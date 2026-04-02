@@ -3,7 +3,7 @@
    ============================================ */
 
 window.APP_CONFIG = {
-  API_URL: 'https://script.google.com/macros/s/AKfycbwhrAckDK-eLguLKM5WcV9HtUuE6D8I-Q2g-lckarcpSPfigqKsKAfVqIRMU1ppcBCkIQ/exec',
+  API_URL: 'https://script.google.com/macros/s/AKfycbyh-69v4qQbQYFJp6ZeHmnr_vOLuzBgRYjf0F2YeWa0W3k2RC_OMeCnT9V-Wq6Yu5G3/exec',
   
   // Google Sheet IDs (keep these as they are)
   SHEETS: {
