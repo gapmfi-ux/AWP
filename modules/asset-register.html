@@ -1,0 +1,423 @@
+<div class="asset-register-container">
+  <div class="register-header">
+    <h1>Asset Register</h1>
+  </div>
+
+  <!-- Tab Navigation with Shared Date Range -->
+  <div class="register-tabs">
+    <button class="tab-btn active" onclick="switchAssetRegisterTab('detailedRegister')">
+      <i class="fas fa-table"></i> Detailed
+    </button>
+    <button class="tab-btn" onclick="switchAssetRegisterTab('summaryRegister')">
+      <i class="fas fa-chart-pie"></i> Summary
+    </button>
+    
+    <!-- Date Range Controls -->
+    <div class="date-range-controls">
+      <div class="date-control-wrapper" id="detailedDateControl">
+        <label for="detailedToDate">AS AT:</label>
+        <input type="date" id="detailedToDate" onchange="recalculateAssetValues()">
+        <button class="print-btn-small" onclick="printUtils.printAssetRegister('detailedRegister')">
+          <i class="fas fa-print"></i>
+        </button>
+      </div>
+      
+      <div class="date-control-wrapper" id="summaryDateControl" style="display: none;">
+        <label for="summaryFromDate">FROM:</label>
+        <input type="date" id="summaryFromDate" onchange="recalculateSummaryRegister()">
+        <label for="summaryToDate">TO:</label>
+        <input type="date" id="summaryToDate" onchange="recalculateSummaryRegister()">
+        <button class="print-btn-small" onclick="printUtils.printAssetRegister('summaryRegister')">
+          <i class="fas fa-print"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detailed Asset Register Tab -->
+  <div class="tab-content active" id="detailedRegister">
+    <div class="tab-title">Detailed Asset Register</div>
+    <div class="register-table-wrapper" id="detailedRegisterTable">
+      <table class="register-table">
+        <thead>
+          <tr>
+            <th><span>Name</span></th>
+            <th><span>Type</span></th>
+            <th><span>Code</span></th>
+            <th><span>Location</span></th>
+            <th><span>Purchase Date</span></th>
+            <th><span>Cost</span></th>
+            <th><span>Annual</span></th>
+            <th><span>Monthly</span></th>
+            <th><span>Accum. Dep.</span></th>
+            <th><span>NBV</span></th>
+            <th><span>Action</span></th>
+           </tr>
+        </thead>
+        <tbody id="detailedRegisterBody">
+          <tr><td colspan="11" class="loading-cell">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Summary Asset Register Tab -->
+  <div class="tab-content" id="summaryRegister">
+    <div class="tab-title">Summary Asset Register</div>
+    <div class="summary-container">
+      <div class="summary-details-table-wrapper" id="summaryRegisterTable">
+        <table class="summary-details-table">
+          <thead>
+             <tr>
+              <th class="details-col">Details</th>
+              <th class="date-col">Date</th>
+              <th>Computers</th>
+              <th>Furniture</th>
+              <th>Fittings</th>
+              <th>Office Eq.</th>
+              <th>Vehicles</th>
+              <th>Software</th>
+              <th class="total-col">Total</th>
+            </tr>
+          </thead>
+          <tbody id="summaryDetailsBody">
+            <tr><td colspan="9" class="loading-cell">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Action Dropdown Portal -->
+  <div class="action-dropdown-portal" id="assetActionPortal" style="display: none;"></div>
+</div>
+
+<style>
+  .asset-register-container {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  .register-header {
+    text-align: center;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #4361ee;
+    padding-bottom: 8px;
+  }
+
+  .register-header h1 {
+    color: #2d3748;
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .register-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .tab-btn {
+    padding: 6px 12px;
+    border: none;
+    background: none;
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .tab-btn:hover {
+    color: #4361ee;
+  }
+
+  .tab-btn.active {
+    color: #4361ee;
+    border-bottom-color: #4361ee;
+  }
+
+  .date-range-controls {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .date-control-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f7fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  .date-control-wrapper label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #2d3748;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin: 0;
+  }
+
+  .date-control-wrapper input[type="date"] {
+    padding: 4px 6px;
+    border: 1px solid #cbd5e0;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+  }
+
+  .print-btn-small {
+    background: none;
+    border: none;
+    color: #4361ee;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 12px;
+    transition: all 0.2s;
+  }
+
+  .print-btn-small:hover {
+    color: #3a56d4;
+    transform: scale(1.05);
+  }
+
+  .tab-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 12px;
+  }
+
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.2s;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .register-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .register-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 11px;
+  }
+
+  .register-table thead {
+    background: #f7fafc;
+  }
+
+  .register-table th {
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #2d3748;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .register-table th:last-child {
+    border-right: none;
+  }
+
+  .register-table td {
+    padding: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    color: #4a5568;
+    font-size: 10px;
+    text-align: center;
+  }
+
+  .register-table td:last-child {
+    border-right: none;
+  }
+
+  .register-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .loading-cell {
+    text-align: center;
+    color: #a0aec0;
+    font-style: italic;
+    padding: 30px !important;
+  }
+
+  .action-btn {
+    background: #4361ee;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .action-btn:hover {
+    background: #3a56d4;
+    transform: translateY(-1px);
+  }
+
+  .action-dropdown-portal {
+    position: fixed;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 120px;
+  }
+
+  .action-dropdown-content {
+    padding: 4px 0;
+  }
+
+  .dropdown-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #2d3748;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .dropdown-item:hover {
+    background: #f7fafc;
+    color: #4361ee;
+  }
+
+  /* Summary Table Compact */
+  .summary-container {
+    padding: 0;
+  }
+
+  .summary-details-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    background: white;
+  }
+
+  .summary-details-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 10px;
+  }
+
+  .summary-details-table thead {
+    background: #f7fafc;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .summary-details-table th {
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #2d3748;
+    border-right: 1px solid #e2e8f0;
+    font-size: 9px;
+    text-transform: uppercase;
+  }
+
+  .summary-details-table td {
+    padding: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    font-size: 10px;
+    text-align: right;
+  }
+
+  .highlight-row {
+    background: #e3f2fd !important;
+    font-weight: 600;
+  }
+
+  .highlight-row.special-highlight {
+    background: #fff3e0 !important;
+  }
+
+  .highlight-row.green-row {
+    background: #e8f5e9 !important;
+  }
+
+  @media (max-width: 768px) {
+    .asset-register-container {
+      padding: 10px;
+    }
+
+    .register-header h1 {
+      font-size: 16px;
+    }
+
+    .register-tabs {
+      flex-direction: column;
+      gap: 6px;
+      align-items: stretch;
+    }
+
+    .date-range-controls {
+      width: 100%;
+      margin-left: 0;
+      flex-direction: column;
+    }
+
+    .date-control-wrapper {
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .register-table th,
+    .register-table td {
+      padding: 4px;
+      font-size: 9px;
+    }
+  }
+</style>

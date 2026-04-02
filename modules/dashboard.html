@@ -1,0 +1,238 @@
+<div class="dashboard-container">
+  <!-- Alerts Section -->
+  <div class="alerts-section">
+    <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
+    
+    <!-- Matured Investments Alert -->
+    <div class="alert-card" id="maturedAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Matured Investments</div>
+        <div class="alert-message" id="maturedMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+      </div>
+    </div>
+
+    <!-- Near Maturity Alert (5 days) -->
+    <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Investments Maturing in 5 Days</div>
+        <div class="alert-message" id="nearMaturityMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+      </div>
+    </div>
+
+    <!-- Low Stock Alert -->
+    <div class="alert-card warning" id="lowStockAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-boxes"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Low Stock Alert</div>
+        <div class="alert-message" id="lowStockMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('inventoryReport')" class="alert-btn">View Inventory</button>
+      </div>
+    </div>
+
+    <!-- Out of Stock Alert -->
+    <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-times-circle"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Out of Stock</div>
+        <div class="alert-message" id="outOfStockMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('inventoryAdd')" class="alert-btn">Restock Now</button>
+      </div>
+    </div>
+
+    <!-- No Alerts Message -->
+    <div class="no-alerts" id="noAlerts">
+      <i class="fas fa-check-circle"></i>
+      <p>All clear! No pending alerts.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .dashboard-container {
+    max-width: 1000px;
+    margin: 0 auto;
+  }
+
+  /* Alerts Section */
+  .alerts-section {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  }
+
+  .alerts-section h3 {
+    color: #2d3748;
+    font-size: 16px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .alerts-section h3 i {
+    color: #4361ee;
+  }
+
+  /* Alert Cards */
+  .alert-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    margin-bottom: 12px;
+    border-radius: 10px;
+    background: #f0fdf4;
+    border-left: 4px solid #06d6a0;
+    transition: all 0.2s;
+  }
+
+  .alert-card.warning {
+    background: #fefce8;
+    border-left-color: #ffd166;
+  }
+
+  .alert-card.danger {
+    background: #fef2f2;
+    border-left-color: #ef476f;
+  }
+
+  .alert-card:hover {
+    transform: translateX(3px);
+  }
+
+  .alert-icon {
+    font-size: 28px;
+    min-width: 50px;
+    text-align: center;
+  }
+
+  .alert-card .alert-icon i {
+    color: #06d6a0;
+  }
+
+  .alert-card.warning .alert-icon i {
+    color: #ffd166;
+  }
+
+  .alert-card.danger .alert-icon i {
+    color: #ef476f;
+  }
+
+  .alert-content {
+    flex: 1;
+  }
+
+  .alert-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #2d3748;
+    margin-bottom: 4px;
+  }
+
+  .alert-message {
+    font-size: 12px;
+    color: #4a5568;
+  }
+
+  .alert-message ul {
+    margin: 5px 0 0 20px;
+    padding: 0;
+  }
+
+  .alert-message li {
+    margin: 3px 0;
+  }
+
+  .alert-btn {
+    background: #4361ee;
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .alert-btn:hover {
+    background: #3a56d4;
+    transform: translateY(-1px);
+  }
+
+  .alert-card.danger .alert-btn {
+    background: #ef476f;
+  }
+
+  .alert-card.danger .alert-btn:hover {
+    background: #d32f2f;
+  }
+
+  .alert-card.warning .alert-btn {
+    background: #ffd166;
+    color: #2d3748;
+  }
+
+  .alert-card.warning .alert-btn:hover {
+    background: #e6c200;
+  }
+
+  .no-alerts {
+    text-align: center;
+    padding: 40px;
+    color: #a0aec0;
+  }
+
+  .no-alerts i {
+    font-size: 48px;
+    margin-bottom: 12px;
+    color: #cbd5e0;
+  }
+
+  .no-alerts p {
+    font-size: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .alerts-section {
+      padding: 15px;
+    }
+
+    .alert-card {
+      flex-direction: column;
+      text-align: center;
+      gap: 10px;
+    }
+
+    .alert-action {
+      width: 100%;
+    }
+
+    .alert-btn {
+      width: 100%;
+    }
+  }
+</style>

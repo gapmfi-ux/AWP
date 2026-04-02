@@ -1,0 +1,741 @@
+<div class="inventory-report-container">
+  <div class="report-header">
+    <h1>Inventory Reports</h1>
+  </div>
+
+  <!-- Tabs and Controls Row -->
+  <div class="report-controls-row">
+    <!-- Tabs on the left -->
+    <div class="report-tabs">
+      <button class="tab-btn active" onclick="switchInventoryTab('purchaseReport')">
+        <i class="fas fa-shopping-cart"></i> Purchase
+      </button>
+      <button class="tab-btn" onclick="switchInventoryTab('usageReport')">
+        <i class="fas fa-box-open"></i> Usage
+      </button>
+      <button class="tab-btn" onclick="switchInventoryTab('inventoryList')">
+        <i class="fas fa-list"></i> Inventory List
+      </button>
+    </div>
+
+    <!-- Controls on the right -->
+    <div class="report-controls">
+      <!-- Purchase Report Controls -->
+      <div class="control-group" id="purchaseControls" style="display: flex;">
+        <div class="compact-date-input">
+          <label for="purchaseFromDate">From:</label>
+          <input type="date" id="purchaseFromDate" onchange="loadPurchaseReport()">
+        </div>
+        <div class="compact-date-input">
+          <label for="purchaseToDate">To:</label>
+          <input type="date" id="purchaseToDate" onchange="loadPurchaseReport()">
+        </div>
+        <button class="print-report-btn" onclick="printUtils.printInventoryReport('purchaseReport')">
+          <i class="fas fa-print"></i> Print
+        </button>
+      </div>
+
+      <!-- Usage Report Controls -->
+      <div class="control-group" id="usageControls" style="display: none;">
+        <div class="compact-date-input">
+          <label for="usageFromDate">From:</label>
+          <input type="date" id="usageFromDate" onchange="loadUsageReport()">
+        </div>
+        <div class="compact-date-input">
+          <label for="usageToDate">To:</label>
+          <input type="date" id="usageToDate" onchange="loadUsageReport()">
+        </div>
+        <button class="print-report-btn" onclick="printUtils.printInventoryReport('usageReport')">
+          <i class="fas fa-print"></i> Print
+        </button>
+      </div>
+
+      <!-- Inventory List Controls -->
+      <div class="control-group" id="inventoryControls" style="display: none;">
+        <div class="compact-date-input">
+          <label for="inventoryToDate">As At:</label>
+          <input type="date" id="inventoryToDate" onchange="loadInventoryList()">
+        </div>
+        <button class="print-report-btn" onclick="printUtils.printInventoryReport('inventoryList')">
+          <i class="fas fa-print"></i> Print
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Purchase Report Tab -->
+<div class="tab-content active" id="purchaseReport">
+  <div class="report-table-wrapper" id="purchaseReportTable">
+    <table class="report-table">
+      <thead>
+         <tr>
+          <th>Code</th>
+          <th>Category</th>
+          <th>Description</th>
+          <th>Total Cost</th>
+          <th>Qty</th>
+          <th>Unit Cost</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody id="purchaseTableBody">
+        <tr>
+          <td colspan="7" class="loading-cell">Loading...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- Usage Report Tab -->
+  <div class="tab-content" id="usageReport">
+    <div class="report-table-wrapper" id="usageReportTable">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Qty Used</th>
+            <th>Unit Cost</th>
+            <th>Usage Cost</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="usageTableBody">
+          <tr>
+            <td colspan="7" class="loading-cell">Loading...</td>
+          </tr>
+        </tbody>
+        <tfoot id="usageTableFoot" style="display: none;"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Inventory List Tab -->
+  <div class="tab-content" id="inventoryList">
+    <div class="report-table-wrapper" id="inventoryListTable">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryListTableBody">
+          <tr>
+            <td colspan="7" class="loading-cell">Loading...</td>
+          </tr>
+        </tbody>
+        <tfoot id="inventoryListTableFoot" style="display: none;"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <!-- Action Dropdown Portal -->
+  <div class="action-dropdown-portal" id="inventoryActionPortal" style="display: none;"></div>
+</div>
+
+<!-- Record Usage Modal (compact) -->
+<div class="usage-modal" id="usageModal" style="display: none;">
+  <div class="usage-modal-content">
+    <div class="usage-modal-header">
+      <h2>Record Usage</h2>
+      <button class="usage-modal-close" onclick="closeUsageModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="usage-modal-body">
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Code:</label>
+          <p id="usageItemCode" class="modal-value"></p>
+        </div>
+        <div class="modal-field">
+          <label>Category:</label>
+          <p id="usageItemName" class="modal-value"></p>
+        </div>
+      </div>
+      <div class="modal-field full-width">
+        <label>Description:</label>
+        <p id="usageItemDescription" class="modal-value"></p>
+      </div>
+      <div class="modal-grid">
+        <div class="modal-field">
+          <label>Available:</label>
+          <p id="usageItemQuantity" class="modal-value"></p>
+        </div>
+        <div class="modal-field">
+          <label>Unit Cost:</label>
+          <p id="usageItemUnitCost" class="modal-value"></p>
+        </div>
+      </div>
+      <form id="usageForm" onsubmit="event.preventDefault(); submitUsageRecord();">
+        <div class="modal-field full-width">
+          <label for="quantityUsedInput">Quantity Used:</label>
+          <input type="number" id="quantityUsedInput" step="1" min="1" placeholder="Enter quantity" required>
+        </div>
+        <div class="modal-grid">
+          <div class="modal-field">
+            <label>Unit Cost:</label>
+            <p id="usageCostUnitPrice" class="modal-value"></p>
+          </div>
+          <div class="modal-field">
+            <label>Usage Cost:</label>
+            <p id="usageCostDisplay" class="modal-value">0.00</p>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="modal-btn-cancel" onclick="closeUsageModal()">Cancel</button>
+          <button type="submit" class="modal-btn-save">Record</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<style>
+  .inventory-report-container {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .report-header {
+    text-align: center;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #4361ee;
+    padding-bottom: 8px;
+  }
+
+  .report-header h1 {
+    color: #2d3748;
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  /* Controls Row - Compact */
+  .report-controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-wrap: wrap;
+  }
+
+  .report-tabs {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+
+  .tab-btn {
+    padding: 5px 12px;
+    border: none;
+    background: none;
+    color: #6c757d;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .tab-btn:hover {
+    color: #4361ee;
+  }
+
+  .tab-btn.active {
+    color: #4361ee;
+    border-bottom-color: #4361ee;
+  }
+
+  .report-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .control-group {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .compact-date-input {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: white;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    padding: 4px 8px;
+    transition: all 0.2s;
+  }
+
+  .compact-date-input:hover {
+    border-color: #4361ee;
+  }
+
+  .compact-date-input label {
+    font-size: 10px;
+    font-weight: 600;
+    color: #2d3748;
+    margin: 0;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .compact-date-input input[type="date"] {
+    padding: 3px 5px;
+    border: none;
+    border-radius: 3px;
+    font-size: 11px;
+    font-family: inherit;
+    cursor: pointer;
+    background: transparent;
+    color: #2d3748;
+    min-width: 110px;
+  }
+
+  .print-report-btn {
+    background: #4361ee;
+    color: white;
+    border: none;
+    padding: 4px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .print-report-btn:hover {
+    background: #3a56d4;
+    transform: translateY(-1px);
+  }
+
+  .tab-content {
+    display: none;
+    animation: fadeIn 0.2s;
+  }
+
+  .tab-content.active {
+    display: block;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .report-table-wrapper {
+    overflow-x: auto;
+    margin-bottom: 12px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .report-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    font-size: 11px;
+  }
+
+  .report-table thead {
+    background: #f7fafc;
+  }
+
+  .report-table th {
+    padding: 8px 6px;
+    text-align: center;
+    font-weight: 600;
+    color: #2d3748;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .report-table th:last-child {
+    border-right: none;
+  }
+
+  .report-table td {
+    padding: 6px;
+    border-bottom: 1px solid #e2e8f0;
+    border-right: 1px solid #e2e8f0;
+    color: #4a5568;
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .report-table td:last-child {
+    border-right: none;
+  }
+
+  .report-table tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  .total-row {
+    background: #e8f8f3;
+    border-top: 1px solid #06d6a0;
+    border-bottom: 1px solid #06d6a0;
+    font-weight: 600;
+  }
+
+  .total-row td {
+    padding: 8px 6px !important;
+    color: #118d57;
+    background: #e8f8f3 !important;
+    font-weight: 600;
+  }
+
+  .total-cell {
+    background: #d0f0e6 !important;
+    font-weight: 600;
+    color: #06d6a0 !important;
+  }
+
+  .loading-cell {
+    text-align: center;
+    color: #a0aec0;
+    font-style: italic;
+    padding: 30px !important;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: #a0aec0;
+  }
+
+  .empty-state i {
+    font-size: 36px;
+    margin-bottom: 10px;
+    color: #cbd5e0;
+  }
+
+  .action-btn {
+    background: #4361ee;
+    color: white;
+    border: none;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 10px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .action-btn:hover {
+    background: #3a56d4;
+    transform: translateY(-1px);
+  }
+
+  .action-dropdown-portal {
+    position: fixed;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    z-index: 1000;
+    min-width: 130px;
+  }
+
+  .action-dropdown-content {
+    padding: 4px 0;
+  }
+
+  .dropdown-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 11px;
+    color: #2d3748;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+  }
+
+  .dropdown-item:hover {
+    background: #f7fafc;
+    color: #4361ee;
+  }
+
+  /* Usage Modal - Compact */
+  .usage-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  .usage-modal-content {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    max-width: 450px;
+    width: 90%;
+    animation: slideIn 0.2s ease-out;
+  }
+
+  @keyframes slideIn {
+    from {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .usage-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  .usage-modal-header h2 {
+    margin: 0;
+    color: #2d3748;
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .usage-modal-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #a0aec0;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .usage-modal-close:hover {
+    color: #2d3748;
+  }
+
+  .usage-modal-body {
+    padding: 15px;
+  }
+
+  .modal-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .modal-field {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .modal-field.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .modal-field label {
+    font-size: 9px;
+    font-weight: 600;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    margin-bottom: 3px;
+  }
+
+  .modal-value {
+    font-size: 12px;
+    color: #2d3748;
+    font-weight: 500;
+    margin: 0;
+    padding: 6px 8px;
+    background: #f7fafc;
+    border-radius: 5px;
+    border: 1px solid #e2e8f0;
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+  }
+
+  .modal-field input {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .modal-field input:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .modal-btn-cancel,
+  .modal-btn-save {
+    padding: 6px 16px;
+    border: none;
+    border-radius: 5px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .modal-btn-cancel {
+    background: #e2e8f0;
+    color: #2d3748;
+  }
+
+  .modal-btn-cancel:hover {
+    background: #cbd5e0;
+  }
+
+  .modal-btn-save {
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+  }
+
+  .modal-btn-save:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+  }
+
+  /* Print Styles */
+  @media print {
+    .report-controls-row,
+    .action-btn,
+    .print-report-btn,
+    .tab-btn {
+      display: none !important;
+    }
+    
+    .inventory-report-container {
+      padding: 0;
+      margin: 0;
+      box-shadow: none;
+    }
+    
+    .report-table-wrapper {
+      border: 1px solid #ddd;
+    }
+    
+    .report-table th,
+    .report-table td {
+      border: 1px solid #ddd;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .inventory-report-container {
+      padding: 10px;
+    }
+
+    .report-header h1 {
+      font-size: 16px;
+    }
+
+    .report-controls-row {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .report-tabs {
+      gap: 3px;
+    }
+
+    .tab-btn {
+      padding: 4px 8px;
+      font-size: 10px;
+      flex: 1;
+      justify-content: center;
+    }
+
+    .report-controls {
+      flex-direction: column;
+      width: 100%;
+      gap: 6px;
+    }
+
+    .control-group {
+      flex-direction: column;
+      gap: 5px;
+      width: 100%;
+    }
+
+    .compact-date-input {
+      width: 100%;
+    }
+
+    .print-report-btn {
+      width: 100%;
+      justify-content: center;
+    }
+
+    .report-table th,
+    .report-table td {
+      padding: 5px 3px;
+      font-size: 9px;
+    }
+
+    .modal-grid {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .usage-modal-content {
+      width: 95%;
+    }
+  }
+</style>
