@@ -1,0 +1,137 @@
+/* ============================================
+   INVENTORY MODULE STYLES - COMPACT VERSION
+   ============================================ */
+
+/* Loading Modal for Inventory */
+.inventory-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.inventory-loading-modal .loading-modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 130px;
+}
+
+.inventory-loading-modal .loading-spinner {
+  width: 35px;
+  height: 35px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4361ee;
+  border-radius: 50%;
+  animation: inventorySpin 0.8s linear infinite;
+  margin: 0 auto 10px auto;
+}
+
+.inventory-loading-modal p {
+  color: #2d3748;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+
+@keyframes inventorySpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Table Loader */
+.table-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px;
+}
+
+.spinner-small {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #4361ee;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+/* Add Inventory Form */
+.inventory-container {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.inventory-header {
+  text-align: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #4361ee;
+  padding-bottom: 8px;
+}
+
+.inventory-header h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+/* Form Compact */
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  margin-bottom: 3px;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+#addNewCategoryFields {
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.submit-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  max-width: 180px;
+  margin: 12px auto 0 auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .inventory-summary {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .inventory-summary-card .value {
+    font-size: 18px;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventory-summary {
+    grid-template-columns: 1fr;
+  }
+}

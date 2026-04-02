@@ -1,0 +1,320 @@
+/* Loading Modal */
+.investment-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.investment-loading-modal .loading-modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  text-align: center;
+  min-width: 130px;
+}
+
+.investment-loading-modal .loading-spinner {
+  width: 35px;
+  height: 35px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4361ee;
+  border-radius: 50%;
+  animation: investmentSpin 0.8s linear infinite;
+  margin: 0 auto 10px auto;
+}
+
+@keyframes investmentSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Add Investment Form - Compact */
+.investment-container {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.investment-header {
+  text-align: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #4361ee;
+  padding-bottom: 8px;
+}
+
+.investment-header h1 {
+  font-size: 18px;
+  margin: 0;
+  font-weight: 600;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  margin-bottom: 3px;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: #2d3748;
+}
+
+.form-group input,
+.form-group select {
+  padding: 5px 8px;
+  font-size: 11px;
+  border: 1px solid #cbd5e0;
+  border-radius: 5px;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+.form-group input[readonly] {
+  background: #f7fafc;
+  cursor: not-allowed;
+}
+
+.form-row-two {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.calculated-fields {
+  background: #f7fafc;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 12px 0;
+  border: 1px solid #e2e8f0;
+}
+
+.calculated-fields .form-group {
+  margin-bottom: 8px;
+}
+
+.calculated-fields input {
+  font-weight: 600;
+  color: #4361ee;
+}
+
+#addNewInvestmentTypeFields,
+#addNewBankFields {
+  background: #f7fafc;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 10px;
+}
+
+.submit-btn {
+  width: 100%;
+  max-width: 180px;
+  padding: 6px 16px;
+  background: linear-gradient(135deg, #4361ee, #7209b7);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 15px auto 0 auto;
+}
+
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
+}
+
+/* Investment Cards - Compact */
+.investment-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.investment-card {
+  background: linear-gradient(135deg, #4361ee, #7209b7);
+  border-radius: 10px;
+  padding: 15px;
+  color: white;
+  text-align: center;
+}
+
+.investment-card h4 {
+  font-size: 10px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  opacity: 0.9;
+}
+
+.investment-card .value {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.investment-card .sub-value {
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
+/* Investment Type Badges - Compact */
+.investment-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.investment-badge.fd {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.investment-badge.tbill {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.investment-badge.bond {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+/* Maturity Status - Compact */
+.maturity-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.maturity-status.matured {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.maturity-status.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.maturity-status.near-maturity {
+  background: #fed7aa;
+  color: #92400e;
+}
+
+/* Interest Rate Highlight */
+.interest-rate {
+  font-weight: 700;
+  color: #4361ee;
+}
+
+/* Rollover Info - Compact */
+.rollover-info {
+  background: #f7fafc;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 8px;
+  font-size: 10px;
+  border-left: 2px solid #4361ee;
+}
+
+.rollover-info i {
+  color: #4361ee;
+  margin-right: 6px;
+}
+
+/* Report Filters - Compact */
+.investment-filters {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.filter-group label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 5px 8px;
+  border: 1px solid #cbd5e0;
+  border-radius: 4px;
+  font-size: 11px;
+  min-width: 130px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .investment-summary-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .investment-card .value {
+    font-size: 18px;
+  }
+
+  .investment-filters {
+    flex-direction: column;
+  }
+
+  .filter-group {
+    width: 100%;
+  }
+
+  .filter-group input,
+  .filter-group select {
+    width: 100%;
+  }
+
+  .form-row-two {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .investment-summary-cards {
+    grid-template-columns: 1fr;
+  }
+}

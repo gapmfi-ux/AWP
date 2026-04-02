@@ -1,0 +1,208 @@
+
+.asset-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.asset-loading-modal .loading-modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 130px;
+}
+
+.asset-loading-modal .loading-spinner {
+  width: 35px;
+  height: 35px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4361ee;
+  border-radius: 50%;
+  animation: assetSpin 0.8s linear infinite;
+  margin: 0 auto 10px auto;
+}
+
+.asset-loading-modal p {
+  color: #2d3748;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 0;
+}
+
+@keyframes assetSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Asset Register Loading Modal */
+.asset-register-loading-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.asset-register-loading-modal .loading-modal-content {
+  background: white;
+  padding: 25px;
+  border-radius: 10px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+  text-align: center;
+  min-width: 130px;
+}
+
+.asset-register-loading-modal .loading-spinner {
+  width: 35px;
+  height: 35px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4361ee;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto 10px auto;
+}
+
+/* Add Asset Form - Compact */
+.asset-container {
+  background: white;
+  border-radius: 10px;
+  padding: 16px;
+  max-width: 750px;
+  margin: 0 auto;
+}
+
+.asset-header {
+  text-align: center;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #4361ee;
+  padding-bottom: 8px;
+}
+
+.asset-header h1 {
+  font-size: 18px;
+  margin: 0;
+}
+
+.form-group {
+  margin-bottom: 10px;
+}
+
+.form-group label {
+  margin-bottom: 3px;
+  font-weight: 600;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.form-group input,
+.form-group select {
+  padding: 5px 8px;
+  font-size: 11px;
+}
+
+.form-row-two {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+/* Depreciation Info - Compact */
+.depreciation-info {
+  padding: 10px;
+  margin: 12px 0;
+  background: #f7fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.info-header {
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #cbd5e0;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-item label {
+  font-size: 8px;
+  font-weight: 600;
+  color: #718096;
+  text-transform: uppercase;
+}
+
+.info-item span {
+  font-size: 10px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.submit-btn {
+  padding: 6px 16px;
+  font-size: 12px;
+  max-width: 180px;
+  margin: 12px auto 0 auto;
+}
+
+/* Asset Status Badges */
+.asset-status {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.asset-status.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.asset-status.disposed {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .asset-container {
+    padding: 12px;
+  }
+
+  .form-row-two {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .info-grid {
+    grid-template-columns: 1fr;
+  }
+}
