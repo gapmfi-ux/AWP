@@ -1,15 +1,15 @@
 /* ============================================
    ADD INVESTMENT MODULE JAVASCRIPT
+   Using google.script.run (same pattern as add-asset)
    ============================================ */
-
-// Global variables for add investment
-let addInvestmentData = [];
 
 // ============================================
 // INITIALIZATION
 // ============================================
 
 function initInvestmentModule() {
+  console.log('Initializing Add Investment Module');
+  
   const today = new Date().toISOString().split('T')[0];
   const dateField = document.getElementById('investmentDate');
   if (dateField) dateField.value = today;
@@ -19,6 +19,36 @@ function initInvestmentModule() {
     bankSelect.addEventListener('change', handleBankChange);
   }
 
+  // Add event listeners for real-time calculations
+  const amountField = document.getElementById('amount');
+  const rateField = document.getElementById('interestRate');
+  const durationField = document.getElementById('duration');
+  const investmentDateField = document.getElementById('investmentDate');
+  const maturityDateField = document.getElementById('maturityDate');
+
+  if (amountField) {
+    amountField.addEventListener('input', calculateMaturityAmount);
+  }
+  if (rateField) {
+    rateField.addEventListener('input', calculateMaturityAmount);
+  }
+  if (durationField) {
+    durationField.addEventListener('input', function() {
+      calculateMaturityDate();
+      calculateMaturityAmount();
+    });
+  }
+  if (investmentDateField) {
+    investmentDateField.addEventListener('change', function() {
+      calculateMaturityDate();
+      calculateMaturityAmount();
+    });
+  }
+  if (maturityDateField) {
+    maturityDateField.addEventListener('change', calculateMaturityAmount);
+  }
+
+  // Close modal when clicking outside
   window.addEventListener('click', function(event) {
     const modal = document.getElementById('messageModal');
     if (modal && event.target === modal) {
@@ -38,16 +68,24 @@ function handleInvestmentTypeChange() {
 
   if (investmentType === 'add-new') {
     if (addNewFields) addNewFields.style.display = 'block';
-    if (codeField) codeField.value = '';
+    if (codeField) {
+      codeField.value = '';
+      codeField.readOnly = false;
+    }
   } else {
     if (addNewFields) addNewFields.style.display = 'none';
     const newTypeField = document.getElementById('newInvestmentType');
     if (newTypeField) newTypeField.value = '';
     
     if (investmentType) {
+      codeField.value = 'Generating...';
+      codeField.readOnly = true;
       generateInvestmentCode(investmentType);
     } else {
-      if (codeField) codeField.value = '';
+      if (codeField) {
+        codeField.value = '';
+        codeField.readOnly = false;
+      }
     }
   }
 }
@@ -66,17 +104,25 @@ function handleBankChange() {
 }
 
 function generateInvestmentCode(investmentType) {
-  callGAS('generateInvestmentCode', { investmentType: investmentType })
-    .then(response => {
+  console.log('Generating investment code for:', investmentType);
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
       const field = document.getElementById('investmentCode');
       if (field && response) {
         field.value = response;
+        console.log('Investment code generated:', response);
       }
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       console.error('Error generating investment code:', error);
-      showInvestmentMessage('Error generating investment code: ' + (error.message || error), 'error');
-    });
+      const field = document.getElementById('investmentCode');
+      if (field) {
+        field.value = '';
+        showInvestmentMessage('Error generating investment code: ' + (error.message || error), 'error');
+      }
+    })
+    .generateInvestmentCode(investmentType);
 }
 
 // ============================================
@@ -139,7 +185,7 @@ function calculateMaturityAmount() {
 }
 
 // ============================================
-// SUBMIT INVESTMENT
+// SUBMIT NEW INVESTMENT - USING google.script.run
 // ============================================
 
 function submitNewInvestment() {
@@ -154,6 +200,7 @@ function submitNewInvestment() {
   const interestAmount = document.getElementById('interestAmount').value;
   const maturityAmount = document.getElementById('maturityAmount').value;
 
+  // Validation
   if (!investmentType || investmentType === 'add-new') {
     if (investmentType === 'add-new') {
       const newType = document.getElementById('newInvestmentType').value;
@@ -168,8 +215,8 @@ function submitNewInvestment() {
     }
   }
 
-  if (!investmentCode || investmentCode.trim() === '') {
-    showInvestmentMessage('Please generate an investment code', 'error');
+  if (!investmentCode || investmentCode.trim() === '' || investmentCode === 'Generating...') {
+    showInvestmentMessage('Please wait for the investment code to be generated', 'error');
     return;
   }
 
@@ -227,40 +274,66 @@ function submitNewInvestment() {
     maturityAmount: parseFloat(maturityAmount)
   };
 
-  callGAS('addNewInvestment', { formData: JSON.stringify(formData) })
-    .then(response => {
+  console.log('Submitting investment form data:', formData);
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Success response:', response);
       hideInvestmentLoadingModal();
-      if (response && !response.error) {
-        showInvestmentMessage('✓ Investment added successfully!', 'success');
-        setTimeout(() => {
-          const form = document.getElementById('newInvestmentForm');
-          if (form) form.reset();
-          const today = new Date().toISOString().split('T')[0];
-          const investmentDateField = document.getElementById('investmentDate');
-          if (investmentDateField) investmentDateField.value = today;
-          const codeField = document.getElementById('investmentCode');
-          if (codeField) codeField.value = '';
-          const interestAmountField = document.getElementById('interestAmount');
-          if (interestAmountField) interestAmountField.value = '0.00';
-          const maturityAmountField = document.getElementById('maturityAmount');
-          if (maturityAmountField) maturityAmountField.value = '0.00';
-          const typeField = document.getElementById('investmentType');
-          if (typeField) typeField.value = '';
-          const bankField = document.getElementById('bankName');
-          if (bankField) bankField.value = '';
-          const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
-          if (addNewTypeFields) addNewTypeFields.style.display = 'none';
-          const addNewBankFields = document.getElementById('addNewBankFields');
-          if (addNewBankFields) addNewBankFields.style.display = 'none';
-        }, 1500);
-      } else {
-        showInvestmentMessage('Error adding investment: ' + (response?.error || 'Unknown error'), 'error');
-      }
+      showInvestmentMessage('✓ Investment added successfully!', 'success');
+      setTimeout(() => {
+        resetInvestmentForm();
+      }, 1500);
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
+      console.error('Error:', error);
       hideInvestmentLoadingModal();
       showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
-    });
+    })
+    .addNewInvestment(formData);
+}
+
+// ============================================
+// RESET FORM
+// ============================================
+
+function resetInvestmentForm() {
+  const form = document.getElementById('newInvestmentForm');
+  if (form) form.reset();
+  
+  const today = new Date().toISOString().split('T')[0];
+  const investmentDateField = document.getElementById('investmentDate');
+  if (investmentDateField) investmentDateField.value = today;
+  
+  const codeField = document.getElementById('investmentCode');
+  if (codeField) {
+    codeField.value = '';
+    codeField.readOnly = false;
+  }
+  
+  const interestAmountField = document.getElementById('interestAmount');
+  if (interestAmountField) interestAmountField.value = '0.00';
+  
+  const maturityAmountField = document.getElementById('maturityAmount');
+  if (maturityAmountField) maturityAmountField.value = '0.00';
+  
+  const typeField = document.getElementById('investmentType');
+  if (typeField) typeField.value = '';
+  
+  const bankField = document.getElementById('bankName');
+  if (bankField) bankField.value = '';
+  
+  const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
+  if (addNewTypeFields) addNewTypeFields.style.display = 'none';
+  
+  const addNewBankFields = document.getElementById('addNewBankFields');
+  if (addNewBankFields) addNewBankFields.style.display = 'none';
+  
+  const newTypeField = document.getElementById('newInvestmentType');
+  if (newTypeField) newTypeField.value = '';
+  
+  const newBankField = document.getElementById('newBankName');
+  if (newBankField) newBankField.value = '';
 }
 
 // ============================================
@@ -284,23 +357,39 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39');
+    .replace(/'/g, '&#39;');
 }
 
 function showInvestmentMessage(message, type) {
-  const modal = document.getElementById('messageModal');
-  const messageDiv = document.getElementById('modalMessage');
-
-  if (!modal || !messageDiv) return;
-
+  let modal = document.getElementById('messageModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'messageModal';
+    modal.className = 'investment-message-modal';
+    document.body.appendChild(modal);
+  }
+  
+  let messageDiv = document.getElementById('modalMessage');
+  if (!messageDiv) {
+    const div = document.createElement('div');
+    div.id = 'modalMessage';
+    modal.appendChild(div);
+    messageDiv = div;
+  }
+  
   const types = {
     success: 'success-message',
     error: 'error-message',
-    info: 'info-message'
+    info: 'info-message',
+    warning: 'warning-message'
   };
 
   messageDiv.innerHTML = `<div class="${types[type] || types.info}">${message}</div>`;
   modal.style.display = 'flex';
+  
+  setTimeout(() => {
+    if (modal) modal.style.display = 'none';
+  }, 3000);
 }
 
 function closeInvestmentModal() {
@@ -308,7 +397,7 @@ function closeInvestmentModal() {
   if (modal) modal.style.display = 'none';
 }
 
-function showInvestmentLoadingModal(message = 'Processing...') {
+function showInvestmentLoadingModal(message = 'Adding Investment...') {
   let modal = document.getElementById('investmentLoadingModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -331,10 +420,13 @@ function hideInvestmentLoadingModal() {
   if (modal) modal.style.display = 'none';
 }
 
-// Export for global use
+// Export functions for global use
 window.initInvestmentModule = initInvestmentModule;
 window.handleInvestmentTypeChange = handleInvestmentTypeChange;
+window.handleBankChange = handleBankChange;
 window.calculateMaturityDate = calculateMaturityDate;
 window.calculateMaturityAmount = calculateMaturityAmount;
 window.submitNewInvestment = submitNewInvestment;
+window.resetInvestmentForm = resetInvestmentForm;
+window.generateInvestmentCode = generateInvestmentCode;
 window.closeInvestmentModal = closeInvestmentModal;
