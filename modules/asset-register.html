@@ -12,11 +12,26 @@
       <i class="fas fa-chart-pie"></i> Summary
     </button>
     
-    <!-- Date Range Controls -->
-    <div class="date-range-controls">
+    <!-- Date Range Controls -->    <div class="date-range-controls">
       <div class="date-control-wrapper" id="detailedDateControl">
         <label for="detailedToDate">AS AT:</label>
         <input type="date" id="detailedToDate" onchange="recalculateAssetValues()">
+        
+        <!-- Group By Control - Added here -->
+        <div class="group-by-wrapper">
+          <label for="groupBySelect">GROUP BY:</label>
+          <select id="groupBySelect" onchange="applyGrouping()">
+            <option value="full">Full List (All Assets)</option>
+            <option value="type">Group by Type</option>
+            <option value="fittings">Fittings Only</option>
+            <option value="software">Software Only</option>
+            <option value="computers">Computers & Accessories Only</option>
+            <option value="furniture">Furniture and Fixtures Only</option>
+            <option value="office">Office Equipment Only</option>
+            <option value="motor">Motor Vehicle Only</option>
+          </select>
+        </div>
+        
         <button class="print-btn-small" onclick="printUtils.printAssetRegister('detailedRegister')">
           <i class="fas fa-print"></i>
         </button>
@@ -60,7 +75,7 @@
       </table>
     </div>
   </div>
-
+  
   <!-- Summary Asset Register Tab -->
   <div class="tab-content" id="summaryRegister">
     <div class="tab-title">Summary Asset Register</div>
