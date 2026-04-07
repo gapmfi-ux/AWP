@@ -80,6 +80,10 @@ function initAssetRegisterModule() {
 // ASSET CODE GENERATION
 // ============================================
 
+// ============================================
+// ASSET DEPRECIATION INFO - FIXED
+// ============================================
+
 function handleAssetTypeChange() {
   const assetType = document.getElementById('assetType').value;
   const codeField = document.getElementById('assetCode');
@@ -88,7 +92,7 @@ function handleAssetTypeChange() {
   if (assetType) {
     // Show depreciation info
     depreciationInfo.style.display = 'block';
-    calculateDepreciationInfo(assetType);
+    updateDepreciationInfo();
     
     if (assetType === 'Fittings' || assetType === 'Software') {
       codeField.value = 'N/A';
@@ -105,11 +109,19 @@ function handleAssetTypeChange() {
   }
 }
 
-function calculateDepreciationInfo(assetType) {
+function updateDepreciationInfo() {
+  const assetType = document.getElementById('assetType').value;
   const cost = parseFloat(document.getElementById('assetCost').value) || 0;
   const purchaseDate = document.getElementById('dateOfPurchase').value;
   
+  console.log('Updating depreciation info:', { assetType, cost, purchaseDate });
+  
+  if (!assetType) {
+    return;
+  }
+  
   if (!cost || cost <= 0 || !purchaseDate) {
+    // Show placeholders
     document.getElementById('lifeSpanDisplay').textContent = '—';
     document.getElementById('rateDisplay').textContent = '—';
     document.getElementById('monthlyDepDisplay').textContent = '—';
@@ -118,6 +130,7 @@ function calculateDepreciationInfo(assetType) {
     return;
   }
   
+  // Get asset config
   const configs = {
     'Computers & Accessories': { lifeSpan: 3, rate: 33.33 },
     'Furniture and Fixtures': { lifeSpan: 3, rate: 33.33 },
@@ -131,23 +144,38 @@ function calculateDepreciationInfo(assetType) {
   const annualCharge = (cost * config.rate) / 100;
   const monthlyDep = annualCharge / 12;
   
+  // Calculate end of life span
   const purchase = new Date(purchaseDate);
   const endOfLife = new Date(purchase);
   endOfLife.setFullYear(purchase.getFullYear() + config.lifeSpan);
+  // Subtract one day to get the actual end of life date
+  endOfLife.setDate(endOfLife.getDate() - 1);
   
+  // Update the display
   document.getElementById('lifeSpanDisplay').textContent = config.lifeSpan + ' years';
   document.getElementById('rateDisplay').textContent = config.rate + '%';
   document.getElementById('monthlyDepDisplay').textContent = formatCurrency(monthlyDep);
   document.getElementById('annualChargeDisplay').textContent = formatCurrency(annualCharge);
   document.getElementById('endOfLifeDisplay').textContent = formatDateForDisplay(endOfLife);
+  
+  console.log('Depreciation info updated:', {
+    lifeSpan: config.lifeSpan,
+    rate: config.rate,
+    monthlyDep: monthlyDep,
+    annualCharge: annualCharge,
+    endOfLife: endOfLife
+  });
 }
 
 function generateAssetCode(assetType) {
+  console.log('Generating asset code for:', assetType);
+  
   callGAS('generateAssetCode', { assetType: assetType })
     .then(response => {
       const field = document.getElementById('assetCode');
-      if (field) {
-        field.value = response || '';
+      if (field && response) {
+        field.value = response;
+        console.log('Asset code generated:', response);
       }
     })
     .catch(error => {
@@ -156,6 +184,68 @@ function generateAssetCode(assetType) {
       showAssetMessage('Error generating asset code: ' + (error.message || error), 'error');
     });
 }
+
+function formatDateForDisplay(date) {
+  if (!date) return '';
+  if (!(date instanceof Date)) date = new Date(date);
+  if (isNaN(date.getTime())) return '';
+  
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function formatCurrency(value) {
+  if (isNaN(value) || value === null || value === undefined) return '0.00';
+  return parseFloat(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+// Make sure resetAssetForm is defined
+function resetAssetForm() {
+  document.getElementById('newAssetForm').reset();
+  document.getElementById('depreciationInfo').style.display = 'none';
+  document.getElementById('assetCode').value = '';
+  const today = new Date().toISOString().split('T')[0];
+  const dateField = document.getElementById('dateOfPurchase');
+  if (dateField) dateField.value = today;
+}
+
+// Add event listeners when the module loads
+function initAssetModule() {
+  console.log('Initializing Asset Module');
+  
+  const today = new Date().toISOString().split('T')[0];
+  const dateField = document.getElementById('dateOfPurchase');
+  if (dateField) dateField.value = today;
+  
+  // Add event listeners for real-time updates
+  const costField = document.getElementById('assetCost');
+  const purchaseDateField = document.getElementById('dateOfPurchase');
+  const typeField = document.getElementById('assetType');
+  
+  if (costField) {
+    costField.addEventListener('input', function() {
+      if (typeField && typeField.value) updateDepreciationInfo();
+    });
+  }
+  
+  if (purchaseDateField) {
+    purchaseDateField.addEventListener('change', function() {
+      if (typeField && typeField.value) updateDepreciationInfo();
+    });
+  }
+  
+  // Close modal when clicking outside
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('messageModal');
+    if (modal && event.target === modal) {
+      closeAssetModal();
+    }
+  });
+}
+
 
 // ============================================
 // ASSET CRUD
@@ -790,3 +880,7 @@ window.disposeAsset = disposeAsset;
 window.closeAssetModal = closeAssetModal;
 window.loadSummaryRegister = loadSummaryRegister;
 window.renderSummaryRegisterFromReport = renderSummaryRegisterFromReport;
+window.initAssetModule = initAssetModule;
+window.updateDepreciationInfo = updateDepreciationInfo;
+window.resetAssetForm = resetAssetForm;
+window.generateAssetCode = generateAssetCode;
