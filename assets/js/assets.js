@@ -55,12 +55,18 @@ function initAssetRegisterModule() {
   // Initial update to ensure all values are correct as of today
   showAssetRegisterLoadingModal('Initializing asset register...');
   callGAS('updateAllAccumulatedDepreciation', { asOfDate: today })
-    .then(() => loadDetailedRegister())
+    .then(() => {
+      hideAssetRegisterLoadingModal(); // Add this line here
+      return loadDetailedRegister();
+    })
     .catch(error => {
       console.error('Initialization error:', error);
-      hideAssetRegisterLoadingModal();
+      hideAssetRegisterLoadingModal(); // Hide loading modal on error
       loadDetailedRegister(); // Still try to load even if update fails
     });
+    
+  // Also need to hide in case loadDetailedRegister has its own loading spinner
+  // but we handle that separately
 
   window.addEventListener('click', function(event) {
     if (assetPortalOpen) {
