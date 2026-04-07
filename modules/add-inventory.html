@@ -67,6 +67,14 @@
   </div>
 </div>
 
+<!-- Loading Modal -->
+<div class="inventory-loading-modal" id="inventoryLoadingModal" style="display: none;">
+  <div class="loading-modal-content">
+    <div class="loading-spinner"></div>
+    <p>Processing...</p>
+  </div>
+</div>
+
 <style>
   .inventory-container {
     background: white;
@@ -249,6 +257,49 @@
     color: #ef476f;
     font-weight: 600;
     font-size: 16px;
+  }
+
+  /* Loading Modal Styles */
+  .inventory-loading-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1001;
+  }
+
+  .loading-modal-content {
+    background: white;
+    padding: 30px 40px;
+    border-radius: 12px;
+    text-align: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  }
+
+  .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #4361ee;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 15px auto;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .loading-modal-content p {
+    margin: 0;
+    color: #2d3748;
+    font-size: 14px;
   }
 
   @media (max-width: 768px) {
