@@ -159,18 +159,19 @@ function submitNewInventory() {
 
   console.log('Submitting form data:', formData);
 
+  // FIX: Send formData directly, not wrapped
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Success response:', response);
       hideInventoryLoadingModal();
       
-      if (response && !response.error) {
+      if (response && response.success) {
         showInventoryMessage('✓ Inventory added successfully!', 'success');
         setTimeout(function() {
           resetInventoryForm();
         }, 1500);
       } else {
-        showInventoryMessage('Error adding inventory: ' + (response?.error || 'Unknown error'), 'error');
+        showInventoryMessage('Error adding inventory: ' + (response?.error || response?.message || 'Unknown error'), 'error');
       }
     })
     .withFailureHandler(function(error) {
@@ -178,9 +179,8 @@ function submitNewInventory() {
       hideInventoryLoadingModal();
       showInventoryMessage('Error adding inventory: ' + (error.message || error), 'error');
     })
-    .addNewInventory({ formData: JSON.stringify(formData) });
+    .addNewInventory(formData);  // FIX: Send formData directly
 }
-
 // ============================================
 // RESET FORM
 // ============================================
