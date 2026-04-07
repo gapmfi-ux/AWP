@@ -6,7 +6,6 @@
 // Global variables for inventory module
 let inventoryPortalOpen = false;
 let currentUsageItem = null;
-let allInventoryData = [];
 
 // ============================================
 // INITIALIZATION
@@ -31,6 +30,7 @@ function initInventoryReportModule() {
   if (usageToDate) usageToDate.value = today;
   if (inventoryToDate) inventoryToDate.value = today;
 
+  // Load initial data
   loadPurchaseReport();
   
   // Close dropdown when clicking outside
@@ -59,7 +59,7 @@ function getStartOfYear() {
 }
 
 // ============================================
-// REPORT FUNCTIONS - USING google.script.run
+// TAB SWITCHING
 // ============================================
 
 function switchInventoryTab(tabName) {
@@ -104,6 +104,10 @@ function switchInventoryTab(tabName) {
   }
 }
 
+// ============================================
+// REPORT LOADING FUNCTIONS
+// ============================================
+
 function loadPurchaseReport() {
   const fromDateInput = document.getElementById('purchaseFromDate');
   const toDateInput = document.getElementById('purchaseToDate');
@@ -127,7 +131,6 @@ function loadPurchaseReport() {
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Purchase report response:', response);
-      hideLoadingSpinner('purchaseTableBody');
       
       if (response && response.error) {
         console.error('Error in response:', response.error);
@@ -152,7 +155,6 @@ function loadPurchaseReport() {
     })
     .withFailureHandler(function(error) {
       console.error('Error loading purchase report:', error);
-      hideLoadingSpinner('purchaseTableBody');
       showInventoryEmptyState('purchaseTableBody', 'Error loading purchase report: ' + (error.message || error), 7);
     })
     .getPurchaseReportData(fromDate, toDate);
@@ -178,7 +180,6 @@ function loadUsageReport() {
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Usage report response:', response);
-      hideLoadingSpinner('usageTableBody');
       
       if (response && response.error) {
         showInventoryEmptyState('usageTableBody', 'Error: ' + response.error, 7);
@@ -202,7 +203,6 @@ function loadUsageReport() {
     })
     .withFailureHandler(function(error) {
       console.error('Error loading usage report:', error);
-      hideLoadingSpinner('usageTableBody');
       showInventoryEmptyState('usageTableBody', 'Error loading usage report: ' + (error.message || error), 7);
     })
     .getUsageReportData(fromDate, toDate);
@@ -215,7 +215,6 @@ function loadInventoryList() {
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Inventory list response:', response);
-      hideLoadingSpinner('inventoryListTableBody');
       
       if (response && response.error) {
         showInventoryEmptyState('inventoryListTableBody', 'Error: ' + response.error, 7);
@@ -239,7 +238,6 @@ function loadInventoryList() {
     })
     .withFailureHandler(function(error) {
       console.error('Error loading inventory list:', error);
-      hideLoadingSpinner('inventoryListTableBody');
       showInventoryEmptyState('inventoryListTableBody', 'Error loading inventory list: ' + (error.message || error), 7);
     })
     .getInventoryListData();
@@ -259,11 +257,11 @@ function renderPurchaseReportTable(data) {
   }
 
   let totalCost = 0;
+  let rows = '';
 
-  var rows = '';
-  for (var i = 0; i < data.length; i++) {
-    var row = data[i];
-    var cost = parseFloat(row.totalCost) || 0;
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const cost = parseFloat(row.totalCost) || 0;
     totalCost += cost;
 
     rows += `
@@ -279,7 +277,7 @@ function renderPurchaseReportTable(data) {
     `;
   }
 
-  var totalRow = `
+  const totalRow = `
     <tr class="total-row">
       <td colspan="3" style="text-align: right; font-weight: 700;">Total Cost:</td>
       <td class="total-cell">${formatCurrency(totalCost)}</td>
@@ -300,11 +298,11 @@ function renderUsageReportTable(data) {
   }
 
   let totalUsageCost = 0;
+  let rows = '';
 
-  var rows = '';
-  for (var i = 0; i < data.length; i++) {
-    var row = data[i];
-    var usageCost = parseFloat(row.usageCost) || 0;
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const usageCost = parseFloat(row.usageCost) || 0;
     totalUsageCost += usageCost;
     
     rows += `
@@ -320,7 +318,7 @@ function renderUsageReportTable(data) {
     `;
   }
 
-  var totalRow = `
+  const totalRow = `
     <tr class="total-row">
       <td colspan="5" style="text-align: right; font-weight: 700;">Total Usage Cost:</td>
       <td class="total-cell">${formatCurrency(totalUsageCost)}</td>
@@ -341,14 +339,13 @@ function renderInventoryListTable(data) {
   }
 
   let totalInventoryCost = 0;
+  let rows = '';
 
-  var rows = '';
-  for (var i = 0; i < data.length; i++) {
-    var row = data[i];
-    var unitCost = parseFloat(row.unitCost) || 0;
-    var quantity = parseInt(row.quantity) || 0;
-    var calculatedTotalCost = quantity * unitCost;
-    var totalCost = calculatedTotalCost;
+  for (let i = 0; i < data.length; i++) {
+    const row = data[i];
+    const unitCost = parseFloat(row.unitCost) || 0;
+    const quantity = parseInt(row.quantity) || 0;
+    const totalCost = quantity * unitCost;
     
     totalInventoryCost += totalCost;
     
@@ -369,7 +366,7 @@ function renderInventoryListTable(data) {
     `;
   }
 
-  var totalRow = `
+  const totalRow = `
     <tr class="total-row">
       <td colspan="5" style="text-align: right; font-weight: 700;">Total Inventory Cost:</td>
       <td class="total-cell">${formatCurrency(totalInventoryCost)}</td>
@@ -387,11 +384,11 @@ function renderInventoryListTable(data) {
 function openInventoryActionDropdown(event, inventoryCode, categoryName, description, quantity, unitCost) {
   closeInventoryActionDropdown();
   
-  var button = event.target.closest('button');
+  const button = event.target.closest('button');
   if (!button) return;
   
-  var rect = button.getBoundingClientRect();
-  var portal = document.getElementById('inventoryActionPortal');
+  const rect = button.getBoundingClientRect();
+  const portal = document.getElementById('inventoryActionPortal');
   
   if (!portal) return;
   
@@ -416,7 +413,7 @@ function openInventoryActionDropdown(event, inventoryCode, categoryName, descrip
 }
 
 function closeInventoryActionDropdown() {
-  var portal = document.getElementById('inventoryActionPortal');
+  const portal = document.getElementById('inventoryActionPortal');
   if (portal) {
     portal.innerHTML = '';
     portal.style.display = 'none';
@@ -446,11 +443,10 @@ function openUsageModal(inventoryCode, categoryName, description, quantity, unit
   document.getElementById('usageItemUnitCost').textContent = formatCurrency(unitCost);
   document.getElementById('usageCostUnitPrice').textContent = formatCurrency(unitCost);
   
-  var quantityInput = document.getElementById('quantityUsedInput');
+  const quantityInput = document.getElementById('quantityUsedInput');
   if (quantityInput) {
     quantityInput.value = '';
     quantityInput.max = quantity;
-    // Remove existing listener to avoid duplicates
     quantityInput.removeEventListener('input', calculateUsageCost);
     quantityInput.addEventListener('input', calculateUsageCost);
   }
@@ -460,10 +456,10 @@ function openUsageModal(inventoryCode, categoryName, description, quantity, unit
 }
 
 function closeUsageModal() {
-  var modal = document.getElementById('usageModal');
+  const modal = document.getElementById('usageModal');
   if (modal) modal.style.display = 'none';
   
-  var input = document.getElementById('quantityUsedInput');
+  const input = document.getElementById('quantityUsedInput');
   if (input) {
     input.removeEventListener('input', calculateUsageCost);
   }
@@ -473,8 +469,8 @@ function closeUsageModal() {
 function calculateUsageCost() {
   if (!currentUsageItem) return;
 
-  var quantityUsed = parseInt(document.getElementById('quantityUsedInput').value) || 0;
-  var usageCost = quantityUsed * currentUsageItem.unitCost;
+  const quantityUsed = parseInt(document.getElementById('quantityUsedInput').value) || 0;
+  const usageCost = quantityUsed * currentUsageItem.unitCost;
   
   document.getElementById('usageCostDisplay').textContent = formatCurrency(usageCost);
 }
@@ -482,8 +478,8 @@ function calculateUsageCost() {
 function submitUsageRecord() {
   if (!currentUsageItem) return;
 
-  var quantityInput = document.getElementById('quantityUsedInput');
-  var quantityUsed = parseInt(quantityInput.value);
+  const quantityInput = document.getElementById('quantityUsedInput');
+  const quantityUsed = parseInt(quantityInput.value);
 
   if (!quantityUsed || quantityUsed <= 0) {
     showInventoryMessage('Please enter a valid quantity', 'error');
@@ -491,15 +487,15 @@ function submitUsageRecord() {
   }
 
   if (quantityUsed > currentUsageItem.quantity) {
-    showInventoryMessage('Cannot use more than available quantity (' + currentUsageItem.quantity + ')', 'error');
+    showInventoryMessage(`Cannot use more than available quantity (${currentUsageItem.quantity})`, 'error');
     return;
   }
 
   showInventoryLoadingModal('Recording usage...');
 
-  var usageCost = quantityUsed * currentUsageItem.unitCost;
+  const usageCost = quantityUsed * currentUsageItem.unitCost;
 
-  var formData = {
+  const formData = {
     inventoryCode: currentUsageItem.code,
     categoryName: currentUsageItem.name,
     description: currentUsageItem.description,
@@ -518,7 +514,7 @@ function submitUsageRecord() {
       if (response && !response.error) {
         closeUsageModal();
         showInventoryMessage('Usage recorded successfully!', 'success');
-        loadInventoryList(); // Refresh the inventory list
+        loadInventoryList();
       } else {
         showInventoryMessage('Error recording usage: ' + (response?.error || 'Unknown error'), 'error');
       }
@@ -538,7 +534,7 @@ function submitUsageRecord() {
 function removeInventoryItem(inventoryCode, categoryName) {
   closeInventoryActionDropdown();
   
-  if (confirm('Are you sure you want to remove inventory:\n' + inventoryCode + ' - ' + categoryName + '?')) {
+  if (confirm(`Are you sure you want to remove inventory:\n${inventoryCode} - ${categoryName}?`)) {
     showInventoryLoadingModal('Removing inventory...');
     
     google.script.run
@@ -547,7 +543,7 @@ function removeInventoryItem(inventoryCode, categoryName) {
         hideInventoryLoadingModal();
         if (response && !response.error) {
           showInventoryMessage('Inventory removed successfully!', 'success');
-          loadInventoryList(); // Refresh the inventory list
+          loadInventoryList();
         } else {
           showInventoryMessage('Error removing inventory: ' + (response?.error || 'Unknown error'), 'error');
         }
@@ -567,7 +563,7 @@ function removeInventoryItem(inventoryCode, categoryName) {
 
 function formatCurrency(value) {
   if (value === null || value === undefined || value === '' || isNaN(value)) return '0.00';
-  var numValue = parseFloat(value);
+  const numValue = parseFloat(value);
   if (isNaN(numValue)) return '0.00';
   return numValue.toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -586,48 +582,22 @@ function escapeHtml(str) {
 }
 
 function showInventoryMessage(message, type) {
-  var modal = document.getElementById('messageModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'messageModal';
-    modal.className = 'inventory-message-modal';
-    document.body.appendChild(modal);
+  // Check if printUtils has a message function
+  if (window.printUtils && printUtils.showMessage) {
+    printUtils.showMessage(message, type);
+    return;
   }
   
-  var messageDiv = document.getElementById('modalMessage');
-  if (!messageDiv) {
-    var div = document.createElement('div');
-    div.id = 'modalMessage';
-    modal.appendChild(div);
-    messageDiv = div;
+  // Fallback to simple alert if printUtils not available
+  if (type === 'error') {
+    alert('Error: ' + message);
+  } else {
+    alert(message);
   }
-  
-  var types = {
-    success: 'success-message',
-    error: 'error-message',
-    info: 'info-message',
-    warning: 'warning-message'
-  };
-
-  messageDiv.innerHTML = '<div class="' + (types[type] || types.info) + '">' + message + '</div>';
-  modal.style.display = 'flex';
-  
-  // Auto-hide after 3 seconds for non-error messages
-  if (type !== 'error') {
-    setTimeout(function() {
-      var modalElem = document.getElementById('messageModal');
-      if (modalElem) modalElem.style.display = 'none';
-    }, 3000);
-  }
-}
-
-function closeInventoryModal() {
-  var modal = document.getElementById('messageModal');
-  if (modal) modal.style.display = 'none';
 }
 
 function showInventoryEmptyState(elementId, message, colspan) {
-  var tbody = document.getElementById(elementId);
+  const tbody = document.getElementById(elementId);
   if (!tbody) return;
   
   tbody.innerHTML = `
@@ -635,13 +605,13 @@ function showInventoryEmptyState(elementId, message, colspan) {
       <td colspan="${colspan}" class="empty-state">
         <i class="fas fa-folder-open"></i>
         <p>${escapeHtml(message)}</p>
-      </td>
+       </td>
     </tr>
   `;
 }
 
 function showInventoryLoadingSpinner(elementId, colspan) {
-  var tbody = document.getElementById(elementId);
+  const tbody = document.getElementById(elementId);
   if (!tbody) return;
   
   tbody.innerHTML = `
@@ -651,163 +621,58 @@ function showInventoryLoadingSpinner(elementId, colspan) {
           <div class="spinner-small"></div>
           <span>Loading...</span>
         </div>
-      </td>
+       </td>
     </tr>
   `;
 }
 
-function hideLoadingSpinner(elementId) {
-  // The spinner will be replaced by actual content in success/failure handlers
-  console.log('Loading completed for:', elementId);
-}
-
 function showInventoryLoadingModal(message) {
-  message = message || 'Processing...';
-  var modal = document.getElementById('inventoryLoadingModal');
+  // Use printUtils loading modal if available
+  if (window.printUtils && printUtils.showLoading) {
+    printUtils.showLoading(message);
+    return;
+  }
+  
+  // Fallback - create simple loading indicator
+  let modal = document.getElementById('inventoryLoadingModal');
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'inventoryLoadingModal';
-    modal.className = 'inventory-loading-modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+    `;
     document.body.appendChild(modal);
   }
   
   modal.innerHTML = `
-    <div class="loading-modal-content">
-      <div class="loading-spinner"></div>
-      <p>${escapeHtml(message)}</p>
+    <div style="background: white; padding: 30px 40px; border-radius: 12px; text-align: center;">
+      <div style="width: 40px; height: 40px; border: 3px solid #e2e8f0; border-top: 3px solid #4361ee; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 15px auto;"></div>
+      <p style="margin: 0; color: #2d3748;">${escapeHtml(message || 'Processing...')}</p>
     </div>
   `;
   modal.style.display = 'flex';
+  
+  // Add keyframe animation if not exists
+  if (!document.querySelector('#loading-spinner-style')) {
+    const style = document.createElement('style');
+    style.id = 'loading-spinner-style';
+    style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+    document.head.appendChild(style);
+  }
 }
 
 function hideInventoryLoadingModal() {
-  var modal = document.getElementById('inventoryLoadingModal');
+  const modal = document.getElementById('inventoryLoadingModal');
   if (modal) modal.style.display = 'none';
-}
-
-// ============================================
-// PRINT REPORT FUNCTION
-// ============================================
-
-function printReport(tableId) {
-  // Get the active tab
-  var activeTab = document.querySelector('.tab-content.active');
-  if (activeTab) {
-    var tabId = activeTab.id;
-    
-    // Get report title
-    var reportTitle = '';
-    if (tabId === 'purchaseReport') reportTitle = 'INVENTORY PURCHASE REPORT';
-    else if (tabId === 'usageReport') reportTitle = 'INVENTORY USAGE REPORT';
-    else if (tabId === 'inventoryList') reportTitle = 'INVENTORY LIST REPORT';
-    
-    // Get date info
-    var dateInfo = '';
-    if (document.getElementById('purchaseFromDate') && document.getElementById('purchaseFromDate').value) {
-      var fromDate = document.getElementById('purchaseFromDate').value;
-      var toDate = document.getElementById('purchaseToDate').value;
-      if (fromDate && toDate) dateInfo = 'Period: ' + fromDate + ' to ' + toDate;
-    } else if (document.getElementById('usageFromDate') && document.getElementById('usageFromDate').value) {
-      var fromDate = document.getElementById('usageFromDate').value;
-      var toDate = document.getElementById('usageToDate').value;
-      if (fromDate && toDate) dateInfo = 'Period: ' + fromDate + ' to ' + toDate;
-    } else if (document.getElementById('inventoryToDate') && document.getElementById('inventoryToDate').value) {
-      dateInfo = 'As at: ' + document.getElementById('inventoryToDate').value;
-    }
-    
-    // Get the table
-    var tableWrapper = document.getElementById(tabId);
-    if (!tableWrapper) {
-      alert('Report data not found');
-      return;
-    }
-    
-    var originalTable = tableWrapper.querySelector('table');
-    if (!originalTable) {
-      alert('Table not found');
-      return;
-    }
-    
-    var tableClone = originalTable.cloneNode(true);
-    
-    // Remove action column if present
-    var headerCells = tableClone.querySelectorAll('thead tr th');
-    var lastHeader = headerCells[headerCells.length - 1];
-    if (lastHeader && lastHeader.textContent.includes('Action')) {
-      var headerRow = tableClone.querySelector('thead tr');
-      if (headerRow && headerRow.lastElementChild) {
-        headerRow.removeChild(headerRow.lastElementChild);
-      }
-      var bodyRows = tableClone.querySelectorAll('tbody tr');
-      for (var i = 0; i < bodyRows.length; i++) {
-        var row = bodyRows[i];
-        if (row.lastElementChild && !row.classList.contains('total-row')) {
-          row.removeChild(row.lastElementChild);
-        }
-      }
-    }
-    
-    var dateTime = new Date();
-    var printDate = dateTime.toLocaleDateString();
-    var printTime = dateTime.toLocaleTimeString();
-    
-    var printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${reportTitle}</title>
-        <meta charset="UTF-8">
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            padding: 15mm;
-            font-size: 11px;
-            color: #2d3748;
-          }
-          .print-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4361ee;
-            padding-bottom: 12px;
-          }
-          .print-header h1 { font-size: 18px; margin-bottom: 5px; }
-          .print-header .date-info { font-size: 10px; color: #6c757d; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-          th {
-            background: #f7fafc;
-            padding: 8px 6px;
-            border: 1px solid #cbd5e0;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-          }
-          td { padding: 6px; border: 1px solid #e2e8f0; font-size: 10px; text-align: center; }
-          .total-row { background: #e8f8f3; font-weight: 600; }
-          @media print {
-            body { padding: 10mm; }
-            th, td { page-break-inside: avoid; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="print-header">
-          <h1>${reportTitle}</h1>
-          <div class="date-info">${dateInfo}</div>
-          <div class="date-info">Printed on: ${printDate} at ${printTime}</div>
-        </div>
-        ${tableClone.outerHTML}
-      </body>
-      </html>
-    `;
-
-    var printWindow = window.open('', '_blank');
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    setTimeout(function() { printWindow.close(); }, 1000);
-  }
 }
 
 // ============================================
@@ -824,5 +689,3 @@ window.openUsageModal = openUsageModal;
 window.closeUsageModal = closeUsageModal;
 window.submitUsageRecord = submitUsageRecord;
 window.removeInventoryItem = removeInventoryItem;
-window.closeInventoryModal = closeInventoryModal;
-window.printReport = printReport;
