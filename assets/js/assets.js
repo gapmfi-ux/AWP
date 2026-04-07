@@ -381,7 +381,7 @@ function renderDetailedRegisterTable(data) {
 }
 
 // ============================================
-// SUMMARY REGISTER
+// SUMMARY REGISTER (FIXED - Uses Backend Report)
 // ============================================
 
 function loadSummaryRegister() {
@@ -395,11 +395,11 @@ function loadSummaryRegister() {
     return;
   }
 
-  callGAS('getDetailedRegister', {})
+  // Use the backend report function for consistent calculations
+  callGAS('getFixedAssetsSummaryReport', { toDate: summaryToDate })
     .then(response => {
       if (response && !response.error) {
-        allDetailedAssets = response;
-        renderSummaryTable();
+        renderSummaryRegisterFromReport(response);
       } else {
         showAssetRegisterEmptyState('summaryDetailsBody', 'Error loading summary register', 9);
       }
@@ -422,15 +422,16 @@ function recalculateSummaryRegister() {
   summaryFromDate = fromDateInput;
   summaryToDate = toDateInput;
   
-  // Auto-save accumulated depreciation as at TO date
-  showAssetRegisterLoadingModal('Updating records as at ' + formatDateForDisplay(new Date(summaryToDate)) + '...');
+  showAssetRegisterLoadingModal('Recalculating summary register as at ' + formatDateForDisplay(new Date(summaryToDate)) + '...');
   
+  // Update brought forward depreciation as at TO date
   callGAS('updateAllAccumulatedDepreciation', { 
     asOfDate: summaryToDate 
   })
   .then(response => {
     if (response && !response.error) {
-      return callGAS('getDetailedRegister', {});
+      // Now generate the summary report
+      return callGAS('getFixedAssetsSummaryReport', { toDate: summaryToDate });
     } else {
       throw new Error(response?.error || 'Failed to update');
     }
@@ -438,260 +439,123 @@ function recalculateSummaryRegister() {
   .then(response => {
     hideAssetRegisterLoadingModal();
     if (response && !response.error) {
-      allDetailedAssets = response;
-      renderSummaryTable();
-      showAssetMessage('✓ Records updated as at ' + formatDateForDisplay(new Date(summaryToDate)), 'success');
+      renderSummaryRegisterFromReport(response);
+      showAssetMessage('✓ Summary Register recalculated as at ' + formatDateForDisplay(new Date(summaryToDate)), 'success');
       setTimeout(() => closeAssetModal(), 1500);
+    } else {
+      throw new Error(response?.error || 'Failed to generate report');
     }
   })
   .catch(error => {
     hideAssetRegisterLoadingModal();
     console.error('Error:', error);
-    showAssetMessage('Error updating records: ' + (error.message || error), 'error');
-    // Still try to render summary with existing data
-    renderSummaryTable();
+    showAssetMessage('Error: ' + (error.message || error), 'error');
   });
 }
 
-function renderSummaryTable() {
+/**
+ * Render Summary Register using backend report data
+ * Maintains consistent calculations with Report tab
+ */
+function renderSummaryRegisterFromReport(report) {
   const tbody = document.getElementById('summaryDetailsBody');
   if (!tbody) return;
-  
-  if (!allDetailedAssets || allDetailedAssets.length === 0) {
-    showAssetRegisterEmptyState('summaryDetailsBody', 'No assets found', 9);
+
+  if (!report.summaryByType || Object.keys(report.summaryByType).length === 0) {
+    showAssetRegisterEmptyState('summaryDetailsBody', 'No assets found for the selected period', 9);
     return;
   }
 
-  // Parse dates
-  const fromDate = new Date(summaryFromDate);
-  const toDate = new Date(summaryToDate);
-  const fromYear = fromDate.getFullYear();
-  const janFirstOfFromYear = new Date(fromYear, 0, 1); // January 1st of FROM year
-  
-  // Format dates for display
-  const janFirstDisplay = formatDateDisplay(janFirstOfFromYear);
-  const toDateDisplay = formatDateDisplay(toDate);
-  const monthDisplay = formatMonthDisplay(toDate);
+  const summaryByType = report.summaryByType;
+  const total = report.totalSummary;
 
-  // Initialize summary data by asset type
-  let summaryData = {};
-  ASSET_TYPES.forEach(type => {
-    summaryData[type] = {
-      costAtJan1: 0,
-      additionsJanToTo: 0,
-      costAtTo: 0,
-      accDepAtJan1: 0,
-      chargeJanToTo: 0,
-      accDepAtTo: 0,
-      nbvAtTo: 0,
-      chargeForMonth: 0
-    };
-  });
-
-  // Process each asset
-  allDetailedAssets.forEach(asset => {
-    const assetType = asset.type;
-    // Skip if asset type not in our list
-    if (!summaryData[assetType]) return;
-    
-    // Skip disposed assets
-    if (asset.status === 'Disposed') return;
-
-    const purchaseDate = new Date(asset.purchaseDate);
-    const cost = parseFloat(asset.cost) || 0;
-    const annualCharge = parseFloat(asset.annualCharge) || 0;
-    const monthlyCharge = annualCharge / 12;
-    const lifeSpanMonths = getAssetLifeSpanMonths(assetType);
-
-    // ========== COST CALCULATIONS ==========
-    
-    // COST AS AT 1st January of FROM year
-    if (purchaseDate <= janFirstOfFromYear) {
-      summaryData[assetType].costAtJan1 += cost;
-    }
-
-    // ADDITIONS (Jan 1 to TO date)
-    if (purchaseDate > janFirstOfFromYear && purchaseDate <= toDate) {
-      summaryData[assetType].additionsJanToTo += cost;
-    }
-
-    // COST AS AT TO date
-    if (purchaseDate <= toDate) {
-      summaryData[assetType].costAtTo += cost;
-    }
-
-    // ========== DEPRECIATION CALCULATIONS (All recalculated as at TO date) ==========
-    
-    // ACCUMULATED DEPRECIATION at Jan 1
-    if (purchaseDate <= janFirstOfFromYear) {
-      const monthsUntilJan1 = calculateMonthsBetween(purchaseDate, janFirstOfFromYear);
-      const actualMonths = Math.min(monthsUntilJan1, lifeSpanMonths);
-      summaryData[assetType].accDepAtJan1 += monthlyCharge * Math.max(0, actualMonths);
-    }
-
-    // CHARGE FOR YEAR/PERIOD (Jan 1 to TO date)
-    if (purchaseDate <= toDate) {
-      let chargeStartDate = purchaseDate;
-      if (chargeStartDate < janFirstOfFromYear) {
-        chargeStartDate = janFirstOfFromYear;
-      }
-      const monthsJanToTo = calculateMonthsBetween(chargeStartDate, toDate);
-      
-      // Calculate remaining life span
-      const monthsSincePurchase = calculateMonthsBetween(purchaseDate, toDate);
-      const remainingMonths = Math.max(0, lifeSpanMonths - monthsSincePurchase + monthsJanToTo);
-      const actualMonths = Math.min(monthsJanToTo, remainingMonths);
-      
-      summaryData[assetType].chargeJanToTo += monthlyCharge * Math.max(0, actualMonths);
-    }
-
-    // ACCUMULATED DEPRECIATION at TO date (RECALCULATED from purchase date to TO date)
-    if (purchaseDate <= toDate) {
-      // Calculate total months from purchase date to TO date
-      const monthsUntilTo = calculateMonthsBetween(purchaseDate, toDate);
-      // Limit by asset's life span
-      const actualMonths = Math.min(monthsUntilTo, lifeSpanMonths);
-      // Calculate accumulated depreciation as at TO date
-      const accumulatedDepToDate = monthlyCharge * Math.max(0, actualMonths);
-      summaryData[assetType].accDepAtTo += accumulatedDepToDate;
-    }
-
-    // NET BOOK VALUE at TO date (Cost - Recalculated Accumulated Depreciation)
-    if (purchaseDate <= toDate) {
-      const monthsUntilTo = calculateMonthsBetween(purchaseDate, toDate);
-      const actualMonths = Math.min(monthsUntilTo, lifeSpanMonths);
-      const accumulatedDep = monthlyCharge * Math.max(0, actualMonths);
-      const nbv = Math.max(0, cost - accumulatedDep);
-      summaryData[assetType].nbvAtTo += nbv;
-    }
-
-    // CHARGE FOR THE MONTH (month of TO date only)
-    const toDateMonth = toDate.getMonth();
-    const toDateYear = toDate.getFullYear();
-    const monthStartDate = new Date(toDateYear, toDateMonth, 1);
-    const monthEndDate = new Date(toDateYear, toDateMonth + 1, 0);
-    
-    // Check if asset was active during the TO date's month
-    if (purchaseDate <= monthEndDate) {
-      let chargeStartDate = purchaseDate;
-      if (chargeStartDate < monthStartDate) {
-        chargeStartDate = monthStartDate;
-      }
-      
-      // Only charge if start date is within the month
-      if (chargeStartDate <= monthEndDate) {
-        // Calculate days in month for precise proration
-        const daysInMonth = monthEndDate.getDate();
-        let daysToCharge = daysInMonth;
-        
-        if (chargeStartDate > monthStartDate) {
-          daysToCharge = monthEndDate.getDate() - chargeStartDate.getDate() + 1;
-        }
-        
-        // Calculate prorated monthly charge based on days
-        const dailyCharge = monthlyCharge / daysInMonth;
-        let proratedCharge = dailyCharge * daysToCharge;
-        
-        // Check if asset has reached end of life
-        const monthsSincePurchase = calculateMonthsBetween(purchaseDate, monthEndDate);
-        if (monthsSincePurchase > lifeSpanMonths) {
-          proratedCharge = 0;
-        }
-        
-        summaryData[assetType].chargeForMonth += proratedCharge;
-      }
-    }
-  });
-
-  // Round all values to 2 decimal places
-  for (let type in summaryData) {
-    for (let key in summaryData[type]) {
-      summaryData[type][key] = Math.round(summaryData[type][key] * 100) / 100;
-    }
-  }
-
-  // Build HTML
   let html = '';
 
-  // Row 1: COST AS AT Jan 1
+  // ===== COST SECTION =====
+  
+  // Row 1: Cost As At Year Start (1-Jan)
   html += `<tr>
     <td class="details-col">Cost As At</td>
-    <td class="date-col">${janFirstDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].costAtJan1)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].costAtJan1, 0))}</td>
-   </tr>`;
+    <td class="date-col">${report.yearStart}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.costAtYearStart || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.costAtYearStart)}</td>
+  </tr>`;
 
-  // Row 2: ADDITIONS
+  // Row 2: Additions During Period
   html += `<tr>
     <td class="details-col">Additions</td>
-    <td class="date-col"></td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].additionsJanToTo)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].additionsJanToTo, 0))}</td>
-   </tr>`;
+    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(summaryToDate))}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.additionsDuringPeriod || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.additionsDuringPeriod)}</td>
+  </tr>`;
 
-  // Row 3: COST AS AT TO date - SPECIAL HIGHLIGHT
+  // Row 3: Cost As At Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
     <td class="details-col">Cost As At</td>
-    <td class="date-col">${toDateDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].costAtTo)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].costAtTo, 0))}</td>
-   </tr>`;
+    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.costAtReportDate || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.costAtReportDate)}</td>
+  </tr>`;
 
-  // Row 4: ACCUMULATED DEPRECIATION at Jan 1
+  // ===== DEPRECIATION SECTION =====
+
+  // Row 4: Accumulated Depreciation at Year Start
   html += `<tr>
     <td class="details-col">Accumulated Depreciation</td>
-    <td class="date-col">${janFirstDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].accDepAtJan1)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].accDepAtJan1, 0))}</td>
-   </tr>`;
+    <td class="date-col">${report.yearStart}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.depAtYearStart || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.depAtYearStart)}</td>
+  </tr>`;
 
-  // Row 5: CHARGE FOR THE YEAR/PERIOD
+  // Row 5: Charge For Period
   html += `<tr>
     <td class="details-col">Charge For The Year(Period)</td>
-    <td class="date-col"></td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].chargeJanToTo)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].chargeJanToTo, 0))}</td>
-   </tr>`;
+    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(summaryToDate))}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.chargeForPeriod || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.chargeForPeriod)}</td>
+  </tr>`;
 
-  // Row 6: ACCUMULATED DEPRECIATION at TO date - RECALCULATED
+  // Row 6: Accumulated Depreciation at Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
     <td class="details-col">Accumulated Depreciation</td>
-    <td class="date-col">${toDateDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].accDepAtTo)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].accDepAtTo, 0))}</td>
-   </tr>`;
+    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.depAtReportDate || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.depAtReportDate)}</td>
+  </tr>`;
 
-  // Row 7: NET BOOK VALUE - RECALCULATED based on new accumulated depreciation
+  // ===== NET BOOK VALUE SECTION =====
+
+  // Row 7: Net Book Value at Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
     <td class="details-col">Net Book Value</td>
-    <td class="date-col">${toDateDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].nbvAtTo)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].nbvAtTo, 0))}</td>
-   </tr>`;
+    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.netBookValue || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.netBookValue)}</td>
+  </tr>`;
 
-  // Row 8: CHARGE FOR THE MONTH - month of TO date only
+  // ===== MONTHLY CHARGE SECTION =====
+
+  // Row 8: Charge For The Month (Green Highlight)
+  const monthYear = getMonthYearDisplay(new Date(summaryToDate));
   html += `<tr class="highlight-row green-row">
     <td class="details-col">Charge For The Month</td>
-    <td class="date-col">${monthDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].chargeForMonth)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].chargeForMonth, 0))}</td>
-   </tr>`;
+    <td class="date-col">${monthYear}</td>
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.chargeForMonth || 0)}</td>`).join('')}
+    <td class="total-col">${formatCurrency(total.chargeForMonth)}</td>
+  </tr>`;
 
   tbody.innerHTML = html;
 }
 
-function getAssetLifeSpanMonths(assetType) {
-  const lifeSpans = {
-    'Computers & Accessories': 36, // 3 years * 12
-    'Furniture and Fixtures': 36,
-    'Office Equipment': 36,
-    'Software': 36,
-    'Fittings': 60, // 5 years * 12
-    'Motor Vehicle': 60
-  };
-  return lifeSpans[assetType] || 36;
+/**
+ * Get month-year display in format MMM-YYYY
+ */
+function getMonthYearDisplay(date) {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const month = months[date.getMonth()];
+  const year = date.getFullYear();
+  return month + '-' + year;
 }
-
 // ============================================
 // ACTION DROPDOWN
 // ============================================
