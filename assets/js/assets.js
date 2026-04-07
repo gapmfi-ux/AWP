@@ -409,110 +409,316 @@ function loadSummaryRegister() {
 }
 
 
-/**
- * Render Summary Register using backend report data
- * Maintains consistent calculations with Report tab
- */
-function renderSummaryRegisterFromReport(report) {
-  const tbody = document.getElementById('summaryDetailsBody');
-  if (!tbody) return;
+// Add this corrected function to your FixedAssets.js file (server_js)
 
-  if (!report.summaryByType || Object.keys(report.summaryByType).length === 0) {
-    showAssetRegisterEmptyState('summaryDetailsBody', 'No assets found for the selected period', 9);
-    return;
+// ============================================================================
+// GET FIXED ASSETS SUMMARY REPORT - CORRECTED VERSION
+// ============================================================================
+function getFixedAssetsSummaryReport(toDate) {
+  try {
+    Logger.log('getFixedAssetsSummaryReport called with toDate: ' + toDate);
+    
+    // If no date provided, use today
+    if (!toDate) {
+      toDate = getTodayString();
+    }
+    
+    const reportDate = new Date(toDate);
+    reportDate.setHours(0, 0, 0, 0);
+    
+    // For year start (January 1st of the same year)
+    const yearStart = new Date(reportDate.getFullYear(), 0, 1);
+    const yearStartStr = Utilities.formatDate(yearStart, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    
+    // For accumulated depreciation at start (end of previous month)
+    const prevMonthEnd = new Date(reportDate.getFullYear(), reportDate.getMonth(), 0);
+    const prevMonthEndStr = Utilities.formatDate(prevMonthEnd, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+    
+    Logger.log('Report Date: ' + toDate);
+    Logger.log('Year Start: ' + yearStartStr);
+    Logger.log('Previous Month End: ' + prevMonthEndStr);
+    
+    // Get all assets
+    const ss = SpreadsheetApp.openById(ASSET_CONFIG.SHEET_ID);
+    const sheet = ss.getSheetByName(ASSET_CONFIG.SHEET_NAME);
+    const data = sheet.getDataRange().getValues();
+    const header = data[0];
+    
+    // Find column indices
+    const nameIdx = header.indexOf(ASSET_CONFIG.COLUMNS.NAME_OF_ASSET);
+    const typeIdx = header.indexOf(ASSET_CONFIG.COLUMNS.TYPE_OF_ASSET);
+    const purchaseDateIdx = header.indexOf(ASSET_CONFIG.COLUMNS.DATE_OF_PURCHASE);
+    const endOfLifeIdx = header.indexOf(ASSET_CONFIG.COLUMNS.DATE_OF_END_OF_LIFE);
+    const costIdx = header.indexOf(ASSET_CONFIG.COLUMNS.COST_OF_ASSET);
+    const monthlyDepIdx = header.indexOf(ASSET_CONFIG.COLUMNS.MONTHLY_DEPRECIATION);
+    const annualChargeIdx = header.indexOf(ASSET_CONFIG.COLUMNS.ANNUAL_CHARGE);
+    const statusIdx = header.indexOf(ASSET_CONFIG.COLUMNS.STATUS);
+    
+    // Asset types for summary (in correct order)
+    const assetTypes = [
+      'Computers & Accessories',
+      'Furniture and Fixtures',
+      'Fittings',
+      'Office Equipment',
+      'Motor Vehicle',
+      'Software'
+    ];
+    
+    // Initialize summary by type
+    const summaryByType = {};
+    assetTypes.forEach(type => {
+      summaryByType[type] = {
+        costAtYearStart: 0,
+        additionsDuringPeriod: 0,
+        costAtReportDate: 0,
+        depAtYearStart: 0,        // Accumulated depreciation as at Jan 1
+        depAtPrevMonthEnd: 0,      // Accumulated depreciation as at end of previous month
+        chargeForPeriod: 0,        // Charge from Jan 1 to report date
+        chargeForMonth: 0,         // Charge for the month of report date
+        depAtReportDate: 0,        // Accumulated depreciation as at report date
+        netBookValue: 0
+      };
+    });
+    
+    // Total summary
+    const totalSummary = {
+      costAtYearStart: 0,
+      additionsDuringPeriod: 0,
+      costAtReportDate: 0,
+      depAtYearStart: 0,
+      depAtPrevMonthEnd: 0,
+      chargeForPeriod: 0,
+      chargeForMonth: 0,
+      depAtReportDate: 0,
+      netBookValue: 0
+    };
+    
+    // Process each asset
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const assetName = row[nameIdx];
+      
+      if (!assetName || String(assetName).trim() === '') {
+        continue;
+      }
+      
+      const assetType = String(row[typeIdx]).trim();
+      const purchaseDateRaw = row[purchaseDateIdx];
+      const endOfLifeRaw = row[endOfLifeIdx];
+      const cost = parseFloat(row[costIdx]) || 0;
+      const monthlyDepreciation = parseFloat(row[monthlyDepIdx]) || 0;
+      const annualDepreciation = parseFloat(row[annualChargeIdx]) || 0;
+      const status = String(row[statusIdx]).trim();
+      
+      // Skip disposed assets
+      if (status === 'Disposed') {
+        continue;
+      }
+      
+      // Parse purchase date
+      let purchaseDate;
+      if (purchaseDateRaw instanceof Date) {
+        purchaseDate = purchaseDateRaw;
+      } else if (typeof purchaseDateRaw === 'string') {
+        purchaseDate = new Date(purchaseDateRaw);
+      } else {
+        continue;
+      }
+      
+      if (isNaN(purchaseDate.getTime())) {
+        continue;
+      }
+      
+      // Parse end of life date
+      let endOfLifeDate = null;
+      if (endOfLifeRaw) {
+        if (endOfLifeRaw instanceof Date) {
+          endOfLifeDate = endOfLifeRaw;
+        } else if (typeof endOfLifeRaw === 'string') {
+          endOfLifeDate = new Date(endOfLifeRaw);
+        }
+      }
+      
+      // Set all dates to start of day for accurate comparison
+      purchaseDate.setHours(0, 0, 0, 0);
+      if (endOfLifeDate) endOfLifeDate.setHours(0, 0, 0, 0);
+      
+      // Only include assets purchased on or before report date
+      if (purchaseDate > reportDate) {
+        continue;
+      }
+      
+      // Check if asset's life span ended before report date
+      const isFullyDepreciated = endOfLifeDate && endOfLifeDate < reportDate;
+      
+      // ===== COST CALCULATIONS =====
+      
+      // 1. Cost at Year Start (assets purchased before Jan 1)
+      if (purchaseDate < yearStart) {
+        summaryByType[assetType].costAtYearStart += cost;
+        totalSummary.costAtYearStart += cost;
+      }
+      
+      // 2. Additions during period (assets purchased from Jan 1 to report date)
+      if (purchaseDate >= yearStart && purchaseDate <= reportDate) {
+        summaryByType[assetType].additionsDuringPeriod += cost;
+        totalSummary.additionsDuringPeriod += cost;
+      }
+      
+      // 3. Cost at Report Date (all assets purchased on or before report date)
+      summaryByType[assetType].costAtReportDate += cost;
+      totalSummary.costAtReportDate += cost;
+      
+      // ===== DEPRECIATION CALCULATIONS =====
+      // Only calculate depreciation if asset hasn't reached end of life before the respective dates
+      
+      // Helper function to calculate depreciation up to a specific date
+      function calculateDepreciationUpTo(date, purchaseDate, monthlyDep, cost, endOfLifeDate) {
+        if (!date || purchaseDate > date) return 0;
+        
+        // If asset has end of life date and it's before the target date, use end of life date
+        const effectiveDate = (endOfLifeDate && endOfLifeDate < date) ? endOfLifeDate : date;
+        
+        // Calculate months between purchase and effective date
+        let monthsDiff = (effectiveDate.getFullYear() - purchaseDate.getFullYear()) * 12;
+        monthsDiff += effectiveDate.getMonth() - purchaseDate.getMonth();
+        
+        // Adjust for partial month - if day of month is less than purchase day
+        if (effectiveDate.getDate() < purchaseDate.getDate()) {
+          monthsDiff--;
+        }
+        
+        monthsDiff = Math.max(0, monthsDiff);
+        
+        // Calculate depreciation
+        let depreciation = monthsDiff * monthlyDep;
+        return Math.min(depreciation, cost);
+      }
+      
+      // 4. Accumulated Depreciation at Year Start (Jan 1)
+      // Use Jan 1 as the target date, but if asset was purchased after Jan 1, depreciation is 0
+      let depAtYearStart = 0;
+      if (purchaseDate < yearStart) {
+        depAtYearStart = calculateDepreciationUpTo(yearStart, purchaseDate, monthlyDepreciation, cost, endOfLifeDate);
+      }
+      summaryByType[assetType].depAtYearStart += depAtYearStart;
+      totalSummary.depAtYearStart += depAtYearStart;
+      
+      // 5. Accumulated Depreciation at Previous Month End
+      // Used for calculating charge for period correctly
+      let depAtPrevMonthEnd = 0;
+      if (purchaseDate <= prevMonthEnd) {
+        depAtPrevMonthEnd = calculateDepreciationUpTo(prevMonthEnd, purchaseDate, monthlyDepreciation, cost, endOfLifeDate);
+      }
+      summaryByType[assetType].depAtPrevMonthEnd += depAtPrevMonthEnd;
+      totalSummary.depAtPrevMonthEnd += depAtPrevMonthEnd;
+      
+      // 6. Accumulated Depreciation at Report Date
+      let depAtReportDate = 0;
+      if (purchaseDate <= reportDate) {
+        depAtReportDate = calculateDepreciationUpTo(reportDate, purchaseDate, monthlyDepreciation, cost, endOfLifeDate);
+      }
+      summaryByType[assetType].depAtReportDate += depAtReportDate;
+      totalSummary.depAtReportDate += depAtReportDate;
+      
+      // 7. Charge for Period (Jan 1 to Report Date)
+      // = Depreciation at Report Date - Depreciation at Year Start
+      let chargeForPeriod = depAtReportDate - depAtYearStart;
+      chargeForPeriod = Math.max(0, chargeForPeriod);
+      summaryByType[assetType].chargeForPeriod += chargeForPeriod;
+      totalSummary.chargeForPeriod += chargeForPeriod;
+      
+      // 8. Charge for Month (the month of the report date)
+      // = Depreciation at Report Date - Depreciation at Previous Month End
+      let chargeForMonth = depAtReportDate - depAtPrevMonthEnd;
+      chargeForMonth = Math.max(0, chargeForMonth);
+      summaryByType[assetType].chargeForMonth += chargeForMonth;
+      totalSummary.chargeForMonth += chargeForMonth;
+      
+      // 9. Net Book Value at Report Date
+      let netBookValue = cost - depAtReportDate;
+      netBookValue = Math.max(0, netBookValue);
+      summaryByType[assetType].netBookValue += netBookValue;
+      totalSummary.netBookValue += netBookValue;
+      
+      // Log for debugging
+      if (assetType === 'Computers & Accessories') {
+        Logger.log('Asset: ' + assetName);
+        Logger.log('  Purchase Date: ' + purchaseDate);
+        Logger.log('  End of Life: ' + (endOfLifeDate || 'N/A'));
+        Logger.log('  Cost: ' + cost);
+        Logger.log('  Monthly Dep: ' + monthlyDepreciation);
+        Logger.log('  Dep at Year Start: ' + depAtYearStart);
+        Logger.log('  Dep at Prev Month End: ' + depAtPrevMonthEnd);
+        Logger.log('  Dep at Report Date: ' + depAtReportDate);
+        Logger.log('  Charge for Period: ' + chargeForPeriod);
+        Logger.log('  Charge for Month: ' + chargeForMonth);
+      }
+    }
+    
+    // Round all values to 2 decimal places
+    assetTypes.forEach(type => {
+      Object.keys(summaryByType[type]).forEach(key => {
+        summaryByType[type][key] = Math.round(summaryByType[type][key] * 100) / 100;
+      });
+    });
+    
+    Object.keys(totalSummary).forEach(key => {
+      totalSummary[key] = Math.round(totalSummary[key] * 100) / 100;
+    });
+    
+    Logger.log('Summary Report Complete');
+    Logger.log('Total Cost at Report Date: ' + totalSummary.costAtReportDate);
+    Logger.log('Total Dep at Report Date: ' + totalSummary.depAtReportDate);
+    Logger.log('Total NBV: ' + totalSummary.netBookValue);
+    Logger.log('Total Charge for Period: ' + totalSummary.chargeForPeriod);
+    Logger.log('Total Charge for Month: ' + totalSummary.chargeForMonth);
+    
+    return {
+      success: true,
+      summaryByType: summaryByType,
+      totalSummary: totalSummary,
+      yearStart: yearStartStr,
+      prevMonthEnd: prevMonthEndStr,
+      reportDate: toDate
+    };
+    
+  } catch (error) {
+    Logger.log('Error in getFixedAssetsSummaryReport: ' + error.message);
+    Logger.log('Stack: ' + error.stack);
+    return { error: error.message };
   }
-
-  const summaryByType = report.summaryByType;
-  const total = report.totalSummary;
-  
-  // Asset types in correct order
-  const assetTypes = [
-    'Computers & Accessories',
-    'Furniture and Fixtures',
-    'Fittings',
-    'Office Equipment',
-    'Motor Vehicle',
-    'Software'
-  ];
-
-  let html = '';
-
-  // ===== COST SECTION =====
-  
-  // Row 1: Cost As At Year Start (1-Jan)
-  html += `<tr>
-    <td class="details-col">Cost As At</td>
-    <td class="date-col">${report.yearStart}</td>
-    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.costAtYearStart || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.costAtYearStart)}</td>
-   </tr>`;
-
-  // Row 2: Additions During Period
-  html += `<tr>
-    <td class="details-col">Additions</td>
-    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(report.reportDate))}</td>
-    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.additionsDuringPeriod || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.additionsDuringPeriod)}</td>
-   </tr>`;
-
-  // Row 3: Cost As At Report Date (SPECIAL HIGHLIGHT)
-  html += `<tr class="highlight-row special-highlight">
-    <td class="details-col"><strong>Cost As At</strong></td>
-    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
-    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.costAtReportDate || 0)}</strong></td>`).join('')}
-    <td class="total-col"><strong>${formatCurrency(total.costAtReportDate)}</strong></td>
-   </tr>`;
-
-  // ===== DEPRECIATION SECTION =====
-
-  // Row 4: Accumulated Depreciation at Year Start
-  html += `<tr>
-    <td class="details-col">Accumulated Depreciation</td>
-    <td class="date-col">${report.yearStart}</td>
-    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.depAtYearStart || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.depAtYearStart)}</td>
-   </tr>`;
-
-  // Row 5: Charge For The Year(Period)
-  html += `<tr>
-    <td class="details-col">Charge For The Year(Period)</td>
-    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(report.reportDate))}</td>
-    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.chargeForPeriod || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.chargeForPeriod)}</td>
-   </tr>`;
-
-  // Row 6: Accumulated Depreciation at Report Date (SPECIAL HIGHLIGHT)
-  html += `<tr class="highlight-row special-highlight">
-    <td class="details-col"><strong>Accumulated Depreciation</strong></td>
-    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
-    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.depAtReportDate || 0)}</strong></td>`).join('')}
-    <td class="total-col"><strong>${formatCurrency(total.depAtReportDate)}</strong></td>
-   </tr>`;
-
-  // ===== NET BOOK VALUE SECTION =====
-
-  // Row 7: Net Book Value at Report Date (SPECIAL HIGHLIGHT)
-  html += `<tr class="highlight-row special-highlight">
-    <td class="details-col"><strong>Net Book Value</strong></td>
-    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
-    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.netBookValue || 0)}</strong></td>`).join('')}
-    <td class="total-col"><strong>${formatCurrency(total.netBookValue)}</strong></td>
-   </tr>`;
-
-  // ===== MONTHLY CHARGE SECTION =====
-
-  // Row 8: Charge For The Month (Green Highlight)
-  const monthYear = getMonthYearDisplay(new Date(report.reportDate));
-  html += `<tr class="highlight-row green-row">
-    <td class="details-col">Charge For The Month</td>
-    <td class="date-col">${monthYear}</td>
-    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.chargeForMonth || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.chargeForMonth)}</td>
-   </tr>`;
-
-  tbody.innerHTML = html;
 }
 
+// Helper function to calculate months between two dates (used by getFixedAssetsSummaryReport)
+function calculateMonthsBetweenFixed(startDate, endDate) {
+  try {
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // If start date is after end date, return 0
+    if (start > end) return 0;
+    
+    let months = (end.getFullYear() - start.getFullYear()) * 12;
+    months += end.getMonth() - start.getMonth();
+    
+    // Adjust for partial month - if end day is before start day, subtract 1
+    if (end.getDate() < start.getDate()) {
+      months--;
+    }
+    
+    return Math.max(0, months);
+  } catch (e) {
+    Logger.log('Error calculating months between: ' + e.message);
+    return 0;
+  }
+}
+
+// Make sure getTodayString exists
+function getTodayString() {
+  const today = new Date();
+  return Utilities.formatDate(today, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+}
 // Fix loadSummaryRegister function
 function loadSummaryRegister() {
   showAssetRegisterLoadingSpinner('summaryDetailsBody');
