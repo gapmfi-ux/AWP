@@ -11,7 +11,7 @@ let summaryToDate = null;
 
 const ASSET_TYPES = [
   'Computers & Accessories',
-  'Furniture And Fixtures',
+  'Furniture and Fixtures',
   'Fittings',
   'Office Equipment',
   'Motor Vehicle',
@@ -530,7 +530,7 @@ function renderSummaryTable() {
   html += `<tr>
     <td class="details-col">Cost As At</td>
     <td class="date-col">${janFirstDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td class="${type === 'Furniture And Fixtures' ? 'furniture-col' : ''}">${formatCurrency(summaryData[type].costAtJan1)}</td>`).join('')}
+    ${ASSET_TYPES.map(type => `<td class="${type === 'Furniture and Fixtures' ? 'furniture-col' : ''}">${formatCurrency(summaryData[type].costAtJan1)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].costAtJan1, 0))}</td>
   </tr>`;
 
@@ -596,7 +596,7 @@ function renderSummaryTable() {
 function getAssetLifeSpanMonths(assetType) {
   const lifeSpans = {
     'Computers & Accessories': 36, // 3 years * 12
-    'Furniture And Fixtures': 36,
+    'Furniture and Fixtures': 36,
     'Office Equipment': 36,
     'Software': 36,
     'Fittings': 60, // 5 years * 12
