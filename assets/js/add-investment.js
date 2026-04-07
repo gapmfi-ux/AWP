@@ -185,11 +185,7 @@ function calculateMaturityAmount() {
 }
 
 // ============================================
-// SUBMIT NEW INVESTMENT - USING google.script.run
-// ============================================
-
-// ============================================
-// SUBMIT NEW INVESTMENT - USING google.script.run
+// SUBMIT NEW INVESTMENT - FIXED VERSION
 // ============================================
 
 function submitNewInvestment() {
@@ -265,7 +261,7 @@ function submitNewInvestment() {
 
   showInvestmentLoadingModal('Adding Investment...');
 
-  // Create data object - send as direct parameters, not nested
+  // Create data object - send as direct object, NOT nested
   const investmentData = {
     investmentType: investmentType.trim(),
     investmentCode: investmentCode.trim(),
@@ -279,8 +275,9 @@ function submitNewInvestment() {
     maturityAmount: parseFloat(maturityAmount)
   };
 
-  console.log('Submitting investment form data:', investmentData);
+  console.log('Submitting investment data:', investmentData);
 
+  // IMPORTANT: Send the object directly, not wrapped in another object
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Success response:', response);
@@ -299,7 +296,7 @@ function submitNewInvestment() {
       hideInvestmentLoadingModal();
       showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
     })
-    .addNewInvestment(investmentData);  // Send as object directly
+    .addNewInvestment(investmentData);  // Send as direct parameter
 }
 // ============================================
 // RESET FORM
