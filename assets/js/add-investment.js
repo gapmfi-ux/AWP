@@ -1,6 +1,6 @@
 /* ============================================
    ADD INVESTMENT MODULE JAVASCRIPT
-   Using google.script.run (same pattern as add-asset)
+   With Day Count Support
    ============================================ */
 
 // ============================================
@@ -8,7 +8,7 @@
 // ============================================
 
 function initInvestmentModule() {
-  console.log('Initializing Add Investment Module');
+  console.log('Initializing Add Investment Module with Day Count');
   
   const today = new Date().toISOString().split('T')[0];
   const dateField = document.getElementById('investmentDate');
@@ -25,6 +25,7 @@ function initInvestmentModule() {
   const durationField = document.getElementById('duration');
   const investmentDateField = document.getElementById('investmentDate');
   const maturityDateField = document.getElementById('maturityDate');
+  const dayCountField = document.getElementById('dayCount');
 
   if (amountField) {
     amountField.addEventListener('input', calculateMaturityAmount);
@@ -46,6 +47,14 @@ function initInvestmentModule() {
   }
   if (maturityDateField) {
     maturityDateField.addEventListener('change', calculateMaturityAmount);
+  }
+  if (dayCountField) {
+    dayCountField.addEventListener('input', calculateMaturityAmount);
+  }
+
+  // Set default day count
+  if (dayCountField && !dayCountField.value) {
+    dayCountField.value = '365';
   }
 
   // Close modal when clicking outside
@@ -93,6 +102,7 @@ function handleInvestmentTypeChange() {
 function handleBankChange() {
   const bankName = document.getElementById('bankName').value;
   const addNewFields = document.getElementById('addNewBankFields');
+  const dayCountField = document.getElementById('dayCount');
 
   if (bankName === 'add-new') {
     if (addNewFields) addNewFields.style.display = 'block';
@@ -100,6 +110,9 @@ function handleBankChange() {
     if (addNewFields) addNewFields.style.display = 'none';
     const newBankField = document.getElementById('newBankName');
     if (newBankField) newBankField.value = '';
+    
+    // You can optionally load bank-specific day count here
+    // loadBankDayCount(bankName);
   }
 }
 
@@ -126,7 +139,7 @@ function generateInvestmentCode(investmentType) {
 }
 
 // ============================================
-// CALCULATIONS
+// CALCULATIONS WITH DAY COUNT
 // ============================================
 
 function calculateMaturityDate() {
@@ -160,12 +173,14 @@ function calculateMaturityAmount() {
   const amountField = document.getElementById('amount');
   const interestRateField = document.getElementById('interestRate');
   const durationField = document.getElementById('duration');
+  const dayCountField = document.getElementById('dayCount');
   
-  if (!amountField || !interestRateField || !durationField) return;
+  if (!amountField || !interestRateField || !durationField || !dayCountField) return;
   
   const amount = parseFloat(amountField.value) || 0;
   const interestRate = parseFloat(interestRateField.value) || 0;
   const duration = parseInt(durationField.value) || 0;
+  const dayCount = parseInt(dayCountField.value) || 365;
 
   const interestAmountField = document.getElementById('interestAmount');
   const maturityAmountField = document.getElementById('maturityAmount');
@@ -176,7 +191,9 @@ function calculateMaturityAmount() {
     return;
   }
 
-  const timeInYears = duration / 365;
+  // Interest = Principal * Rate * (Duration / DayCount)
+  // Rate is in percentage, so divide by 100
+  const timeInYears = duration / dayCount;
   const interestAmount = (amount * interestRate * timeInYears) / 100;
   const maturityAmount = amount + interestAmount;
 
@@ -185,7 +202,7 @@ function calculateMaturityAmount() {
 }
 
 // ============================================
-// SUBMIT NEW INVESTMENT - FIXED VERSION
+// SUBMIT NEW INVESTMENT - WITH DAY COUNT
 // ============================================
 
 function submitNewInvestment() {
@@ -197,8 +214,7 @@ function submitNewInvestment() {
   const duration = document.getElementById('duration').value;
   const investmentDate = document.getElementById('investmentDate').value;
   const maturityDate = document.getElementById('maturityDate').value;
-  const interestAmount = document.getElementById('interestAmount').value;
-  const maturityAmount = document.getElementById('maturityAmount').value;
+  const dayCount = document.getElementById('dayCount').value;
 
   // Validation
   if (!investmentType || investmentType === 'add-new') {
@@ -259,9 +275,15 @@ function submitNewInvestment() {
     return;
   }
 
+  // Calculate final amounts with day count
+  const dayCountValue = parseInt(dayCount) || 365;
+  const timeInYears = parseInt(duration) / dayCountValue;
+  const calculatedInterestAmount = (parseFloat(amount) * parseFloat(interestRate) * timeInYears) / 100;
+  const calculatedMaturityAmount = parseFloat(amount) + calculatedInterestAmount;
+
   showInvestmentLoadingModal('Adding Investment...');
 
-  // Create data object - send as direct object, NOT nested
+  // Create data object
   const investmentData = {
     investmentType: investmentType.trim(),
     investmentCode: investmentCode.trim(),
@@ -271,13 +293,13 @@ function submitNewInvestment() {
     duration: parseInt(duration),
     investmentDate: investmentDate,
     maturityDate: maturityDate,
-    interestAmount: parseFloat(interestAmount),
-    maturityAmount: parseFloat(maturityAmount)
+    interestAmount: calculatedInterestAmount,
+    maturityAmount: calculatedMaturityAmount,
+    dayCount: dayCountValue
   };
 
-  console.log('Submitting investment data:', investmentData);
+  console.log('Submitting investment data with day count:', investmentData);
 
-  // IMPORTANT: Send the object directly, not wrapped in another object
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Success response:', response);
@@ -296,8 +318,9 @@ function submitNewInvestment() {
       hideInvestmentLoadingModal();
       showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
     })
-    .addNewInvestment(investmentData);  // Send as direct parameter
+    .addNewInvestment(investmentData);
 }
+
 // ============================================
 // RESET FORM
 // ============================================
@@ -327,6 +350,9 @@ function resetInvestmentForm() {
   
   const bankField = document.getElementById('bankName');
   if (bankField) bankField.value = '';
+  
+  const dayCountField = document.getElementById('dayCount');
+  if (dayCountField) dayCountField.value = '365';
   
   const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
   if (addNewTypeFields) addNewTypeFields.style.display = 'none';
