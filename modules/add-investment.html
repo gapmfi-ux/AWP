@@ -24,7 +24,7 @@
     </div>
 
     <!-- Add New Investment Type Fields (Hidden by default) -->
-    <div id="addNewInvestmentTypeFields" style="display: none;">
+    <div id="addNewInvestmentTypeFields" class="toggle-fields" style="display: none;">
       <div class="form-group">
         <label for="newInvestmentType">New Investment Type:</label>
         <input type="text" id="newInvestmentType" name="newInvestmentType" placeholder="e.g., Savings Bond">
@@ -39,7 +39,7 @@
 
       <div class="form-group">
         <label for="bankName">Bank Name:</label>
-        <select id="bankName" name="bankName" required>
+        <select id="bankName" name="bankName" required onchange="handleBankChange()">
           <option value="">Select Bank</option>
           <option value="Fidelity">Fidelity</option>
           <option value="CBG">CBG</option>
@@ -50,11 +50,20 @@
       </div>
     </div>
 
-    <!-- Add New Bank Fields (Hidden by default) -->
-    <div id="addNewBankFields" style="display: none;">
+    <!-- Add New Bank Fields (Hidden by default - shows when add-new is selected) -->
+    <div id="addNewBankFields" class="toggle-fields" style="display: none;">
       <div class="form-group">
         <label for="newBankName">New Bank Name:</label>
         <input type="text" id="newBankName" name="newBankName" placeholder="e.g., Bank of Ghana">
+      </div>
+      <div class="form-group">
+        <label for="newBankDayCount">Day Count for this Bank:</label>
+        <select id="newBankDayCount" name="newBankDayCount">
+          <option value="365">365 Days (Actual/365)</option>
+          <option value="360">360 Days (Actual/360)</option>
+          <option value="364">364 Days (Treasury Bills)</option>
+        </select>
+        <small style="font-size: 10px; color: #718096;">This will be saved for future use</small>
       </div>
     </div>
 
@@ -73,9 +82,21 @@
     <div class="form-row-two">
       <div class="form-group">
         <label for="duration">Duration (Days):</label>
-        <input type="number" id="duration" name="duration" step="1" placeholder="0" required oninput="calculateMaturityDate()">
+        <input type="number" id="duration" name="duration" step="1" placeholder="0" required oninput="calculateMaturityDate(); calculateMaturityAmount();">
       </div>
 
+      <div class="form-group">
+        <label for="dayCount">Day Count Convention:</label>
+        <select id="dayCount" name="dayCount" onchange="calculateMaturityAmount()">
+          <option value="365">365 Days (Actual/365)</option>
+          <option value="360">360 Days (Actual/360)</option>
+          <option value="364">364 Days (Treasury Bills)</option>
+        </select>
+        <small style="font-size: 10px; color: #718096;">Auto-loads from bank selection</small>
+      </div>
+    </div>
+
+    <div class="form-row-two">
       <div class="form-group">
         <label for="maturityDate">Maturity Date:</label>
         <input type="date" id="maturityDate" name="maturityDate" required onchange="calculateMaturityAmount()">
@@ -192,13 +213,13 @@
     margin-bottom: 0;
   }
 
-  #addNewInvestmentTypeFields,
-  #addNewBankFields {
+  .toggle-fields {
     background: #f7fafc;
     padding: 10px;
     border-radius: 8px;
     border: 1px solid #e2e8f0;
     margin-bottom: 10px;
+    transition: all 0.3s ease;
   }
 
   .submit-btn {
