@@ -52,7 +52,15 @@ function initAssetRegisterModule() {
   summaryFromDate = today;
   summaryToDate = today;
   
-  loadDetailedRegister();
+  // Initial update to ensure all values are correct as of today
+  showAssetRegisterLoadingModal('Initializing asset register...');
+  callGAS('updateAllAccumulatedDepreciation', { asOfDate: today })
+    .then(() => loadDetailedRegister())
+    .catch(error => {
+      console.error('Initialization error:', error);
+      hideAssetRegisterLoadingModal();
+      loadDetailedRegister(); // Still try to load even if update fails
+    });
 
   window.addEventListener('click', function(event) {
     if (assetPortalOpen) {
@@ -215,6 +223,15 @@ function submitNewAsset() {
           document.getElementById('assetCode').value = '';
           document.getElementById('assetType').value = '';
           document.getElementById('depreciationInfo').style.display = 'none';
+          
+          // Refresh the register after adding new asset
+          if (currentAsOfDate) {
+            callGAS('updateAllAccumulatedDepreciation', { asOfDate: currentAsOfDate })
+              .then(() => loadDetailedRegister())
+              .catch(() => loadDetailedRegister());
+          } else {
+            loadDetailedRegister();
+          }
         }, 1500);
       } else {
         showAssetMessage('Error adding asset: ' + (response?.error || 'Unknown error'), 'error');
@@ -329,10 +346,9 @@ function renderDetailedRegisterTable(data) {
   }
 
   const rows = data.map(asset => {
+    // Use the values from the spreadsheet (already updated by updateAllAccumulatedDepreciation)
+    // Don't recalculate here - use the stored accumulated depreciation and net book value
     const monthlyDep = parseFloat(asset.annualCharge) / 12;
-    const monthsElapsed = calculateMonthsElapsed(asset.purchaseDate, currentAsOfDate);
-    const accumulatedDep = monthsElapsed * monthlyDep;
-    const netBookValue = Math.max(0, asset.cost - accumulatedDep);
     
     return `
       <tr>
@@ -344,8 +360,8 @@ function renderDetailedRegisterTable(data) {
         <td>${formatCurrency(asset.cost)}</td>
         <td>${formatCurrency(asset.annualCharge)}</td>
         <td>${formatCurrency(monthlyDep)}</td>
-        <td>${formatCurrency(accumulatedDep)}</td>
-        <td>${formatCurrency(netBookValue)}</td>
+        <td>${formatCurrency(asset.accumulatedDepreciation)}</td>
+        <td>${formatCurrency(asset.netBookValue)}</td>
         <td>
           <button class="action-btn" onclick="openAssetActionDropdown(event, '${escapeHtml(asset.name)}')">
             <i class="fas fa-ellipsis-v"></i> Action
@@ -472,7 +488,7 @@ function renderSummaryTable() {
     // Skip if asset type not in our list
     if (!summaryData[assetType]) return;
     
-    // Skip disposed assets if needed
+    // Skip disposed assets
     if (asset.status === 'Disposed') return;
 
     const purchaseDate = new Date(asset.purchaseDate);
@@ -588,9 +604,6 @@ function renderSummaryTable() {
     }
   }
 
-  // Verify Furniture And Fixtures has values (debugging)
-  console.log('Furniture And Fixtures summary:', summaryData['Furniture And Fixtures']);
-
   // Build HTML
   let html = '';
 
@@ -598,9 +611,9 @@ function renderSummaryTable() {
   html += `<tr>
     <td class="details-col">Cost As At</td>
     <td class="date-col">${janFirstDisplay}</td>
-    ${ASSET_TYPES.map(type => `<td class="${type === 'Furniture And Fixtures' ? 'furniture-col' : ''}">${formatCurrency(summaryData[type].costAtJan1)}</td>`).join('')}
+    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].costAtJan1)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].costAtJan1, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 2: ADDITIONS
   html += `<tr>
@@ -608,7 +621,7 @@ function renderSummaryTable() {
     <td class="date-col"></td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].additionsJanToTo)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].additionsJanToTo, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 3: COST AS AT TO date - SPECIAL HIGHLIGHT
   html += `<tr class="highlight-row special-highlight">
@@ -616,7 +629,7 @@ function renderSummaryTable() {
     <td class="date-col">${toDateDisplay}</td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].costAtTo)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].costAtTo, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 4: ACCUMULATED DEPRECIATION at Jan 1
   html += `<tr>
@@ -624,7 +637,7 @@ function renderSummaryTable() {
     <td class="date-col">${janFirstDisplay}</td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].accDepAtJan1)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].accDepAtJan1, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 5: CHARGE FOR THE YEAR/PERIOD
   html += `<tr>
@@ -632,7 +645,7 @@ function renderSummaryTable() {
     <td class="date-col"></td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].chargeJanToTo)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].chargeJanToTo, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 6: ACCUMULATED DEPRECIATION at TO date - RECALCULATED
   html += `<tr class="highlight-row special-highlight">
@@ -640,7 +653,7 @@ function renderSummaryTable() {
     <td class="date-col">${toDateDisplay}</td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].accDepAtTo)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].accDepAtTo, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 7: NET BOOK VALUE - RECALCULATED based on new accumulated depreciation
   html += `<tr class="highlight-row special-highlight">
@@ -648,7 +661,7 @@ function renderSummaryTable() {
     <td class="date-col">${toDateDisplay}</td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].nbvAtTo)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].nbvAtTo, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 8: CHARGE FOR THE MONTH - month of TO date only
   html += `<tr class="highlight-row green-row">
@@ -656,7 +669,7 @@ function renderSummaryTable() {
     <td class="date-col">${monthDisplay}</td>
     ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryData[type].chargeForMonth)}</td>`).join('')}
     <td class="total-col">${formatCurrency(ASSET_TYPES.reduce((sum, type) => sum + summaryData[type].chargeForMonth, 0))}</td>
-  </tr>`;
+   </tr>`;
 
   tbody.innerHTML = html;
 }
@@ -672,6 +685,7 @@ function getAssetLifeSpanMonths(assetType) {
   };
   return lifeSpans[assetType] || 36;
 }
+
 // ============================================
 // ACTION DROPDOWN
 // ============================================
@@ -727,9 +741,24 @@ function disposeAsset(assetName) {
         hideAssetRegisterLoadingModal();
         if (response && !response.error) {
           showAssetMessage('Asset disposed successfully!', 'success');
-          loadDetailedRegister();
+          // Refresh with current as of date
+          if (currentAsOfDate) {
+            return callGAS('updateAllAccumulatedDepreciation', { asOfDate: currentAsOfDate });
+          }
         } else {
-          showAssetMessage('Error disposing asset: ' + (response?.error || 'Unknown error'), 'error');
+          throw new Error(response?.error || 'Unknown error');
+        }
+      })
+      .then(() => {
+        return callGAS('getDetailedRegister', {});
+      })
+      .then(response => {
+        if (response && !response.error) {
+          allDetailedAssets = response;
+          loadDetailedRegister();
+          if (document.getElementById('summaryRegister').classList.contains('active')) {
+            loadSummaryRegister();
+          }
         }
       })
       .catch(error => {
@@ -790,6 +819,24 @@ function formatDateForDisplay(date) {
   if (!date) return '';
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+function formatCurrency(value) {
+  if (!value && value !== 0) return '0.00';
+  return parseFloat(value).toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function showAssetMessage(message, type) {
@@ -901,11 +948,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Print functions for assets
 window.printAssetDetailed = function() {
-  printUtils.printAssetRegister('detailedRegister');
+  if (typeof printUtils !== 'undefined' && printUtils.printAssetRegister) {
+    printUtils.printAssetRegister('detailedRegister');
+  } else {
+    window.print();
+  }
 };
 
 window.printAssetSummary = function() {
-  printUtils.printAssetRegister('summaryRegister');
+  if (typeof printUtils !== 'undefined' && printUtils.printAssetRegister) {
+    printUtils.printAssetRegister('summaryRegister');
+  } else {
+    window.print();
+  }
 };
 
 // Export functions for global use
