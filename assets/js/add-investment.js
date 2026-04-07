@@ -188,6 +188,10 @@ function calculateMaturityAmount() {
 // SUBMIT NEW INVESTMENT - USING google.script.run
 // ============================================
 
+// ============================================
+// SUBMIT NEW INVESTMENT - USING google.script.run
+// ============================================
+
 function submitNewInvestment() {
   let investmentType = document.getElementById('investmentType').value;
   const investmentCode = document.getElementById('investmentCode').value;
@@ -261,7 +265,8 @@ function submitNewInvestment() {
 
   showInvestmentLoadingModal('Adding Investment...');
 
-  const formData = {
+  // Create data object - send as direct parameters, not nested
+  const investmentData = {
     investmentType: investmentType.trim(),
     investmentCode: investmentCode.trim(),
     bankName: bankName.trim(),
@@ -274,25 +279,28 @@ function submitNewInvestment() {
     maturityAmount: parseFloat(maturityAmount)
   };
 
-  console.log('Submitting investment form data:', formData);
+  console.log('Submitting investment form data:', investmentData);
 
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Success response:', response);
       hideInvestmentLoadingModal();
-      showInvestmentMessage('✓ Investment added successfully!', 'success');
-      setTimeout(() => {
-        resetInvestmentForm();
-      }, 1500);
+      if (response && response.success) {
+        showInvestmentMessage('✓ Investment added successfully!', 'success');
+        setTimeout(() => {
+          resetInvestmentForm();
+        }, 1500);
+      } else {
+        showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error');
+      }
     })
     .withFailureHandler(function(error) {
-      console.error('Error:', error);
+      console.error('Error details:', error);
       hideInvestmentLoadingModal();
       showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
     })
-    .addNewInvestment(formData);
+    .addNewInvestment(investmentData);  // Send as object directly
 }
-
 // ============================================
 // RESET FORM
 // ============================================
