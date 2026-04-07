@@ -13,7 +13,6 @@ let investmentToRollover = null;
 // ============================================
 
 function initInvestmentReportModule() {
-  // Wait for DOM to be fully loaded
   setTimeout(() => {
     const today = new Date().toISOString().split('T')[0];
     const startOfYear = getStartOfYear();
@@ -124,8 +123,8 @@ function loadPurchaseReport() {
 
   showInvestmentLoadingSpinner('purchaseReportBody', 7);
   
-  google.script.run
-    .withSuccessHandler(function(response) {
+  callGAS('getInvestmentsByDateRange', { fromDate: fromDate, toDate: toDate })
+    .then(response => {
       if (response && !response.error) {
         allInvestments = response;
         renderPurchaseReportTable(response);
@@ -133,11 +132,10 @@ function loadPurchaseReport() {
         showInvestmentEmptyState('purchaseReportBody', 'Error loading report', 7);
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(error => {
       console.error('Error loading purchase report:', error);
       showInvestmentEmptyState('purchaseReportBody', 'Error loading report', 7);
-    })
-    .getInvestmentsByDateRange(fromDate, toDate);
+    });
 }
 
 function renderPurchaseReportTable(data) {
@@ -158,7 +156,7 @@ function renderPurchaseReportTable(data) {
       <td>${row.interestRate ? row.interestRate.toFixed(2) + '%' : '0.00%'}</td>
       <td>${row.duration || 0}</td>
       <td>${row.investmentDate || ''}</td>
-    </tr>
+     </>
   `).join('');
 }
 
@@ -193,7 +191,6 @@ function loadFullInvestmentReport() {
 
   showInvestmentLoadingSpinner('fullReportContainer');
 
-  // Use a WIDE date range to get ALL investments (10 years back and forward)
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - 10);
   const endDate = new Date();
@@ -202,12 +199,11 @@ function loadFullInvestmentReport() {
   const fromDate = startDate.toISOString().split('T')[0];
   const toDateEnd = endDate.toISOString().split('T')[0];
 
-  google.script.run
-    .withSuccessHandler(function(response) {
+  callGAS('getInvestmentsByDateRange', { fromDate: fromDate, toDate: toDateEnd })
+    .then(response => {
       if (response && !response.error) {
         allInvestments = response;
         
-        // Filter investments active on the As At date (supports backdating)
         const asAtDate = new Date(toDate);
         asAtDate.setHours(0, 0, 0, 0);
         const activeInvestments = filterActiveInvestmentsAsAt(allInvestments, asAtDate);
@@ -226,17 +222,15 @@ function loadFullInvestmentReport() {
         }
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(error => {
       console.error('Error loading full report:', error);
       const fullReportContainer = document.getElementById('fullReportContainer');
       if (fullReportContainer) {
         fullReportContainer.innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 30px;">Error loading report</p>';
       }
-    })
-    .getInvestmentsByDateRange(fromDate, toDateEnd);
+    });
 }
 
-// Filter investments active on a specific date (supports backdating)
 function filterActiveInvestmentsAsAt(investments, asAtDate) {
   if (!investments || !Array.isArray(investments)) return [];
   
@@ -250,7 +244,6 @@ function filterActiveInvestmentsAsAt(investments, asAtDate) {
   });
 }
 
-// Calculate accrued interest up to a specific date
 function calculateAccruedToDate(amount, rate, investmentDate, maturityDate, asAtDate) {
   const investDate = new Date(investmentDate);
   const maturity = new Date(maturityDate);
@@ -347,18 +340,7 @@ function renderByInvestmentType(data, toDate) {
         <div class="group-table-wrapper">
           <table class="group-table">
             <thead>
-              <tr>
-                <th>Investment Code</th>
-                <th>Bank Name</th>
-                <th>Amount (GHc)</th>
-                <th>Interest Rate (%)</th>
-                <th>Duration (Days)</th>
-                <th>Investment Date</th>
-                <th>Interest Amount</th>
-                <th>Maturity Date</th>
-                <th>Maturity Amount</th>
-                <th>Current Value</th>
-              </tr>
+              <tr><th>Code</th><th>Bank</th><th>Amount</th><th>Rate</th><th>Days</th><th>Inv Date</th><th>Interest</th><th>Maturity Date</th><th>Maturity Amt</th><th>Current Value</th></tr>
             </thead>
             <tbody>
               ${items.map(row => {
@@ -369,62 +351,17 @@ function renderByInvestmentType(data, toDate) {
                 const accruedToDate = calculateAccruedToDate(amount, rate, row.investmentDate, row.maturityDate, toDate);
                 const currentValue = amount + accruedToDate;
                 
-                return `
-                  <tr>
-                    <td>${escapeHtml(row.investmentCode || '')}</td>
-                    <td>${escapeHtml(row.bankName || '')}</td>
-                    <td>${formatCurrency(amount)}</td>
-                    <td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td>
-                    <td>${row.duration || 0}</td>
-                    <td>${row.investmentDate || ''}</td>
-                    <td>${formatCurrency(interestAmount)}</td>
-                    <td>${row.maturityDate || ''}</td>
-                    <td>${formatCurrency(maturityAmount)}</td>
-                    <td>${formatCurrency(currentValue)}</td>
-                  </tr>
-                `;
+                return `<tr><td>${escapeHtml(row.investmentCode || '')}</td><td>${escapeHtml(row.bankName || '')}</td><td>${formatCurrency(amount)}</td><td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td><td>${row.duration || 0}</td><td>${row.investmentDate || ''}</td><td>${formatCurrency(interestAmount)}</td><td>${row.maturityDate || ''}</td><td>${formatCurrency(maturityAmount)}</td><td>${formatCurrency(currentValue)}</td></tr>`;
               }).join('')}
             </tbody>
-            <tfoot>
-              <tr class="subtotal-row">
-                <td colspan="2" style="text-align: right; font-weight: 700;">${escapeHtml(type)} Subtotal:</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalAmount)}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td class="subtotal-cell">${formatCurrency(subtotalInterest)}</td>
-                <td></td>
-                <td class="subtotal-cell">${formatCurrency(subtotalMaturityAmount)}</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalCurrentValue)}</td>
-              </tr>
-            </tfoot>
+            <tfoot><tr class="subtotal-row"><td colspan="2">${escapeHtml(type)} Subtotal:</td><td>${formatCurrency(subtotalAmount)}</td><td></td><td></td><td></td><td>${formatCurrency(subtotalInterest)}</td><td></td><td>${formatCurrency(subtotalMaturityAmount)}</td><td>${formatCurrency(subtotalCurrentValue)}</td></tr></tfoot>
           </table>
         </div>
       </div>
     `;
   });
 
-  html += `
-    <div class="grouped-report grand-total-report">
-      <div class="group-table-wrapper">
-        <table class="group-table">
-          <tfoot>
-            <tr class="grand-total-row">
-              <td colspan="2" style="text-align: right; font-weight: 700;">Grand Total:</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalAmount)}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalInterest)}</td>
-              <td></td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalMaturityAmount)}</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalCurrentValue)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  `;
+  html += `<div class="grouped-report grand-total-report"><div class="group-table-wrapper"><table class="group-table"><tfoot><tr class="grand-total-row"><td colspan="2">Grand Total:</td><td>${formatCurrency(grandTotalAmount)}</td><td></td><td></td><td></td><td>${formatCurrency(grandTotalInterest)}</td><td></td><td>${formatCurrency(grandTotalMaturityAmount)}</td><td>${formatCurrency(grandTotalCurrentValue)}</td></tr></tfoot></table></div></div>`;
 
   container.innerHTML = html;
 }
@@ -483,20 +420,7 @@ function renderByBank(data, toDate) {
         <div class="group-title">${escapeHtml(bank)}</div>
         <div class="group-table-wrapper">
           <table class="group-table">
-            <thead>
-              <tr>
-                <th>Investment Code</th>
-                <th>Investment Type</th>
-                <th>Amount (GHc)</th>
-                <th>Interest Rate (%)</th>
-                <th>Duration (Days)</th>
-                <th>Investment Date</th>
-                <th>Interest Amount</th>
-                <th>Maturity Date</th>
-                <th>Maturity Amount</th>
-                <th>Current Value</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Code</th><th>Type</th><th>Amount</th><th>Rate</th><th>Days</th><th>Inv Date</th><th>Interest</th><th>Maturity Date</th><th>Maturity Amt</th><th>Current Value</th></tr></thead>
             <tbody>
               ${items.map(row => {
                 const amount = parseFloat(row.amount) || 0;
@@ -506,62 +430,17 @@ function renderByBank(data, toDate) {
                 const accruedToDate = calculateAccruedToDate(amount, rate, row.investmentDate, row.maturityDate, toDate);
                 const currentValue = amount + accruedToDate;
                 
-                return `
-                  <tr>
-                    <td>${escapeHtml(row.investmentCode || '')}</td>
-                    <td>${escapeHtml(row.investmentType || '')}</td>
-                    <td>${formatCurrency(amount)}</td>
-                    <td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td>
-                    <td>${row.duration || 0}</td>
-                    <td>${row.investmentDate || ''}</td>
-                    <td>${formatCurrency(interestAmount)}</td>
-                    <td>${row.maturityDate || ''}</td>
-                    <td>${formatCurrency(maturityAmount)}</td>
-                    <td>${formatCurrency(currentValue)}</td>
-                  </tr>
-                `;
+                return `<tr><td>${escapeHtml(row.investmentCode || '')}</td><td>${escapeHtml(row.investmentType || '')}</td><td>${formatCurrency(amount)}</td><td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td><td>${row.duration || 0}</td><td>${row.investmentDate || ''}</td><td>${formatCurrency(interestAmount)}</td><td>${row.maturityDate || ''}</td><td>${formatCurrency(maturityAmount)}</td><td>${formatCurrency(currentValue)}</td></tr>`;
               }).join('')}
             </tbody>
-            <tfoot>
-              <tr class="subtotal-row">
-                <td colspan="2" style="text-align: right; font-weight: 700;">${escapeHtml(bank)} Subtotal:</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalAmount)}</td>
-                <td></td>
-                <td></td>
-                <td></td>
-                <td class="subtotal-cell">${formatCurrency(subtotalInterest)}</td>
-                <td></td>
-                <td class="subtotal-cell">${formatCurrency(subtotalMaturityAmount)}</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalCurrentValue)}</td>
-              </tr>
-            </tfoot>
+            <tfoot><tr class="subtotal-row"><td colspan="2">${escapeHtml(bank)} Subtotal:</td><td>${formatCurrency(subtotalAmount)}</td><td></td><td></td><td></td><td>${formatCurrency(subtotalInterest)}</td><td></td><td>${formatCurrency(subtotalMaturityAmount)}</td><td>${formatCurrency(subtotalCurrentValue)}</td></tr></tfoot>
           </table>
         </div>
       </div>
     `;
   });
 
-  html += `
-    <div class="grouped-report grand-total-report">
-      <div class="group-table-wrapper">
-        <table class="group-table">
-          <tfoot>
-            <tr class="grand-total-row">
-              <td colspan="2" style="text-align: right; font-weight: 700;">Grand Total:</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalAmount)}</td>
-              <td></td>
-              <td></td>
-              <td></td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalInterest)}</td>
-              <td></td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalMaturityAmount)}</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalCurrentValue)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  `;
+  html += `<div class="grouped-report grand-total-report"><div class="group-table-wrapper"><table class="group-table"><tfoot><tr class="grand-total-row"><td colspan="2">Grand Total:</td><td>${formatCurrency(grandTotalAmount)}</td><td></td><td></td><td></td><td>${formatCurrency(grandTotalInterest)}</td><td></td><td>${formatCurrency(grandTotalMaturityAmount)}</td><td>${formatCurrency(grandTotalCurrentValue)}</td></tr></tfoot></table></div></div>`;
 
   container.innerHTML = html;
 }
@@ -631,21 +510,7 @@ function renderByDuration(data, toDate) {
           <div class="group-title">${durationRange}</div>
           <div class="group-table-wrapper">
             <table class="group-table">
-              <thead>
-                <tr>
-                  <th>Investment Code</th>
-                  <th>Bank Name</th>
-                  <th>Investment Type</th>
-                  <th>Amount (GHc)</th>
-                  <th>Interest Rate (%)</th>
-                  <th>Duration (Days)</th>
-                  <th>Investment Date</th>
-                  <th>Interest Amount</th>
-                  <th>Maturity Date</th>
-                  <th>Maturity Amount</th>
-                  <th>Current Value</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Code</th><th>Bank</th><th>Type</th><th>Amount</th><th>Rate</th><th>Days</th><th>Inv Date</th><th>Interest</th><th>Maturity Date</th><th>Maturity Amt</th><th>Current Value</th></tr></thead>
               <tbody>
                 ${items.map(row => {
                   const amount = parseFloat(row.amount) || 0;
@@ -655,32 +520,10 @@ function renderByDuration(data, toDate) {
                   const accruedToDate = calculateAccruedToDate(amount, rate, row.investmentDate, row.maturityDate, toDate);
                   const currentValue = amount + accruedToDate;
                   
-                  return `
-                    <tr>
-                      <td>${escapeHtml(row.investmentCode || '')}</td>
-                      <td>${escapeHtml(row.bankName || '')}</td>
-                      <td>${escapeHtml(row.investmentType || '')}</td>
-                      <td>${formatCurrency(amount)}</td>
-                      <td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td>
-                      <td>${row.duration || 0}</td>
-                      <td>${row.investmentDate || ''}</td>
-                      <td>${formatCurrency(interestAmount)}</td>
-                      <td>${row.maturityDate || ''}</td>
-                      <td>${formatCurrency(maturityAmount)}</td>
-                      <td>${formatCurrency(currentValue)}</td>
-                    </tr>
-                  `;
+                  return `<tr><td>${escapeHtml(row.investmentCode || '')}</td><td>${escapeHtml(row.bankName || '')}</td><td>${escapeHtml(row.investmentType || '')}</td><td>${formatCurrency(amount)}</td><td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td><td>${row.duration || 0}</td><td>${row.investmentDate || ''}</td><td>${formatCurrency(interestAmount)}</td><td>${row.maturityDate || ''}</td><td>${formatCurrency(maturityAmount)}</td><td>${formatCurrency(currentValue)}</td></tr>`;
                 }).join('')}
               </tbody>
-              <tfoot>
-                <tr class="subtotal-row">
-                  <td colspan="3" style="text-align: right; font-weight: 700;">${durationRange} Subtotal:</td>
-                  <td class="subtotal-cell">${formatCurrency(subtotalAmount)}</td>
-                  <td>\n                  <td>\n                  <td class="subtotal-cell">${formatCurrency(subtotalInterest)}</td>
-                  <td>\n                  <td class="subtotal-cell">${formatCurrency(subtotalMaturityAmount)}</td>
-                  <td class="subtotal-cell">${formatCurrency(subtotalCurrentValue)}</td>
-                </tr>
-              </tfoot>
+              <tfoot><tr class="subtotal-row"><td colspan="3">${durationRange} Subtotal:</td><td>${formatCurrency(subtotalAmount)}</td><td></td><td></td><td><td class="subtotal-cell">${formatCurrency(subtotalInterest)}</td><td></td><td>${formatCurrency(subtotalMaturityAmount)}</td><td>${formatCurrency(subtotalCurrentValue)}</td></tr></tfoot>
             </table>
           </div>
         </div>
@@ -688,23 +531,7 @@ function renderByDuration(data, toDate) {
     }
   });
 
-  html += `
-    <div class="grouped-report grand-total-report">
-      <div class="group-table-wrapper">
-        <table class="group-table">
-          <tfoot>
-            <tr class="grand-total-row">
-              <td colspan="3" style="text-align: right; font-weight: 700;">Grand Total:</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalAmount)}</td>
-              <td>\n              <td>\n              <td class="grand-total-cell">${formatCurrency(grandTotalInterest)}</td>
-              <td>\n              <td class="grand-total-cell">${formatCurrency(grandTotalMaturityAmount)}</td>
-              <td class="grand-total-cell">${formatCurrency(grandTotalCurrentValue)}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-    </div>
-  `;
+  html += `<div class="grouped-report grand-total-report"><div class="group-table-wrapper"><table class="group-table"><tfoot><tr class="grand-total-row"><td colspan="3">Grand Total:</td><td>${formatCurrency(grandTotalAmount)}</td><td></td><td></td><td>${formatCurrency(grandTotalInterest)}</td><td></td><td>${formatCurrency(grandTotalMaturityAmount)}</td><td>${formatCurrency(grandTotalCurrentValue)}</td></tr></tfoot></table></div></div>`;
 
   container.innerHTML = html;
 }
@@ -732,7 +559,6 @@ function loadInterestReport() {
 
   showInvestmentLoadingSpinner('interestReportContainer');
 
-  // Use a WIDE date range to get ALL investments (10 years back and forward)
   const startDate = new Date();
   startDate.setFullYear(startDate.getFullYear() - 10);
   const endDate = new Date();
@@ -741,8 +567,8 @@ function loadInterestReport() {
   const wideFromDate = startDate.toISOString().split('T')[0];
   const wideToDate = endDate.toISOString().split('T')[0];
 
-  google.script.run
-    .withSuccessHandler(function(response) {
+  callGAS('getInvestmentsByDateRange', { fromDate: wideFromDate, toDate: wideToDate })
+    .then(response => {
       if (response && !response.error) {
         renderInterestReport(response, fromDate, toDate);
       } else {
@@ -752,14 +578,13 @@ function loadInterestReport() {
         }
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(error => {
       console.error('Error loading interest report:', error);
       const interestContainer = document.getElementById('interestReportContainer');
       if (interestContainer) {
         interestContainer.innerHTML = '<p style="text-align: center; color: #a0aec0; padding: 30px;">Error loading report</p>';
       }
-    })
-    .getInvestmentsByDateRange(wideFromDate, wideToDate);
+    });
 }
 
 function renderInterestReport(data, fromDate, toDate) {
@@ -771,7 +596,6 @@ function renderInterestReport(data, fromDate, toDate) {
   fromDateObj.setHours(0, 0, 0, 0);
   toDateObj.setHours(0, 0, 0, 0);
 
-  // Filter: Include investments that were active ANYTIME during the selected period
   const activeInvestments = data.filter(item => {
     const investmentDate = new Date(item.investmentDate);
     const maturityDate = new Date(item.maturityDate);
@@ -839,21 +663,7 @@ function renderInterestReport(data, fromDate, toDate) {
         <div class="group-title">${escapeHtml(type)}</div>
         <div class="group-table-wrapper">
           <table class="group-table">
-            <thead>
-              <tr>
-                <th>Investment Code</th>
-                <th>Bank Name</th>
-                <th>Amount (GHc)</th>
-                <th>Interest Rate (%)</th>
-                <th>Duration (Days)</th>
-                <th>Investment Date</th>
-                <th>Maturity Date</th>
-                <th>Interest Amount</th>
-                <th>Accrued Monthly Interest</th>
-                <th>Accrued Interest To Date</th>
-                <th>Current Value</th>
-              </tr>
-            </thead>
+            <thead><tr><th>Code</th><th>Bank</th><th>Amount</th><th>Rate</th><th>Days</th><th>Inv Date</th><th>Maturity Date</th><th>Interest Amt</th><th>Accrued Monthly</th><th>Accrued To Date</th><th>Current Value</th></tr></thead>
             <tbody>
               ${items.map(row => {
                 const amount = parseFloat(row.amount) || 0;
@@ -871,32 +681,10 @@ function renderInterestReport(data, fromDate, toDate) {
                 const accruedToDate = dailyRate * Math.max(0, daysToDate);
                 const currentValue = amount + accruedToDate;
 
-                return `
-                  <tr>
-                    <td>${escapeHtml(row.investmentCode || '')}</td>
-                    <td>${escapeHtml(row.bankName || '')}</td>
-                    <td>${formatCurrency(amount)}</td>
-                    <td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td>
-                    <td>${row.duration || 0}</td>
-                    <td>${row.investmentDate || ''}</td>
-                    <td>${row.maturityDate || ''}</td>
-                    <td>${formatCurrency(interestAmount)}</td>
-                    <td>${formatCurrency(accruedMonthly)}</td>
-                    <td>${formatCurrency(accruedToDate)}</td>
-                    <td>${formatCurrency(currentValue)}</td>
-                  </tr>
-                `;
+                return `<tr><td>${escapeHtml(row.investmentCode || '')}</td><td>${escapeHtml(row.bankName || '')}</td><td>${formatCurrency(amount)}</td><td>${rate ? rate.toFixed(2) + '%' : '0.00%'}</td><td>${row.duration || 0}</td><td>${row.investmentDate || ''}</td><td>${row.maturityDate || ''}</td><td>${formatCurrency(interestAmount)}</td><td>${formatCurrency(accruedMonthly)}</td><td>${formatCurrency(accruedToDate)}</td><td>${formatCurrency(currentValue)}</td></tr>`;
               }).join('')}
             </tbody>
-            <tfoot>
-              <tr class="subtotal-row">
-                <td colspan="2" style="text-align: right; font-weight: 700;">${escapeHtml(type)} Subtotal:</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalAmount)}</td>
-                <td>\n                <td>\n                <td>\n                <td>\n                <td>\n                <td class="subtotal-cell">${formatCurrency(subtotalAccruedMonthly)}</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalAccruedToDate)}</td>
-                <td class="subtotal-cell">${formatCurrency(subtotalCurrentValue)}</td>
-              </tr>
-            </tfoot>
+            <tfoot><tr class="subtotal-row"><td colspan="2">${escapeHtml(type)} Subtotal:</td><td>${formatCurrency(subtotalAmount)}</td><td></td><td></td><td></td><td></td><td><td><td>${formatCurrency(subtotalAccruedMonthly)}</td><td>${formatCurrency(subtotalAccruedToDate)}</td><td>${formatCurrency(subtotalCurrentValue)}</td></tr></tfoot>
           </table>
         </div>
       </div>
@@ -914,19 +702,18 @@ function loadMaturedInvestments() {
   const today = new Date().toISOString().split('T')[0];
   showInvestmentLoadingSpinner('maturedReportBody', 10);
 
-  google.script.run
-    .withSuccessHandler(function(response) {
+  callGAS('getMaturedInvestments', { toDate: today })
+    .then(response => {
       if (response && !response.error && response.length > 0) {
         renderMaturedInvestmentsTable(response);
       } else {
         showInvestmentEmptyState('maturedReportBody', 'No matured investments found', 10);
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(error => {
       console.error('Error loading matured investments:', error);
       showInvestmentEmptyState('maturedReportBody', 'Error loading matured investments', 10);
-    })
-    .getMaturedInvestments(today);
+    });
 }
 
 function renderMaturedInvestmentsTable(data) {
@@ -946,11 +733,7 @@ function renderMaturedInvestmentsTable(data) {
       <td>${row.investmentDate || ''}</td>
       <td>${row.maturityDate || ''}</td>
       <td>${formatCurrency(row.maturityAmount)}</td>
-      <td>
-        <button class="action-btn" onclick="openMaturedDropdown(event, '${escapeHtml(row.investmentCode)}')">
-          <i class="fas fa-ellipsis-v"></i> Action
-        </button>
-      </td>
+      <td><button class="action-btn" onclick="openMaturedDropdown(event, '${escapeHtml(row.investmentCode)}')"><i class="fas fa-ellipsis-v"></i> Action</button></td>
     </tr>
   `).join('');
 }
@@ -1030,15 +813,14 @@ function closeRolloverModal() {
 }
 
 function generateRolloverInvestmentCode(investmentType) {
-  google.script.run
-    .withSuccessHandler(function(response) {
+  callGAS('generateInvestmentCode', { investmentType: investmentType })
+    .then(response => {
       const codeField = document.getElementById('rolloverInvestmentCode');
       if (codeField) codeField.value = response || '';
     })
-    .withFailureHandler(function(error) {
+    .catch(error => {
       console.error('Error generating code:', error);
-    })
-    .generateInvestmentCode(investmentType);
+    });
 }
 
 function handleRolloverInvestmentTypeChange() {
@@ -1135,20 +917,6 @@ function formatCurrency(value) {
   });
 }
 
-function formatDate(dateString) {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch (e) {
-    return dateString;
-  }
-}
-
 function escapeHtml(str) {
   if (!str) return '';
   return str
@@ -1156,7 +924,7 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/'/g, '&#39');
 }
 
 function showInvestmentMessage(message, type) {
@@ -1178,14 +946,7 @@ function showInvestmentMessage(message, type) {
 function showInvestmentEmptyState(elementId, message, colSpan) {
   const element = document.getElementById(elementId);
   if (element && element.tagName === 'TBODY') {
-    element.innerHTML = `
-      <tr>
-        <td colspan="${colSpan}" class="loading-cell">
-          <i class="fas fa-folder-open"></i>
-          <p>${message}</p>
-        </td>
-      </tr>
-    `;
+    element.innerHTML = `<tr><td colspan="${colSpan}" class="loading-cell"><i class="fas fa-folder-open"></i><p>${message}</p></td></tr>`;
   } else {
     const container = document.getElementById(elementId);
     if (container) {
