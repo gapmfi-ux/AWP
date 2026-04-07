@@ -174,10 +174,15 @@ class ApiService {
     return this.request('updateAssetStatus', { assetName, newStatus }, options);
   }
   
-  // NEW: Update all accumulated depreciation as at a specific date
+  
   async updateAllAccumulatedDepreciation(asOfDate, options = {}) {
     this.log('updateAllAccumulatedDepreciation called for date:', asOfDate);
     return this.request('updateAllAccumulatedDepreciation', { asOfDate }, options);
+  }
+
+  async getFixedAssetsSummaryReport(toDate, options = {}) {
+    this.log('getFixedAssetsSummaryReport called for date:', toDate);
+    return this.request('getFixedAssetsSummaryReport', { toDate }, options);
   }
 
   // ============================================
@@ -272,11 +277,16 @@ window.callGAS = async function(action, data = {}) {
     'addNewAsset': () => API.addNewAsset(data),
     'getDetailedRegister': () => API.getDetailedRegister(),
     'updateAssetStatus': () => API.updateAssetStatus(data.assetName, data.newStatus),
-    'updateAllAccumulatedDepreciation': () => API.updateAllAccumulatedDepreciation(data.asOfDate),  // ADD THIS LINE
+    'updateAllAccumulatedDepreciation': () => API.updateAllAccumulatedDepreciation(data.asOfDate),
+    'getFixedAssetsSummaryReport': () => API.getFixedAssetsSummaryReport(data.toDate),  // ADD THIS LINE
     'generateInvestmentCode': () => API.generateInvestmentCode(data.investmentType),
     'addNewInvestment': () => API.addNewInvestment(data),
     'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(data.fromDate, data.toDate),
-    'getMaturedInvestments': () => API.getMaturedInvestments(data.toDate)
+    'getMaturedInvestments': () => API.getMaturedInvestments(data.toDate),
+    'getUniqueInvestmentTypes': () => API.getUniqueInvestmentTypes(),
+    'getUniqueBanks': () => API.getUniqueBanks(),
+    'getAllInvestments': () => API.getAllInvestments(),
+    'test': () => API.request('test', {})
   };
   
   const apiCall = actionMap[action];
