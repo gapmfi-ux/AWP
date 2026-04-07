@@ -1,14 +1,17 @@
 /* ============================================
    ADD INVESTMENT MODULE JAVASCRIPT
-   With Day Count Support
+   With Bank Day Count Persistence & Proper Toggle
    ============================================ */
+
+// Storage key for bank day counts
+const BANK_DAY_COUNT_STORAGE_KEY = 'investment_bank_day_counts';
 
 // ============================================
 // INITIALIZATION
 // ============================================
 
 function initInvestmentModule() {
-  console.log('Initializing Add Investment Module with Day Count');
+  console.log('Initializing Add Investment Module with Bank Day Count');
   
   const today = new Date().toISOString().split('T')[0];
   const dateField = document.getElementById('investmentDate');
@@ -16,6 +19,8 @@ function initInvestmentModule() {
 
   const bankSelect = document.getElementById('bankName');
   if (bankSelect) {
+    // Load saved bank day counts into the select options
+    loadBankDayCountsIntoSelect();
     bankSelect.addEventListener('change', handleBankChange);
   }
 
@@ -49,7 +54,7 @@ function initInvestmentModule() {
     maturityDateField.addEventListener('change', calculateMaturityAmount);
   }
   if (dayCountField) {
-    dayCountField.addEventListener('input', calculateMaturityAmount);
+    dayCountField.addEventListener('change', calculateMaturityAmount);
   }
 
   // Set default day count
@@ -64,6 +69,64 @@ function initInvestmentModule() {
       closeInvestmentModal();
     }
   });
+}
+
+// ============================================
+// BANK DAY COUNT MANAGEMENT
+// ============================================
+
+function getBankDayCounts() {
+  const stored = localStorage.getItem(BANK_DAY_COUNT_STORAGE_KEY);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  // Default day counts for common banks
+  return {
+    'Fidelity': 365,
+    'CBG': 365,
+    'Ecobank': 360,
+    'GCB': 365
+  };
+}
+
+function saveBankDayCount(bankName, dayCount) {
+  const counts = getBankDayCounts();
+  counts[bankName] = parseInt(dayCount);
+  localStorage.setItem(BANK_DAY_COUNT_STORAGE_KEY, JSON.stringify(counts));
+  console.log(`Saved day count ${dayCount} for bank: ${bankName}`);
+}
+
+function loadBankDayCountsIntoSelect() {
+  const bankSelect = document.getElementById('bankName');
+  if (!bankSelect) return;
+  
+  const counts = getBankDayCounts();
+  
+  // Add day count as data attribute to each option
+  for (let i = 0; i < bankSelect.options.length; i++) {
+    const option = bankSelect.options[i];
+    const bankName = option.value;
+    if (bankName && bankName !== 'add-new' && counts[bankName]) {
+      option.setAttribute('data-day-count', counts[bankName]);
+    }
+  }
+}
+
+function getBankDayCount(bankName) {
+  const counts = getBankDayCounts();
+  return counts[bankName] || 365;
+}
+
+function setDayCountForBank(bankName) {
+  const dayCountField = document.getElementById('dayCount');
+  if (!dayCountField || !bankName || bankName === 'add-new') return;
+  
+  const dayCount = getBankDayCount(bankName);
+  dayCountField.value = dayCount;
+  console.log(`Set day count to ${dayCount} for bank: ${bankName}`);
+  
+  // Trigger recalculation
+  calculateMaturityAmount();
 }
 
 // ============================================
@@ -101,18 +164,34 @@ function handleInvestmentTypeChange() {
 
 function handleBankChange() {
   const bankName = document.getElementById('bankName').value;
-  const addNewFields = document.getElementById('addNewBankFields');
+  const addNewBankFields = document.getElementById('addNewBankFields');
   const dayCountField = document.getElementById('dayCount');
 
   if (bankName === 'add-new') {
-    if (addNewFields) addNewFields.style.display = 'block';
+    // Show the add new bank fields
+    if (addNewBankFields) {
+      addNewBankFields.style.display = 'block';
+    }
+    // Clear the day count field for new bank entry
+    if (dayCountField) {
+      dayCountField.value = '365';
+    }
   } else {
-    if (addNewFields) addNewFields.style.display = 'none';
+    // Hide the add new bank fields
+    if (addNewBankFields) {
+      addNewBankFields.style.display = 'none';
+    }
+    // Clear the new bank input fields
     const newBankField = document.getElementById('newBankName');
     if (newBankField) newBankField.value = '';
     
-    // You can optionally load bank-specific day count here
-    // loadBankDayCount(bankName);
+    const newBankDayCount = document.getElementById('newBankDayCount');
+    if (newBankDayCount) newBankDayCount.value = '365';
+    
+    // Set day count for selected bank
+    if (bankName && bankName !== '') {
+      setDayCountForBank(bankName);
+    }
   }
 }
 
@@ -192,7 +271,6 @@ function calculateMaturityAmount() {
   }
 
   // Interest = Principal * Rate * (Duration / DayCount)
-  // Rate is in percentage, so divide by 100
   const timeInYears = duration / dayCount;
   const interestAmount = (amount * interestRate * timeInYears) / 100;
   const maturityAmount = amount + interestAmount;
@@ -202,7 +280,7 @@ function calculateMaturityAmount() {
 }
 
 // ============================================
-// SUBMIT NEW INVESTMENT - WITH DAY COUNT
+// SUBMIT NEW INVESTMENT - WITH BANK SAVING
 // ============================================
 
 function submitNewInvestment() {
@@ -214,7 +292,7 @@ function submitNewInvestment() {
   const duration = document.getElementById('duration').value;
   const investmentDate = document.getElementById('investmentDate').value;
   const maturityDate = document.getElementById('maturityDate').value;
-  const dayCount = document.getElementById('dayCount').value;
+  let dayCount = document.getElementById('dayCount').value;
 
   // Validation
   if (!investmentType || investmentType === 'add-new') {
@@ -236,18 +314,25 @@ function submitNewInvestment() {
     return;
   }
 
-  if (!bankName || bankName === 'add-new') {
-    if (bankName === 'add-new') {
-      const newBank = document.getElementById('newBankName').value;
-      if (!newBank || newBank.trim() === '') {
-        showInvestmentMessage('Please enter a new bank name', 'error');
-        return;
-      }
-      bankName = newBank;
-    } else {
-      showInvestmentMessage('Please select a bank', 'error');
+  // Handle new bank addition
+  let isNewBank = false;
+  if (bankName === 'add-new') {
+    const newBankName = document.getElementById('newBankName').value;
+    const newBankDayCount = document.getElementById('newBankDayCount').value;
+    
+    if (!newBankName || newBankName.trim() === '') {
+      showInvestmentMessage('Please enter a new bank name', 'error');
       return;
     }
+    
+    bankName = newBankName.trim();
+    dayCount = newBankDayCount;
+    isNewBank = true;
+  }
+
+  if (!bankName || bankName === '') {
+    showInvestmentMessage('Please select a bank', 'error');
+    return;
   }
 
   if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
@@ -273,6 +358,13 @@ function submitNewInvestment() {
   if (!maturityDate) {
     showInvestmentMessage('Please enter a maturity date', 'error');
     return;
+  }
+
+  // Save the bank's day count if it's a new bank
+  if (isNewBank) {
+    saveBankDayCount(bankName, dayCount);
+    // Add the new bank to the dropdown for future use
+    addBankToDropdown(bankName, dayCount);
   }
 
   // Calculate final amounts with day count
@@ -321,6 +413,35 @@ function submitNewInvestment() {
     .addNewInvestment(investmentData);
 }
 
+// Helper function to add new bank to dropdown
+function addBankToDropdown(bankName, dayCount) {
+  const bankSelect = document.getElementById('bankName');
+  if (!bankSelect) return;
+  
+  // Check if bank already exists
+  for (let i = 0; i < bankSelect.options.length; i++) {
+    if (bankSelect.options[i].value === bankName) {
+      return; // Bank already exists
+    }
+  }
+  
+  // Create new option
+  const option = document.createElement('option');
+  option.value = bankName;
+  option.textContent = bankName;
+  option.setAttribute('data-day-count', dayCount);
+  
+  // Insert before the "add-new" option
+  const addNewOption = bankSelect.querySelector('option[value="add-new"]');
+  if (addNewOption) {
+    bankSelect.insertBefore(option, addNewOption);
+  } else {
+    bankSelect.appendChild(option);
+  }
+  
+  console.log(`Added ${bankName} to dropdown with day count ${dayCount}`);
+}
+
 // ============================================
 // RESET FORM
 // ============================================
@@ -354,17 +475,22 @@ function resetInvestmentForm() {
   const dayCountField = document.getElementById('dayCount');
   if (dayCountField) dayCountField.value = '365';
   
+  // Hide toggle fields
   const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
   if (addNewTypeFields) addNewTypeFields.style.display = 'none';
   
   const addNewBankFields = document.getElementById('addNewBankFields');
   if (addNewBankFields) addNewBankFields.style.display = 'none';
   
+  // Clear input fields
   const newTypeField = document.getElementById('newInvestmentType');
   if (newTypeField) newTypeField.value = '';
   
   const newBankField = document.getElementById('newBankName');
   if (newBankField) newBankField.value = '';
+  
+  const newBankDayCount = document.getElementById('newBankDayCount');
+  if (newBankDayCount) newBankDayCount.value = '365';
 }
 
 // ============================================
