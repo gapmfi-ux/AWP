@@ -37,37 +37,35 @@ function initAssetModule() {
 }
 
 function initAssetRegisterModule() {
+  console.log('Initializing Asset Register Module');
+  
   const today = new Date().toISOString().split('T')[0];
   
   // Set initial date values
   const detailedToDate = document.getElementById('detailedToDate');
-  const summaryFromDateEl = document.getElementById('summaryFromDate');
   const summaryToDateEl = document.getElementById('summaryToDate');
   
   if (detailedToDate) detailedToDate.value = today;
-  if (summaryFromDateEl) summaryFromDateEl.value = today;
   if (summaryToDateEl) summaryToDateEl.value = today;
   
   currentAsOfDate = today;
-  summaryFromDate = today;
   summaryToDate = today;
   
-  // Initial update to ensure all values are correct as of today
+  // First update accumulated depreciation
   showAssetRegisterLoadingModal('Initializing asset register...');
+  
   callGAS('updateAllAccumulatedDepreciation', { asOfDate: today })
     .then(() => {
-      hideAssetRegisterLoadingModal(); // Add this line here
+      hideAssetRegisterLoadingModal();
       return loadDetailedRegister();
     })
     .catch(error => {
       console.error('Initialization error:', error);
-      hideAssetRegisterLoadingModal(); // Hide loading modal on error
+      hideAssetRegisterLoadingModal();
       loadDetailedRegister(); // Still try to load even if update fails
     });
-    
-  // Also need to hide in case loadDetailedRegister has its own loading spinner
-  // but we handle that separately
-
+  
+  // Close dropdown when clicking outside
   window.addEventListener('click', function(event) {
     if (assetPortalOpen) {
       const portal = document.getElementById('assetActionPortal');
@@ -410,48 +408,6 @@ function loadSummaryRegister() {
     });
 }
 
-function recalculateSummaryRegister() {
-  const fromDateInput = document.getElementById('summaryFromDate').value;
-  const toDateInput = document.getElementById('summaryToDate').value;
-
-  if (!fromDateInput || !toDateInput) {
-    showAssetRegisterEmptyState('summaryDetailsBody', 'Please select both FROM and TO dates', 9);
-    return;
-  }
-
-  summaryFromDate = fromDateInput;
-  summaryToDate = toDateInput;
-  
-  showAssetRegisterLoadingModal('Recalculating summary register as at ' + formatDateForDisplay(new Date(summaryToDate)) + '...');
-  
-  // Update brought forward depreciation as at TO date
-  callGAS('updateAllAccumulatedDepreciation', { 
-    asOfDate: summaryToDate 
-  })
-  .then(response => {
-    if (response && !response.error) {
-      // Now generate the summary report
-      return callGAS('getFixedAssetsSummaryReport', { toDate: summaryToDate });
-    } else {
-      throw new Error(response?.error || 'Failed to update');
-    }
-  })
-  .then(response => {
-    hideAssetRegisterLoadingModal();
-    if (response && !response.error) {
-      renderSummaryRegisterFromReport(response);
-      showAssetMessage('✓ Summary Register recalculated as at ' + formatDateForDisplay(new Date(summaryToDate)), 'success');
-      setTimeout(() => closeAssetModal(), 1500);
-    } else {
-      throw new Error(response?.error || 'Failed to generate report');
-    }
-  })
-  .catch(error => {
-    hideAssetRegisterLoadingModal();
-    console.error('Error:', error);
-    showAssetMessage('Error: ' + (error.message || error), 'error');
-  });
-}
 
 /**
  * Render Summary Register using backend report data
@@ -468,6 +424,16 @@ function renderSummaryRegisterFromReport(report) {
 
   const summaryByType = report.summaryByType;
   const total = report.totalSummary;
+  
+  // Asset types in correct order
+  const assetTypes = [
+    'Computers & Accessories',
+    'Furniture and Fixtures',
+    'Fittings',
+    'Office Equipment',
+    'Motor Vehicle',
+    'Software'
+  ];
 
   let html = '';
 
@@ -477,25 +443,25 @@ function renderSummaryRegisterFromReport(report) {
   html += `<tr>
     <td class="details-col">Cost As At</td>
     <td class="date-col">${report.yearStart}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.costAtYearStart || 0)}</td>`).join('')}
+    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.costAtYearStart || 0)}</td>`).join('')}
     <td class="total-col">${formatCurrency(total.costAtYearStart)}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 2: Additions During Period
   html += `<tr>
     <td class="details-col">Additions</td>
-    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(summaryToDate))}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.additionsDuringPeriod || 0)}</td>`).join('')}
+    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(report.reportDate))}</td>
+    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.additionsDuringPeriod || 0)}</td>`).join('')}
     <td class="total-col">${formatCurrency(total.additionsDuringPeriod)}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 3: Cost As At Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
-    <td class="details-col">Cost As At</td>
-    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.costAtReportDate || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.costAtReportDate)}</td>
-  </tr>`;
+    <td class="details-col"><strong>Cost As At</strong></td>
+    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
+    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.costAtReportDate || 0)}</strong></td>`).join('')}
+    <td class="total-col"><strong>${formatCurrency(total.costAtReportDate)}</strong></td>
+   </tr>`;
 
   // ===== DEPRECIATION SECTION =====
 
@@ -503,50 +469,120 @@ function renderSummaryRegisterFromReport(report) {
   html += `<tr>
     <td class="details-col">Accumulated Depreciation</td>
     <td class="date-col">${report.yearStart}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.depAtYearStart || 0)}</td>`).join('')}
+    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.depAtYearStart || 0)}</td>`).join('')}
     <td class="total-col">${formatCurrency(total.depAtYearStart)}</td>
-  </tr>`;
+   </tr>`;
 
-  // Row 5: Charge For Period
+  // Row 5: Charge For The Year(Period)
   html += `<tr>
     <td class="details-col">Charge For The Year(Period)</td>
-    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(summaryToDate))}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.chargeForPeriod || 0)}</td>`).join('')}
+    <td class="date-col">1-Jan to ${formatDateForDisplay(new Date(report.reportDate))}</td>
+    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.chargeForPeriod || 0)}</td>`).join('')}
     <td class="total-col">${formatCurrency(total.chargeForPeriod)}</td>
-  </tr>`;
+   </tr>`;
 
   // Row 6: Accumulated Depreciation at Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
-    <td class="details-col">Accumulated Depreciation</td>
-    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.depAtReportDate || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.depAtReportDate)}</td>
-  </tr>`;
+    <td class="details-col"><strong>Accumulated Depreciation</strong></td>
+    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
+    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.depAtReportDate || 0)}</strong></td>`).join('')}
+    <td class="total-col"><strong>${formatCurrency(total.depAtReportDate)}</strong></td>
+   </tr>`;
 
   // ===== NET BOOK VALUE SECTION =====
 
   // Row 7: Net Book Value at Report Date (SPECIAL HIGHLIGHT)
   html += `<tr class="highlight-row special-highlight">
-    <td class="details-col">Net Book Value</td>
-    <td class="date-col">${formatDateForDisplay(new Date(summaryToDate))}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.netBookValue || 0)}</td>`).join('')}
-    <td class="total-col">${formatCurrency(total.netBookValue)}</td>
-  </tr>`;
+    <td class="details-col"><strong>Net Book Value</strong></td>
+    <td class="date-col">${formatDateForDisplay(new Date(report.reportDate))}</td>
+    ${assetTypes.map(type => `<td class="amount-cell"><strong>${formatCurrency(summaryByType[type]?.netBookValue || 0)}</strong></td>`).join('')}
+    <td class="total-col"><strong>${formatCurrency(total.netBookValue)}</strong></td>
+   </tr>`;
 
   // ===== MONTHLY CHARGE SECTION =====
 
   // Row 8: Charge For The Month (Green Highlight)
-  const monthYear = getMonthYearDisplay(new Date(summaryToDate));
+  const monthYear = getMonthYearDisplay(new Date(report.reportDate));
   html += `<tr class="highlight-row green-row">
     <td class="details-col">Charge For The Month</td>
     <td class="date-col">${monthYear}</td>
-    ${ASSET_TYPES.map(type => `<td>${formatCurrency(summaryByType[type]?.chargeForMonth || 0)}</td>`).join('')}
+    ${assetTypes.map(type => `<td class="amount-cell">${formatCurrency(summaryByType[type]?.chargeForMonth || 0)}</td>`).join('')}
     <td class="total-col">${formatCurrency(total.chargeForMonth)}</td>
-  </tr>`;
+   </tr>`;
 
   tbody.innerHTML = html;
 }
 
+// Fix loadSummaryRegister function
+function loadSummaryRegister() {
+  showAssetRegisterLoadingSpinner('summaryDetailsBody');
+  
+  const toDateInput = document.getElementById('summaryToDate');
+  if (!toDateInput || !toDateInput.value) {
+    showAssetRegisterEmptyState('summaryDetailsBody', 'Please select a TO date', 9);
+    return;
+  }
+
+  const toDate = toDateInput.value;
+  summaryToDate = toDate;
+
+  // Use the backend report function for consistent calculations
+  callGAS('getFixedAssetsSummaryReport', { toDate: toDate })
+    .then(response => {
+      if (response && !response.error && response.summaryByType) {
+        renderSummaryRegisterFromReport(response);
+      } else {
+        console.error('Invalid response:', response);
+        showAssetRegisterEmptyState('summaryDetailsBody', 'Error loading summary register: ' + (response?.error || 'Unknown error'), 9);
+      }
+    })
+    .catch(error => {
+      console.error('Error loading summary register:', error);
+      showAssetRegisterEmptyState('summaryDetailsBody', 'Error loading summary register: ' + (error.message || error), 9);
+    });
+}
+
+// Fix recalculateSummaryRegister function
+function recalculateSummaryRegister() {
+  const toDateInput = document.getElementById('summaryToDate');
+  
+  if (!toDateInput || !toDateInput.value) {
+    showAssetRegisterEmptyState('summaryDetailsBody', 'Please select a TO date', 9);
+    return;
+  }
+
+  const toDate = toDateInput.value;
+  summaryToDate = toDate;
+  
+  showAssetRegisterLoadingModal('Calculating summary register as at ' + formatDateForDisplay(new Date(toDate)) + '...');
+  
+  // First update accumulated depreciation as at TO date
+  callGAS('updateAllAccumulatedDepreciation', { asOfDate: toDate })
+    .then(response => {
+      if (response && !response.error) {
+        // Then generate the summary report
+        return callGAS('getFixedAssetsSummaryReport', { toDate: toDate });
+      } else {
+        throw new Error(response?.error || 'Failed to update depreciation');
+      }
+    })
+    .then(response => {
+      hideAssetRegisterLoadingModal();
+      if (response && !response.error && response.summaryByType) {
+        renderSummaryRegisterFromReport(response);
+        showAssetMessage('✓ Summary Register calculated as at ' + formatDateForDisplay(new Date(toDate)), 'success');
+        setTimeout(() => closeAssetModal(), 1500);
+      } else {
+        throw new Error(response?.error || 'Failed to generate report');
+      }
+    })
+    .catch(error => {
+      hideAssetRegisterLoadingModal();
+      console.error('Error:', error);
+      showAssetMessage('Error: ' + (error.message || error), 'error');
+      showAssetRegisterEmptyState('summaryDetailsBody', 'Error: ' + (error.message || error), 9);
+    });
+}
 /**
  * Get month-year display in format MMM-YYYY
  */
