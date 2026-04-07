@@ -1,5 +1,6 @@
 /* ============================================
-   FIXED ASSETS MODULE JAVASCRIPT - COMPLETE FILE
+   FIXED ASSETS MODULE JAVASCRIPT - UPDATED
+   Using direct google.script.run (same as inventory module)
    ============================================ */
 
 // Global variables
@@ -54,16 +55,18 @@ function initAssetRegisterModule() {
   // First update accumulated depreciation
   showAssetRegisterLoadingModal('Initializing asset register...');
   
-  callGAS('updateAllAccumulatedDepreciation', { asOfDate: today })
-    .then(() => {
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Update depreciation success:', response);
       hideAssetRegisterLoadingModal();
-      return loadDetailedRegister();
+      loadDetailedRegister();
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       console.error('Initialization error:', error);
       hideAssetRegisterLoadingModal();
       loadDetailedRegister(); // Still try to load even if update fails
-    });
+    })
+    .updateAllAccumulatedDepreciation(today);
   
   // Close dropdown when clicking outside
   window.addEventListener('click', function(event) {
@@ -78,10 +81,6 @@ function initAssetRegisterModule() {
 
 // ============================================
 // ASSET CODE GENERATION
-// ============================================
-
-// ============================================
-// ASSET DEPRECIATION INFO - FIXED
 // ============================================
 
 function handleAssetTypeChange() {
@@ -170,19 +169,20 @@ function updateDepreciationInfo() {
 function generateAssetCode(assetType) {
   console.log('Generating asset code for:', assetType);
   
-  callGAS('generateAssetCode', { assetType: assetType })
-    .then(response => {
+  google.script.run
+    .withSuccessHandler(function(response) {
       const field = document.getElementById('assetCode');
       if (field && response) {
         field.value = response;
         console.log('Asset code generated:', response);
       }
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       console.error('Error generating asset code:', error);
       document.getElementById('assetCode').value = '';
       showAssetMessage('Error generating asset code: ' + (error.message || error), 'error');
-    });
+    })
+    .generateAssetCode(assetType);
 }
 
 function formatDateForDisplay(date) {
@@ -202,7 +202,6 @@ function formatCurrency(value) {
   });
 }
 
-// Make sure resetAssetForm is defined
 function resetAssetForm() {
   document.getElementById('newAssetForm').reset();
   document.getElementById('depreciationInfo').style.display = 'none';
@@ -212,43 +211,8 @@ function resetAssetForm() {
   if (dateField) dateField.value = today;
 }
 
-// Add event listeners when the module loads
-function initAssetModule() {
-  console.log('Initializing Asset Module');
-  
-  const today = new Date().toISOString().split('T')[0];
-  const dateField = document.getElementById('dateOfPurchase');
-  if (dateField) dateField.value = today;
-  
-  // Add event listeners for real-time updates
-  const costField = document.getElementById('assetCost');
-  const purchaseDateField = document.getElementById('dateOfPurchase');
-  const typeField = document.getElementById('assetType');
-  
-  if (costField) {
-    costField.addEventListener('input', function() {
-      if (typeField && typeField.value) updateDepreciationInfo();
-    });
-  }
-  
-  if (purchaseDateField) {
-    purchaseDateField.addEventListener('change', function() {
-      if (typeField && typeField.value) updateDepreciationInfo();
-    });
-  }
-  
-  // Close modal when clicking outside
-  window.addEventListener('click', function(event) {
-    const modal = document.getElementById('messageModal');
-    if (modal && event.target === modal) {
-      closeAssetModal();
-    }
-  });
-}
-
-
 // ============================================
-// ASSET CRUD
+// ASSET CRUD - UPDATED TO USE google.script.run
 // ============================================
 
 function submitNewAsset() {
@@ -259,6 +223,7 @@ function submitNewAsset() {
   const assetCost = document.getElementById('assetCost').value;
   const assetLocation = document.getElementById('assetLocation').value;
 
+  // Validation
   if (!assetType) {
     showAssetMessage('Please select an asset type', 'error');
     return;
@@ -301,39 +266,46 @@ function submitNewAsset() {
     status: 'Active'
   };
 
-  callGAS('addNewAsset', { formData: JSON.stringify(formData) })
-    .then(response => {
+  console.log('Submitting form data:', formData);
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Success response:', response);
       hideAssetLoadingModal();
-      if (response && !response.error) {
-        showAssetMessage('✓ Asset added successfully!', 'success');
-        setTimeout(() => {
-          document.getElementById('newAssetForm').reset();
-          const today = new Date().toISOString().split('T')[0];
-          document.getElementById('dateOfPurchase').value = today;
-          document.getElementById('assetCode').value = '';
-          document.getElementById('assetType').value = '';
-          document.getElementById('depreciationInfo').style.display = 'none';
-          
-          if (currentAsOfDate) {
-            callGAS('updateAllAccumulatedDepreciation', { asOfDate: currentAsOfDate })
-              .then(() => loadDetailedRegister())
-              .catch(() => loadDetailedRegister());
-          } else {
-            loadDetailedRegister();
-          }
-        }, 1500);
-      } else {
-        showAssetMessage('Error adding asset: ' + (response?.error || 'Unknown error'), 'error');
-      }
+      showAssetMessage('✓ Asset added successfully!', 'success');
+      setTimeout(() => {
+        document.getElementById('newAssetForm').reset();
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateOfPurchase').value = today;
+        document.getElementById('assetCode').value = '';
+        document.getElementById('assetCode').readOnly = false;
+        document.getElementById('assetType').value = '';
+        document.getElementById('depreciationInfo').style.display = 'none';
+        
+        if (currentAsOfDate) {
+          google.script.run
+            .withSuccessHandler(function() {
+              loadDetailedRegister();
+            })
+            .withFailureHandler(function() {
+              loadDetailedRegister();
+            })
+            .updateAllAccumulatedDepreciation(currentAsOfDate);
+        } else {
+          loadDetailedRegister();
+        }
+      }, 1500);
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
+      console.error('Failure response:', error);
       hideAssetLoadingModal();
       showAssetMessage('Error adding asset: ' + (error.message || error), 'error');
-    });
+    })
+    .addNewAsset(formData);
 }
 
 // ============================================
-// DETAILED REGISTER
+// DETAILED REGISTER - UPDATED
 // ============================================
 
 function switchAssetRegisterTab(tabName) {
@@ -365,8 +337,9 @@ function switchAssetRegisterTab(tabName) {
 function loadDetailedRegister() {
   showAssetRegisterLoadingSpinner('detailedRegisterBody');
   
-  callGAS('getDetailedRegister', {})
-    .then(response => {
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Detailed register response:', response);
       if (response && !response.error) {
         allDetailedAssets = response;
         renderDetailedRegisterTable(response);
@@ -374,10 +347,11 @@ function loadDetailedRegister() {
         showAssetRegisterEmptyState('detailedRegisterBody', 'Error loading asset register', 11);
       }
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       console.error('Error loading detailed register:', error);
       showAssetRegisterEmptyState('detailedRegisterBody', 'Error loading asset register', 11);
-    });
+    })
+    .getDetailedRegister();
 }
 
 function recalculateAssetValues() {
@@ -391,31 +365,39 @@ function recalculateAssetValues() {
   
   showAssetRegisterLoadingModal('Recalculating accumulated depreciation as at ' + formatDateForDisplay(new Date(currentAsOfDate)) + '...');
   
-  callGAS('updateAllAccumulatedDepreciation', { 
-    asOfDate: currentAsOfDate 
-  })
-  .then(response => {
-    hideAssetRegisterLoadingModal();
-    if (response && !response.error) {
-      return callGAS('getDetailedRegister', {});
-    } else {
-      throw new Error(response?.error || 'Failed to update');
-    }
-  })
-  .then(response => {
-    if (response && !response.error) {
-      allDetailedAssets = response;
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Update depreciation success:', response);
+      if (response && !response.error) {
+        // Reload the detailed register
+        google.script.run
+          .withSuccessHandler(function(assets) {
+            hideAssetRegisterLoadingModal();
+            if (assets && !assets.error) {
+              allDetailedAssets = assets;
+              renderDetailedRegisterTable(allDetailedAssets);
+              showAssetMessage('✓ Accumulated depreciation updated as at ' + formatDateForDisplay(new Date(currentAsOfDate)), 'success');
+              setTimeout(() => closeAssetModal(), 1500);
+            }
+          })
+          .withFailureHandler(function(error) {
+            hideAssetRegisterLoadingModal();
+            console.error('Error reloading assets:', error);
+            showAssetMessage('Error reloading assets: ' + (error.message || error), 'error');
+          })
+          .getDetailedRegister();
+      } else {
+        hideAssetRegisterLoadingModal();
+        throw new Error(response?.error || 'Failed to update');
+      }
+    })
+    .withFailureHandler(function(error) {
+      hideAssetRegisterLoadingModal();
+      console.error('Error:', error);
+      showAssetMessage('Error updating depreciation: ' + (error.message || error), 'error');
       renderDetailedRegisterTable(allDetailedAssets);
-      showAssetMessage('✓ Accumulated depreciation updated as at ' + formatDateForDisplay(new Date(currentAsOfDate)), 'success');
-      setTimeout(() => closeAssetModal(), 1500);
-    }
-  })
-  .catch(error => {
-    hideAssetRegisterLoadingModal();
-    console.error('Error:', error);
-    showAssetMessage('Error updating depreciation: ' + (error.message || error), 'error');
-    renderDetailedRegisterTable(allDetailedAssets);
-  });
+    })
+    .updateAllAccumulatedDepreciation(currentAsOfDate);
 }
 
 function renderDetailedRegisterTable(data) {
@@ -455,7 +437,7 @@ function renderDetailedRegisterTable(data) {
 }
 
 // ============================================
-// SUMMARY REGISTER
+// SUMMARY REGISTER - UPDATED
 // ============================================
 
 function loadSummaryRegister() {
@@ -470,8 +452,9 @@ function loadSummaryRegister() {
   const toDate = toDateInput.value;
   summaryToDate = toDate;
 
-  callGAS('getFixedAssetsSummaryReport', { toDate: toDate })
-    .then(response => {
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Summary report response:', response);
       if (response && !response.error && response.summaryByType) {
         renderSummaryRegisterFromReport(response);
       } else {
@@ -479,10 +462,11 @@ function loadSummaryRegister() {
         showAssetRegisterEmptyState('summaryDetailsBody', 'Error loading summary register: ' + (response?.error || 'Unknown error'), 9);
       }
     })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       console.error('Error loading summary register:', error);
       showAssetRegisterEmptyState('summaryDetailsBody', 'Error loading summary register: ' + (error.message || error), 9);
-    });
+    })
+    .getFixedAssetsSummaryReport(toDate);
 }
 
 function recalculateSummaryRegister() {
@@ -498,30 +482,41 @@ function recalculateSummaryRegister() {
   
   showAssetRegisterLoadingModal('Calculating summary register as at ' + formatDateForDisplay(new Date(toDate)) + '...');
   
-  callGAS('updateAllAccumulatedDepreciation', { asOfDate: toDate })
-    .then(response => {
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Update depreciation success:', response);
       if (response && !response.error) {
-        return callGAS('getFixedAssetsSummaryReport', { toDate: toDate });
+        // Get the summary report
+        google.script.run
+          .withSuccessHandler(function(report) {
+            hideAssetRegisterLoadingModal();
+            if (report && !report.error && report.summaryByType) {
+              renderSummaryRegisterFromReport(report);
+              showAssetMessage('✓ Summary Register calculated as at ' + formatDateForDisplay(new Date(toDate)), 'success');
+              setTimeout(() => closeAssetModal(), 1500);
+            } else {
+              throw new Error(report?.error || 'Failed to generate report');
+            }
+          })
+          .withFailureHandler(function(error) {
+            hideAssetRegisterLoadingModal();
+            console.error('Error:', error);
+            showAssetMessage('Error: ' + (error.message || error), 'error');
+            showAssetRegisterEmptyState('summaryDetailsBody', 'Error: ' + (error.message || error), 9);
+          })
+          .getFixedAssetsSummaryReport(toDate);
       } else {
+        hideAssetRegisterLoadingModal();
         throw new Error(response?.error || 'Failed to update depreciation');
       }
     })
-    .then(response => {
-      hideAssetRegisterLoadingModal();
-      if (response && !response.error && response.summaryByType) {
-        renderSummaryRegisterFromReport(response);
-        showAssetMessage('✓ Summary Register calculated as at ' + formatDateForDisplay(new Date(toDate)), 'success');
-        setTimeout(() => closeAssetModal(), 1500);
-      } else {
-        throw new Error(response?.error || 'Failed to generate report');
-      }
-    })
-    .catch(error => {
+    .withFailureHandler(function(error) {
       hideAssetRegisterLoadingModal();
       console.error('Error:', error);
       showAssetMessage('Error: ' + (error.message || error), 'error');
       showAssetRegisterEmptyState('summaryDetailsBody', 'Error: ' + (error.message || error), 9);
-    });
+    })
+    .updateAllAccumulatedDepreciation(toDate);
 }
 
 function renderSummaryRegisterFromReport(report) {
@@ -617,7 +612,7 @@ function getMonthYearDisplay(date) {
 }
 
 // ============================================
-// ACTION DROPDOWN
+// ACTION DROPDOWN - UPDATED
 // ============================================
 
 function openAssetActionDropdown(event, assetName) {
@@ -666,34 +661,47 @@ function disposeAsset(assetName) {
   if (confirm(`Are you sure you want to dispose of this asset?\n${assetName}`)) {
     showAssetRegisterLoadingModal('Disposing asset...');
 
-    callGAS('updateAssetStatus', { assetName: assetName, newStatus: 'Disposed' })
-      .then(response => {
-        hideAssetRegisterLoadingModal();
+    google.script.run
+      .withSuccessHandler(function(response) {
+        console.log('Dispose success:', response);
         if (response && !response.error) {
-          showAssetMessage('Asset disposed successfully!', 'success');
-          if (currentAsOfDate) {
-            return callGAS('updateAllAccumulatedDepreciation', { asOfDate: currentAsOfDate });
-          }
+          // Update accumulated depreciation first
+          google.script.run
+            .withSuccessHandler(function() {
+              // Then reload the detailed register
+              google.script.run
+                .withSuccessHandler(function(assets) {
+                  hideAssetRegisterLoadingModal();
+                  if (assets && !assets.error) {
+                    allDetailedAssets = assets;
+                    loadDetailedRegister();
+                    if (document.getElementById('summaryRegister').classList.contains('active')) {
+                      loadSummaryRegister();
+                    }
+                    showAssetMessage('Asset disposed successfully!', 'success');
+                  }
+                })
+                .withFailureHandler(function(error) {
+                  hideAssetRegisterLoadingModal();
+                  showAssetMessage('Error reloading assets: ' + (error.message || error), 'error');
+                })
+                .getDetailedRegister();
+            })
+            .withFailureHandler(function(error) {
+              hideAssetRegisterLoadingModal();
+              showAssetMessage('Error updating depreciation: ' + (error.message || error), 'error');
+            })
+            .updateAllAccumulatedDepreciation(currentAsOfDate);
         } else {
+          hideAssetRegisterLoadingModal();
           throw new Error(response?.error || 'Unknown error');
         }
       })
-      .then(() => {
-        return callGAS('getDetailedRegister', {});
-      })
-      .then(response => {
-        if (response && !response.error) {
-          allDetailedAssets = response;
-          loadDetailedRegister();
-          if (document.getElementById('summaryRegister').classList.contains('active')) {
-            loadSummaryRegister();
-          }
-        }
-      })
-      .catch(error => {
+      .withFailureHandler(function(error) {
         hideAssetRegisterLoadingModal();
         showAssetMessage('Error disposing asset: ' + (error.message || error), 'error');
-      });
+      })
+      .updateAssetStatus(assetName, 'Disposed');
   }
 }
 
@@ -834,21 +842,6 @@ function showAssetRegisterLoadingSpinner(elementId) {
   `;
 }
 
-// Add event listeners
-document.addEventListener('DOMContentLoaded', function() {
-  const costField = document.getElementById('assetCost');
-  const dateField = document.getElementById('dateOfPurchase');
-  const typeField = document.getElementById('assetType');
-  
-  if (costField) costField.addEventListener('input', function() {
-    if (typeField && typeField.value) calculateDepreciationInfo(typeField.value);
-  });
-  
-  if (dateField) dateField.addEventListener('change', function() {
-    if (typeField && typeField.value) calculateDepreciationInfo(typeField.value);
-  });
-});
-
 // Print functions
 window.printAssetDetailed = function() {
   if (typeof printUtils !== 'undefined' && printUtils.printAssetRegister) {
@@ -880,7 +873,6 @@ window.disposeAsset = disposeAsset;
 window.closeAssetModal = closeAssetModal;
 window.loadSummaryRegister = loadSummaryRegister;
 window.renderSummaryRegisterFromReport = renderSummaryRegisterFromReport;
-window.initAssetModule = initAssetModule;
 window.updateDepreciationInfo = updateDepreciationInfo;
 window.resetAssetForm = resetAssetForm;
 window.generateAssetCode = generateAssetCode;
