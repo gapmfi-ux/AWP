@@ -532,10 +532,13 @@ function previewVoucherFromLast() {
 function printVoucher() {
   var actions = document.querySelector('.modal-actions');
   if (actions) actions.style.display = 'none';
-  window.print();
+  
+  // Use the new printUtils function
+  printUtils.printVoucher();
+  
   setTimeout(() => {
     if (actions) actions.style.display = 'flex';
-  }, 500);
+  }, 1000);
 }
 
 function convertNumberToWords(amount) {
