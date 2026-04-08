@@ -1,3 +1,7 @@
+/* ============================================
+   PAYMENT VOUCHER MODULE STYLES - IMPROVED
+   Fixed: Shows ALL saved vouchers with scrolling
+   ============================================ */
 
 .main-layout {
     display: flex;
@@ -136,7 +140,7 @@
     margin-top: 10px !important;
 }
 
-/* Saved Voucher Table - FIXED SCROLLING */
+/* Saved Voucher Table - FIXED: Shows ALL vouchers with scrolling */
 .saved-voucher-table {
     border: 2px solid #004ba0;
     width: 280px;
@@ -191,19 +195,19 @@
     flex-shrink: 0;
 }
 
-/* FIXED SCROLLING - added overflow-y auto with proper height */
+/* FIXED: Shows ALL vouchers - removed max-height limit, made it scroll properly */
 .svt-list {
-    min-height: 60px;
     padding: 3px 5px;
     font-size: 11px;
     text-align: center;
     color: #1a1a2e;
-    max-height: 120px;
     overflow-y: auto;
-    flex-shrink: 1;
+    flex: 1;
+    min-height: 80px;
+    max-height: 180px;
 }
 
-/* Ensure scrolling works on all browsers */
+/* Custom scrollbar for better visibility */
 .svt-list::-webkit-scrollbar {
     width: 6px;
 }
@@ -233,12 +237,13 @@
     border: none;
     color: #1565c0;
     font-size: 11px;
-    padding: 4px 0;
+    padding: 6px 4px;
     width: 100%;
     text-align: left;
     cursor: pointer;
     border-bottom: 1px dotted #c9d7e5;
     transition: background 0.08s;
+    font-family: inherit;
 }
 
 .pv-btn:hover {
@@ -287,7 +292,7 @@
 }
 
 /* ============================================
-   VOUCHER MODAL - REDUCED WIDTH & IMPROVED PRINT
+   VOUCHER MODAL / PRINT STYLES
    ============================================ */
 
 .voucher-modal {
@@ -306,8 +311,8 @@
     background-color: #fff;
     margin: 2% auto;
     padding: 15px;
-    max-width: 650px;
-    width: 90%;
+    width: 210mm;
+    max-width: 95%;
     position: relative;
     border-radius: 5px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -316,6 +321,7 @@
 .voucher-page {
     font-family: Arial, sans-serif;
     width: 100%;
+    max-width: 750px;
     margin: 0 auto;
     padding: 15px;
     border: 1px solid #000;
@@ -431,7 +437,7 @@
     font-size: 11px;
 }
 
-/* Signature Section - Compact */
+/* Signature Section */
 .signature-section {
     margin-top: 20px;
     width: 100%;
@@ -599,66 +605,50 @@
     margin-bottom: 8px;
 }
 
-/* FIXED PRINT VIEW - matches modal exactly */
+/* Print Styles - matches modal view exactly */
 @media print {
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-    
     body * {
         visibility: hidden !important;
     }
-    
+
     #voucher-print, #voucher-print * {
         visibility: visible !important;
     }
-    
+
     @page {
-        size: A4;
-        margin: 0.5cm;
+        size: A4 portrait;
+        margin: 4mm;
     }
-    
+
     html, body {
         margin: 0 !important;
         padding: 0 !important;
-        background: white !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        overflow: hidden !important;
     }
-    
+
     #voucher-print {
-        position: fixed !important;
+        position: absolute !important;
         top: 0 !important;
         left: 0 !important;
-        right: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 15px !important;
-        background: white !important;
+        width: 210mm !important;
+        padding: 4mm 8mm !important;
+        margin: 0 auto !important;
+        background-color: white !important;
         border: 1px solid #000 !important;
         box-sizing: border-box !important;
-        page-break-after: avoid;
-        page-break-inside: avoid;
     }
-    
+
     .voucher-modal-content {
-        margin: 0 !important;
-        padding: 0 !important;
-        background: none !important;
         box-shadow: none !important;
-        max-width: 100% !important;
-        width: 100% !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
-    
+
     .modal-actions {
         display: none !important;
-    }
-    
-    .voucher-modal {
-        background: white !important;
-        position: fixed !important;
-        display: block !important;
     }
 }
 
@@ -725,7 +715,6 @@
     .voucher-modal-content {
         margin: 5% auto;
         padding: 10px;
-        width: 95%;
     }
     
     .modal-actions {
