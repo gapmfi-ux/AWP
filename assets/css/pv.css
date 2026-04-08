@@ -139,10 +139,10 @@
     margin-top: 10px !important;
 }
 
-/* Saved Voucher Table - Compact */
+/* Saved Voucher Table - IMPROVED SCROLLING */
 .saved-voucher-table {
     border: 2px solid #004ba0;
-    width: 260px;
+    width: 280px;
     background: #f7fafd;
     font-family: 'Courier New', Courier, monospace;
     border-radius: 10px;
@@ -150,7 +150,7 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: column;
-    max-height: 600px;
+    max-height: 550px;
 }
 
 .svt-title {
@@ -171,19 +171,15 @@
     border: 1px solid #bcd;
     border-left: none;
     border-right: none;
-    margin: 12px 12px 0 12px;
-    padding: 0;
-    min-height: 50px;
+    margin: 8px 12px;
+    padding: 0 0 8px 0;
     background: #f9fbff;
     border-radius: 6px;
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-}
-
-.svt-section:last-child {
-    margin-bottom: 12px;
+    min-height: 100px;
+    max-height: 160px;
 }
 
 .svt-header {
@@ -195,7 +191,6 @@
     color: #1565c0;
     border-bottom: 1px dashed #aac4db;
     padding-bottom: 4px;
-    padding: 0 5px;
     flex-shrink: 0;
 }
 
@@ -207,6 +202,7 @@
     color: #1a1a2e;
     overflow-y: auto;
     flex: 1;
+    max-height: 110px;
 }
 
 .svt-list div {
@@ -278,13 +274,13 @@
 }
 
 /* ============================================
-   VOUCHER MODAL / PRINT STYLES - Compact
+   VOUCHER MODAL / PRINT STYLES - REDUCED WIDTH
    ============================================ */
 
 .voucher-page {
     font-family: Arial, sans-serif;
     width: 100%;
-    max-width: 750px;
+    max-width: 700px;
     margin: 0 auto;
     padding: 15px;
     border: 1px solid #000;
@@ -460,7 +456,7 @@
     margin: 0 8px;
 }
 
-/* Modal Styles */
+/* Modal Styles - REDUCED WIDTH */
 .voucher-modal {
     display: none;
     position: fixed;
@@ -477,8 +473,8 @@
     background-color: #fff;
     margin: 2% auto;
     padding: 15px;
-    width: 210mm;
-    max-width: 95%;
+    width: 750px;
+    max-width: 90%;
     position: relative;
     border-radius: 5px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
@@ -501,7 +497,25 @@
     transition: all 0.3s ease;
 }
 
-/* Loading/Processing Modal */
+.print-btn {
+    background: #4CAF50;
+    color: white;
+}
+
+.print-btn:hover {
+    background: #45a049;
+}
+
+.close-modal {
+    background: #f44336;
+    color: white;
+}
+
+.close-modal:hover {
+    background: #da190b;
+}
+
+/* Loading Modal */
 .modal {
     display: none;
     position: fixed;
@@ -520,9 +534,8 @@
     padding: 20px 30px;
     border-radius: 8px;
     text-align: center;
-    min-width: 280px;
-    max-width: 380px;
-    width: 85%;
+    min-width: 250px;
+    max-width: 90vw;
 }
 
 .loader {
@@ -575,128 +588,58 @@
     margin-bottom: 8px;
 }
 
-/* ============================================
-   PRINT STYLES - Simple, Clean Printing
-   ============================================ */
+/* Print Styles - MATCHES MODAL LAYOUT */
 @media print {
-    /* Hide everything by default */
-    body {
-        margin: 0;
-        padding: 0;
-        background: white;
-    }
-
     body * {
-        display: none;
+        visibility: hidden !important;
     }
 
-    /* Show only the voucher content */
-    .voucher-modal,
-    .voucher-modal-content,
-    #voucher-print,
-    .voucher-page,
-    .voucher-header,
-    .voucher-title,
-    .voucher-type,
-    .voucher-body,
-    .voucher-row,
-    .voucher-label,
-    .pv-number-value,
-    .label-text,
-    .dots,
-    .input-value,
-    .half-width,
-    .full-width,
-    .signature-section,
-    .sig-headings,
-    .sig-label,
-    .sig-heading,
-    .sig-row,
-    .sig-name-container,
-    .sig-name-line,
-    .sig-name-text,
-    .sig-dots,
-    #preview-pvNumber,
-    #preview-payableTo,
-    #preview-date,
-    #preview-address,
-    #preview-department,
-    #preview-accountCode,
-    #preview-invoiceDate,
-    #preview-invoiceNo,
-    #preview-amount,
-    #preview-amountInWords,
-    #preview-transactionDetails,
-    #preview-bank,
-    #preview-chequeNumber,
-    #preview-withholdingTax,
-    #preview-requestedBy,
-    #preview-reviewedBy,
-    #preview-authorizedBy,
-    #preview-receivedBy,
-    #preview-cheque-fields,
-    #preview-withholdingTax-row {
-        display: block !important;
+    #voucher-print, #voucher-print * {
+        visibility: visible !important;
     }
 
-    /* Hide interactive elements */
-    .modal-actions,
-    .form-container,
-    .saved-voucher-table,
-    #pv-dropdown-portal {
-        display: none !important;
-    }
-
-    /* Print specific styling */
     @page {
         size: A4 portrait;
-        margin: 0.5cm;
+        margin: 10mm;
     }
 
-    .voucher-modal {
-        position: static !important;
-        display: block !important;
-        background: transparent !important;
-        z-index: auto !important;
-        width: 100% !important;
-        height: auto !important;
-        overflow: visible !important;
-    }
-
-    .voucher-modal-content {
+    html, body {
         margin: 0 !important;
         padding: 0 !important;
-        width: 100% !important;
-        max-width: 100% !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        border: none !important;
-        position: static !important;
     }
 
     #voucher-print {
-        margin: 0 !important;
-        padding: 0 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
         width: 100% !important;
-        height: auto !important;
-    }
-
-    .voucher-page {
-        max-width: 100% !important;
-        width: 100% !important;
-        margin: 0 !important;
+        max-width: 700px !important;
+        margin: 0 auto !important;
         padding: 15px !important;
+        background-color: white !important;
         border: 1px solid #000 !important;
-        background: white !important;
         box-sizing: border-box !important;
+        font-family: Arial, sans-serif !important;
     }
 
-    .voucher-header {
-        margin-bottom: 15px !important;
-    }
-
-    .voucher-body {
+    .voucher-modal-content {
+        box-shadow: none !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 auto !important;
         width: 100% !important;
+        max-width: 700px !important;
+    }
+
+    .modal-actions {
+        display: none !important;
+    }
+    
+    .voucher-page {
+        border: 1px solid #000 !important;
+        margin: 0 auto !important;
+        padding: 15px !important;
     }
 }
 
@@ -763,6 +706,7 @@
     .voucher-modal-content {
         margin: 5% auto;
         padding: 10px;
+        width: 95%;
     }
     
     .modal-actions {
@@ -771,10 +715,5 @@
     
     .print-btn, .close-modal {
         width: 100%;
-    }
-
-    .modal-content {
-        min-width: 250px;
-        max-width: 90%;
     }
 }
