@@ -533,12 +533,12 @@ function printVoucher() {
   var actions = document.querySelector('.modal-actions');
   if (actions) actions.style.display = 'none';
   
-  // Use the new printUtils function
-  printUtils.printVoucher();
+  // Use native print - CSS @media print will handle visibility
+  window.print();
   
   setTimeout(() => {
     if (actions) actions.style.display = 'flex';
-  }, 1000);
+  }, 500);
 }
 
 function convertNumberToWords(amount) {
