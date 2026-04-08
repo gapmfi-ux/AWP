@@ -1,3 +1,7 @@
+/* ============================================
+   PAYMENT VOUCHER MODULE JAVASCRIPT
+   Maintains original Google Apps Script logic
+   ============================================ */
 
 // Payment Voucher Module JavaScript
 let lastSubmittedVoucherData = null;
@@ -159,7 +163,7 @@ function renderPVList(elementId, pvList) {
       formattedPV = prefix + num;
     }
     
-    return `<div><button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">${formattedPV}</button></div>`;
+    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">${formattedPV}</button>`;
   }).join('');
   
   el.innerHTML = items;
@@ -379,7 +383,6 @@ function fetchNextPVNumber(voucherType) {
     })
     .withFailureHandler(function(error) {
       console.error('Error fetching next PV number:', error);
-      // Generate a fallback PV number if API fails
       const fallbackNumber = generateFallbackPVNumber(voucherType);
       if (!currentlyEditingPvNumber) {
         var pvField = document.getElementById('pvNumber');
@@ -391,7 +394,6 @@ function fetchNextPVNumber(voucherType) {
     .getNextPVNumber(voucherType);
 }
 
-// Generate fallback PV number if API fails
 function generateFallbackPVNumber(voucherType) {
   const prefixes = {
     'Payment Voucher': 'PVNO.FT',
@@ -526,13 +528,15 @@ function previewVoucherFromLast() {
 }
 
 function printVoucher() {
+  var modalContent = document.querySelector('.voucher-modal-content');
   var actions = document.querySelector('.modal-actions');
+  var originalPrintHtml = document.getElementById('voucher-print').innerHTML;
+  
   if (actions) actions.style.display = 'none';
   
-  // Use native print - CSS @media print will handle visibility
   window.print();
   
-  setTimeout(() => {
+  setTimeout(function() {
     if (actions) actions.style.display = 'flex';
   }, 500);
 }
@@ -611,7 +615,6 @@ function toggleWithholdingTax() {
   }
 }
 
-// Initialize PV Module
 function initPVModule() {
   const today = new Date().toISOString().split('T')[0];
   var dateField = document.getElementById('date');
@@ -620,7 +623,6 @@ function initPVModule() {
   fetchPVTable();
 }
 
-// Event Listeners for PV Module
 window.addEventListener('click', function(event) {
   var voucherModal = document.getElementById('voucher-preview-modal');
   var loadingModal = document.getElementById('loading-modal');
