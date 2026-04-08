@@ -1,6 +1,6 @@
 /* ============================================
    PAYMENT VOUCHER MODULE JAVASCRIPT
-   Fixed: Shows ALL saved vouchers (removed 5-item limit)
+   Maintains original Google Apps Script logic
    ============================================ */
 
 // Payment Voucher Module JavaScript
@@ -153,8 +153,7 @@ function renderPVList(elementId, pvList) {
     return;
   }
   
-  // FIXED: Show ALL vouchers, not just last 5
-  const items = pvList.slice().reverse().map(item => {
+  const items = pvList.slice(-5).reverse().map(item => {
     const match = item.pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
     let formattedPV = item.pvNumber;
     
@@ -164,7 +163,7 @@ function renderPVList(elementId, pvList) {
       formattedPV = prefix + num;
     }
     
-    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">${formattedPV}</button>`;
+    return `<div><button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">${formattedPV}</button></div>`;
   }).join('');
   
   el.innerHTML = items;
@@ -384,6 +383,7 @@ function fetchNextPVNumber(voucherType) {
     })
     .withFailureHandler(function(error) {
       console.error('Error fetching next PV number:', error);
+      // Generate a fallback PV number if API fails
       const fallbackNumber = generateFallbackPVNumber(voucherType);
       if (!currentlyEditingPvNumber) {
         var pvField = document.getElementById('pvNumber');
@@ -395,6 +395,7 @@ function fetchNextPVNumber(voucherType) {
     .getNextPVNumber(voucherType);
 }
 
+// Generate fallback PV number if API fails
 function generateFallbackPVNumber(voucherType) {
   const prefixes = {
     'Payment Voucher': 'PVNO.FT',
@@ -611,6 +612,7 @@ function toggleWithholdingTax() {
   }
 }
 
+// Initialize PV Module
 function initPVModule() {
   const today = new Date().toISOString().split('T')[0];
   var dateField = document.getElementById('date');
@@ -619,6 +621,7 @@ function initPVModule() {
   fetchPVTable();
 }
 
+// Event Listeners for PV Module
 window.addEventListener('click', function(event) {
   var voucherModal = document.getElementById('voucher-preview-modal');
   var loadingModal = document.getElementById('loading-modal');
@@ -643,10 +646,3 @@ document.addEventListener('click', function(event) {
     event.stopPropagation();
   }
 });
-
-// Initialize when DOM is ready
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initPVModule);
-} else {
-  initPVModule();
-}
