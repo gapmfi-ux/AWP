@@ -1,6 +1,6 @@
 /* ============================================
    PAYMENT VOUCHER MODULE JAVASCRIPT
-   Maintains original Google Apps Script logic
+   Maintains original logic with print fix & scroll improvement
    ============================================ */
 
 // Payment Voucher Module JavaScript
@@ -383,7 +383,6 @@ function fetchNextPVNumber(voucherType) {
     })
     .withFailureHandler(function(error) {
       console.error('Error fetching next PV number:', error);
-      // Generate a fallback PV number if API fails
       const fallbackNumber = generateFallbackPVNumber(voucherType);
       if (!currentlyEditingPvNumber) {
         var pvField = document.getElementById('pvNumber');
@@ -395,7 +394,6 @@ function fetchNextPVNumber(voucherType) {
     .getNextPVNumber(voucherType);
 }
 
-// Generate fallback PV number if API fails
 function generateFallbackPVNumber(voucherType) {
   const prefixes = {
     'Payment Voucher': 'PVNO.FT',
@@ -532,9 +530,24 @@ function previewVoucherFromLast() {
 function printVoucher() {
   var actions = document.querySelector('.modal-actions');
   if (actions) actions.style.display = 'none';
+  
+  var modalContent = document.querySelector('.voucher-modal-content');
+  var originalWidth = modalContent ? modalContent.style.maxWidth : '';
+  if (modalContent) {
+    modalContent.style.maxWidth = '100%';
+    modalContent.style.width = '100%';
+    modalContent.style.padding = '0';
+  }
+  
   window.print();
+  
   setTimeout(() => {
     if (actions) actions.style.display = 'flex';
+    if (modalContent) {
+      modalContent.style.maxWidth = originalWidth || '650px';
+      modalContent.style.width = '90%';
+      modalContent.style.padding = '15px';
+    }
   }, 500);
 }
 
@@ -612,7 +625,6 @@ function toggleWithholdingTax() {
   }
 }
 
-// Initialize PV Module
 function initPVModule() {
   const today = new Date().toISOString().split('T')[0];
   var dateField = document.getElementById('date');
@@ -621,7 +633,6 @@ function initPVModule() {
   fetchPVTable();
 }
 
-// Event Listeners for PV Module
 window.addEventListener('click', function(event) {
   var voucherModal = document.getElementById('voucher-preview-modal');
   var loadingModal = document.getElementById('loading-modal');
@@ -646,3 +657,10 @@ document.addEventListener('click', function(event) {
     event.stopPropagation();
   }
 });
+
+// Initialize when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPVModule);
+} else {
+  initPVModule();
+}
