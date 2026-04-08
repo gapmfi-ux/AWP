@@ -1,6 +1,6 @@
 /* ============================================
    PAYMENT VOUCHER MODULE JAVASCRIPT
-   Maintains original logic with print fix & scroll improvement
+   Fixed: Shows ALL saved vouchers (removed 5-item limit)
    ============================================ */
 
 // Payment Voucher Module JavaScript
@@ -153,7 +153,8 @@ function renderPVList(elementId, pvList) {
     return;
   }
   
-  const items = pvList.slice(-5).reverse().map(item => {
+  // FIXED: Show ALL vouchers, not just last 5
+  const items = pvList.slice().reverse().map(item => {
     const match = item.pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
     let formattedPV = item.pvNumber;
     
@@ -530,24 +531,9 @@ function previewVoucherFromLast() {
 function printVoucher() {
   var actions = document.querySelector('.modal-actions');
   if (actions) actions.style.display = 'none';
-  
-  var modalContent = document.querySelector('.voucher-modal-content');
-  var originalWidth = modalContent ? modalContent.style.maxWidth : '';
-  if (modalContent) {
-    modalContent.style.maxWidth = '100%';
-    modalContent.style.width = '100%';
-    modalContent.style.padding = '0';
-  }
-  
   window.print();
-  
   setTimeout(() => {
     if (actions) actions.style.display = 'flex';
-    if (modalContent) {
-      modalContent.style.maxWidth = originalWidth || '650px';
-      modalContent.style.width = '90%';
-      modalContent.style.padding = '15px';
-    }
   }, 500);
 }
 
