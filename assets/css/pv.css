@@ -1,6 +1,5 @@
 /* ============================================
-   PAYMENT VOUCHER MODULE STYLES - IMPROVED
-   Fixed: Shows ALL saved vouchers with scrolling
+   PAYMENT VOUCHER MODULE STYLES - COMPACT VERSION
    ============================================ */
 
 .main-layout {
@@ -140,10 +139,10 @@
     margin-top: 10px !important;
 }
 
-/* Saved Voucher Table - FIXED: Shows ALL vouchers with scrolling */
+/* Saved Voucher Table - Compact */
 .saved-voucher-table {
     border: 2px solid #004ba0;
-    width: 280px;
+    width: 260px;
     background: #f7fafd;
     font-family: 'Courier New', Courier, monospace;
     border-radius: 10px;
@@ -172,15 +171,19 @@
     border: 1px solid #bcd;
     border-left: none;
     border-right: none;
-    margin: 8px 12px;
-    padding: 0 0 8px 0;
+    margin: 12px 12px 0 12px;
+    padding: 0;
+    min-height: 50px;
     background: #f9fbff;
     border-radius: 6px;
+    flex: 1;
     display: flex;
     flex-direction: column;
-    flex: 1;
-    min-height: 0;
     overflow: hidden;
+}
+
+.svt-section:last-child {
+    margin-bottom: 12px;
 }
 
 .svt-header {
@@ -192,34 +195,18 @@
     color: #1565c0;
     border-bottom: 1px dashed #aac4db;
     padding-bottom: 4px;
+    padding: 0 5px;
     flex-shrink: 0;
 }
 
-/* FIXED: Shows ALL vouchers - removed max-height limit, made it scroll properly */
 .svt-list {
+    min-height: 15px;
     padding: 3px 5px;
     font-size: 11px;
     text-align: center;
     color: #1a1a2e;
     overflow-y: auto;
     flex: 1;
-    min-height: 80px;
-    max-height: 180px;
-}
-
-/* Custom scrollbar for better visibility */
-.svt-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.svt-list::-webkit-scrollbar-track {
-    background: #e0e7f0;
-    border-radius: 3px;
-}
-
-.svt-list::-webkit-scrollbar-thumb {
-    background: #1565c0;
-    border-radius: 3px;
 }
 
 .svt-list div {
@@ -237,13 +224,12 @@
     border: none;
     color: #1565c0;
     font-size: 11px;
-    padding: 6px 4px;
+    padding: 4px 0;
     width: 100%;
     text-align: left;
     cursor: pointer;
     border-bottom: 1px dotted #c9d7e5;
     transition: background 0.08s;
-    font-family: inherit;
 }
 
 .pv-btn:hover {
@@ -292,31 +278,8 @@
 }
 
 /* ============================================
-   VOUCHER MODAL / PRINT STYLES
+   VOUCHER MODAL / PRINT STYLES - Compact
    ============================================ */
-
-.voucher-modal {
-    display: none;
-    position: fixed;
-    z-index: 1000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    overflow: auto;
-}
-
-.voucher-modal-content {
-    background-color: #fff;
-    margin: 2% auto;
-    padding: 15px;
-    width: 210mm;
-    max-width: 95%;
-    position: relative;
-    border-radius: 5px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-}
 
 .voucher-page {
     font-family: Arial, sans-serif;
@@ -437,7 +400,7 @@
     font-size: 11px;
 }
 
-/* Signature Section */
+/* Signature Section - Compact */
 .signature-section {
     margin-top: 20px;
     width: 100%;
@@ -497,6 +460,30 @@
     margin: 0 8px;
 }
 
+/* Modal Styles */
+.voucher-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    overflow: auto;
+}
+
+.voucher-modal-content {
+    background-color: #fff;
+    margin: 2% auto;
+    padding: 15px;
+    width: 210mm;
+    max-width: 95%;
+    position: relative;
+    border-radius: 5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
 .modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -514,25 +501,7 @@
     transition: all 0.3s ease;
 }
 
-.print-btn {
-    background: #2e7d32;
-    color: white;
-}
-
-.print-btn:hover {
-    background: #1b5e20;
-}
-
-.close-modal {
-    background: #757575;
-    color: white;
-}
-
-.close-modal:hover {
-    background: #616161;
-}
-
-/* Loading Modal */
+/* Loading/Processing Modal */
 .modal {
     display: none;
     position: fixed;
@@ -551,8 +520,9 @@
     padding: 20px 30px;
     border-radius: 8px;
     text-align: center;
-    min-width: 250px;
-    max-width: 90vw;
+    min-width: 280px;
+    max-width: 380px;
+    width: 85%;
 }
 
 .loader {
@@ -605,7 +575,7 @@
     margin-bottom: 8px;
 }
 
-/* Print Styles - matches modal view exactly */
+/* Print Styles - Match Modal Display */
 @media print {
     body * {
         visibility: hidden !important;
@@ -629,15 +599,21 @@
     }
 
     #voucher-print {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 210mm !important;
+        position: static !important;
+        width: auto !important;
         padding: 4mm 8mm !important;
-        margin: 0 auto !important;
+        margin: 0 !important;
         background-color: white !important;
-        border: 1px solid #000 !important;
+        border: none !important;
         box-sizing: border-box !important;
+        max-width: 100% !important;
+    }
+
+    .voucher-page {
+        max-width: 100% !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
     .voucher-modal-content {
@@ -645,10 +621,18 @@
         background: none !important;
         padding: 0 !important;
         margin: 0 !important;
+        width: auto !important;
+        max-width: 100% !important;
     }
 
     .modal-actions {
         display: none !important;
+    }
+
+    .voucher-header,
+    .voucher-body,
+    .signature-section {
+        page-break-inside: avoid;
     }
 }
 
@@ -723,5 +707,10 @@
     
     .print-btn, .close-modal {
         width: 100%;
+    }
+
+    .modal-content {
+        min-width: 250px;
+        max-width: 90%;
     }
 }
