@@ -1,3 +1,6 @@
+/* ============================================
+   PAYMENT VOUCHER MODULE STYLES - COMPACT VERSION
+   ============================================ */
 
 .main-layout {
     display: flex;
@@ -8,7 +11,7 @@
     flex-wrap: wrap;
 }
 
-
+/* Form Container */
 .form-container {
     border: 1px solid #000;
     padding: 20px;
@@ -291,7 +294,7 @@
 }
 
 /* ============================================
-   VOUCHER MODAL / PRINT STYLES - EXACT MATCH
+   VOUCHER MODAL / PRINT STYLES
    ============================================ */
 
 .voucher-page {
@@ -334,9 +337,8 @@
 
 .voucher-label {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     margin-bottom: 8px;
-    font-size: 15px;
     width: 100%;
     position: relative;
     min-height: 1.5em;
@@ -357,36 +359,35 @@
     min-width: 120px;
     font-weight: bold;
     margin-right: 8px;
+    flex-shrink: 0;
 }
 
 .dots {
     border-bottom: 1px dotted #000;
-    flex: 1;
-    margin: 0 8px;
-    height: 1.2em;
+    flex: 0 1 80px;
+    margin: 0 5px;
+    height: 1em;
+    min-width: 60px;
+    max-width: 80px;
 }
 
 .input-value {
     display: inline-block;
-    vertical-align: top;
     padding-left: 5px;
     width: auto;
-    max-width: calc(100% - 140px);
+    flex: 1;
     white-space: normal;
     word-break: break-word;
     overflow-wrap: break-word;
     min-height: 1.2em;
-    position: absolute;
-    left: 128px;
 }
 
+/* Special handling for amount and transaction details */
 #preview-amountInWords {
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
     min-height: 2.2em !important;
-    padding-bottom: 2px;
-    padding-left: 45px;
 }
 
 #preview-transactionDetails {
@@ -394,8 +395,6 @@
     word-break: break-word !important;
     overflow-wrap: break-word !important;
     min-height: 2.2em !important;
-    padding-bottom: 2px;
-    padding-left: 80px;
 }
 
 #preview-withholdingTax {
@@ -403,8 +402,6 @@
     word-break: break-word !important;
     overflow-wrap: break-word !important;
     min-height: 2.2em !important;
-    padding-bottom: 2px;
-    padding-left: 80px;
 }
 
 /* Signature Section */
@@ -462,6 +459,7 @@
     border-bottom: 1px dotted #000;
     height: 1.5em;
     margin: 0 10px;
+    max-width: 100px;
 }
 
 /* Modal Styles */
@@ -606,7 +604,7 @@
     margin-bottom: 10px;
 }
 
-/* EXACT PRINT STYLES FROM REFERENCE */
+/* PRINT STYLES - EXACT MATCH WITH SHORTER DOTS */
 @media print {
     /* Hide everything except the voucher */
     body * {
@@ -646,7 +644,6 @@
         page-break-after: avoid !important;
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        overflow: hidden !important;
     }
 
     .voucher-modal-content {
@@ -663,6 +660,22 @@
     * {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
+    }
+
+    /* Ensure shorter dots on print */
+    .dots {
+        flex: 0 1 60px !important;
+        min-width: 50px !important;
+        max-width: 70px !important;
+        margin: 0 4px !important;
+    }
+    
+    .sig-dots {
+        max-width: 80px !important;
+    }
+    
+    .label-text {
+        min-width: 110px !important;
     }
 }
 
@@ -707,9 +720,9 @@
         min-width: 100px;
     }
     
-    .input-value {
-        left: 108px;
-        max-width: calc(100% - 118px);
+    .dots {
+        flex: 0 1 50px;
+        min-width: 40px;
     }
     
     .sig-headings {
@@ -761,4 +774,3 @@
 .withholding-tax-row {
     margin-top: 10px;
 }
-
