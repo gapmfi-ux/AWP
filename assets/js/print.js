@@ -451,6 +451,58 @@ const printUtils = {
     }, 500);
   },
 
+  // Print Voucher using existing modal styles
+  printVoucher: function() {
+    const voucherPrint = document.getElementById('voucher-print');
+    if (!voucherPrint) {
+      alert('Voucher not found');
+      return;
+    }
+
+    // Clone the voucher element
+    const voucherClone = voucherPrint.cloneNode(true);
+    
+    // Get existing CSS from page
+    const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+    let styleContent = '';
+    
+    // Include all existing styles
+    styles.forEach(style => {
+      if (style.tagName === 'STYLE') {
+        styleContent += style.innerHTML;
+      }
+    });
+
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Voucher Print</title>
+        <style>
+          ${styleContent}
+        </style>
+      </head>
+      <body>
+        ${voucherClone.outerHTML}
+      </body>
+      </html>
+    `;
+
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+      setTimeout(() => {
+        printWindow.close();
+      }, 1000);
+    }, 500);
+  },
+
   // Escape HTML to prevent XSS
   escapeHtml: function(str) {
     if (!str) return '';
