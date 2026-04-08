@@ -62,7 +62,7 @@ function showSuccess(action = 'created') {
       clearFormExceptPVDateType();
     }
     fetchPVTable();
-  }, 500);
+  }, 400);
 }
 
 function showError(error) {
@@ -530,18 +530,14 @@ function previewVoucherFromLast() {
   showVoucherPreview(lastSubmittedVoucherData);
 }
 
+// EXACT PRINT FUNCTION FROM REFERENCE
 function printVoucher() {
-  // Hide modal actions during print
-  var actions = document.querySelector('.modal-actions');
+  const actions = document.querySelector('.modal-actions');
   if (actions) actions.style.display = 'none';
-  
-  // Trigger browser print
   window.print();
-  
-  // Restore modal actions after print dialog closes
-  setTimeout(function() {
+  setTimeout(() => {
     if (actions) actions.style.display = 'flex';
-  }, 1000);
+  }, 500);
 }
 
 function convertNumberToWords(amount) {
