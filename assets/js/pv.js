@@ -1,6 +1,5 @@
 /* ============================================
    PAYMENT VOUCHER MODULE JAVASCRIPT
-   Maintains original Google Apps Script logic
    ============================================ */
 
 // Payment Voucher Module JavaScript
@@ -493,14 +492,18 @@ function showVoucherPreview(voucherData) {
   
   if (previewAmount) {
     const amountNum = parseFloat(voucherData.amount);
-    previewAmount.textContent = amountNum.toLocaleString('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-      useGrouping: true
-    });
+    if (!isNaN(amountNum)) {
+      previewAmount.textContent = amountNum.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+        useGrouping: true
+      });
+    } else {
+      previewAmount.textContent = '0.00';
+    }
   }
   
-  if (previewAmountInWords) previewAmountInWords.textContent = voucherData.amountInWords;
+  if (previewAmountInWords) previewAmountInWords.textContent = voucherData.amountInWords || '';
   if (previewTransactionDetails) previewTransactionDetails.textContent = voucherData.transactionDetails;
   if (previewRequestedBy) previewRequestedBy.textContent = voucherData.requestedBy;
   if (previewReviewedBy) previewReviewedBy.textContent = voucherData.reviewedBy;
@@ -528,17 +531,17 @@ function previewVoucherFromLast() {
 }
 
 function printVoucher() {
-  var modalContent = document.querySelector('.voucher-modal-content');
+  // Hide modal actions during print
   var actions = document.querySelector('.modal-actions');
-  var originalPrintHtml = document.getElementById('voucher-print').innerHTML;
-  
   if (actions) actions.style.display = 'none';
   
+  // Trigger browser print
   window.print();
   
+  // Restore modal actions after print dialog closes
   setTimeout(function() {
     if (actions) actions.style.display = 'flex';
-  }, 500);
+  }, 1000);
 }
 
 function convertNumberToWords(amount) {
@@ -646,4 +649,9 @@ document.addEventListener('click', function(event) {
   if (portal && portal.contains(event.target)) {
     event.stopPropagation();
   }
+});
+
+// Auto-initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  initPVModule();
 });
