@@ -7,69 +7,71 @@
     flex-direction: row;
     justify-content: center;
     align-items: flex-start;
-    gap: 42px;
+    gap: 24px;
     flex-wrap: wrap;
 }
 
 /* Form Container */
 .form-container {
-    border: 1px solid #000;
-    padding: 20px;
-    max-width: 900px;
-    min-width: 340px;
-    border-radius: 10px;
+    border: 1px solid #ddd;
+    padding: 15px;
+    max-width: 850px;
+    min-width: 320px;
+    border-radius: 8px;
     background: #fafafa;
     position: relative;
-    flex: 1 1 340px;
+    flex: 1 1 320px;
     box-shadow: 0 1px 5px rgba(0,0,0,0.05);
 }
 
 .form-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 12px;
 }
 
 .form-header h1 {
-    font-size: 24px;
+    font-size: 20px;
     margin: 0;
 }
 
 .form-fields {
     display: flex;
     flex-direction: column;
-    gap: 18px;
-    margin-bottom: 20px;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
 .form-row {
     display: flex;
-    gap: 18px;
+    gap: 12px;
     flex-wrap: wrap;
     width: 100%;
 }
 
 .form-field {
     flex: 1 1 0;
-    min-width: 220px;
+    min-width: 180px;
     display: flex;
     flex-direction: column;
 }
 
 .form-field label {
-    margin-bottom: 5px;
-    font-weight: bold;
-    font-size: 13px;
+    margin-bottom: 3px;
+    font-weight: 600;
+    font-size: 11px;
     color: #2d3748;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 .form-field input,
 .form-field select,
 .form-field textarea {
     width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    font-size: 12px;
     box-sizing: border-box;
     transition: all 0.3s;
     font-family: inherit;
@@ -85,28 +87,27 @@
 
 .form-field textarea {
     resize: vertical;
-    min-height: 38px;
-    max-height: 80px;
+    min-height: 32px;
+    max-height: 65px;
 }
 
 /* Checkbox Container */
 .checkbox-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 5px;
+    gap: 6px;
+    margin-bottom: 3px;
 }
 
 .checkbox-container label {
     margin-bottom: 0;
     cursor: pointer;
-    font-size: 13px;
+    font-size: 11px;
 }
 
 .checkbox-container input[type="checkbox"] {
-    width: auto;
-    height: auto;
-    margin: 0;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
 }
 
@@ -114,17 +115,17 @@
 .submit-button {
     display: block;
     width: 100%;
-    max-width: 300px;
-    margin: 30px auto 0 auto;
-    padding: 12px;
+    max-width: 240px;
+    margin: 20px auto 0 auto;
+    padding: 8px 20px;
     background: linear-gradient(135deg, #4361ee, #7209b7);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 1.1em;
-    font-weight: bold;
-    letter-spacing: 1px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
     transition: all 0.3s;
 }
 
@@ -135,87 +136,67 @@
 
 .update-button {
     background: linear-gradient(135deg, #2196F3, #1976D2) !important;
-    margin-top: 15px !important;
+    margin-top: 10px !important;
 }
 
-/* Saved Voucher Table */
+/* Saved Voucher Table - Compact */
 .saved-voucher-table {
-    border: 2.5px solid #004ba0;
-    width: 280px;
+    border: 2px solid #004ba0;
+    width: 260px;
     background: #f7fafd;
     font-family: 'Courier New', Courier, monospace;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(10,60,160,.08);
+    border-radius: 10px;
+    box-shadow: 0 1px 5px rgba(10,60,160,.08);
     flex-shrink: 0;
-    display: flex;
-    flex-direction: column;
 }
 
 .svt-title {
     text-align: left;
-    padding: 15px 0 9px 19px;
-    font-size: 16px;
+    padding: 10px 0 6px 15px;
+    font-size: 13px;
     font-weight: bold;
     border-bottom: 2px solid #004ba0;
-    letter-spacing: 2px;
+    letter-spacing: 1px;
     color: #004ba0;
     background: #e6f0ff;
-    border-top-left-radius: 10px;
-    border-top-right-radius: 10px;
-    flex-shrink: 0;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
 
 .svt-section {
     border: 1px solid #bcd;
     border-left: none;
     border-right: none;
-    margin: 18px 15px 0 15px;
-    padding: 0 0 12px 0;
-    min-height: 60px;
+    margin: 12px 12px 0 12px;
+    padding: 0 0 8px 0;
+    min-height: 50px;
     background: #f9fbff;
-    border-radius: 7px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    transition: box-shadow 0.18s;
-}
-
-.svt-section:hover {
-    box-shadow: 0 4px 16px rgba(20,60,120,.07);
-    border-color: #1976d2;
+    border-radius: 6px;
 }
 
 .svt-header {
     text-align: center;
-    font-size: 13.5px;
+    font-size: 11px;
     font-weight: bold;
-    margin: 10px 0 8px 0;
-    letter-spacing: 1.2px;
+    margin: 8px 0 5px 0;
+    letter-spacing: 1px;
     color: #1565c0;
     border-bottom: 1px dashed #aac4db;
-    padding-bottom: 6px;
-    background: none;
-    flex-shrink: 0;
+    padding-bottom: 4px;
 }
 
 .svt-list {
-    min-height: 18px;
-    padding: 4px 5px;
-    font-size: 13.5px;
+    min-height: 15px;
+    padding: 3px 5px;
+    font-size: 11px;
     text-align: center;
     color: #1a1a2e;
-    max-height: 110px;
+    max-height: 95px;
     overflow-y: auto;
-    scrollbar-width: thin;
-    background: #fff;
-    border-radius: 4px;
-    box-shadow: 0 1px 2px rgba(10,60,160,.03);
-    flex: 1;
 }
 
 .svt-list div {
-    padding: 6px 0;
+    padding: 4px 0;
     border-bottom: 1px dotted #c9d7e5;
 }
 
@@ -223,24 +204,13 @@
     border-bottom: none;
 }
 
-.svt-list::-webkit-scrollbar {
-    width: 6px;
-    background: #e6f0ff;
-    border-radius: 4px;
-}
-
-.svt-list::-webkit-scrollbar-thumb {
-    background: #bbd4f6;
-    border-radius: 4px;
-}
-
 /* PV Buttons in List */
 .pv-btn {
     background: none;
     border: none;
     color: #1565c0;
-    font-size: 15px;
-    padding: 6px 0;
+    font-size: 11px;
+    padding: 4px 0;
     width: 100%;
     text-align: left;
     cursor: pointer;
@@ -256,7 +226,7 @@
 #pv-dropdown-portal {
     position: absolute;
     z-index: 9999;
-    min-width: 120px;
+    min-width: 100px;
     display: none;
 }
 
@@ -264,14 +234,14 @@
     background: #fff;
     border: 1px solid #aac4db;
     border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(20,60,120,.13);
-    font-size: 14px;
-    padding: 4px 0;
+    box-shadow: 0 2px 6px rgba(20,60,120,.13);
+    font-size: 12px;
+    padding: 3px 0;
     display: block;
 }
 
 .pv-dropdown-content-portal .dropdown-item {
-    padding: 8px 20px;
+    padding: 6px 16px;
     cursor: pointer;
     color: #333;
     border-bottom: 1px solid #f3f3f3;
@@ -280,7 +250,7 @@
     border: none;
     width: 100%;
     display: block;
-    font-size: 14px;
+    font-size: 12px;
     transition: all 0.2s;
 }
 
@@ -294,33 +264,34 @@
 }
 
 /* ============================================
-   VOUCHER MODAL / PRINT STYLES
+   VOUCHER MODAL / PRINT STYLES - Compact
    ============================================ */
 
 .voucher-page {
     font-family: Arial, sans-serif;
     width: 100%;
-    max-width: 800px;
+    max-width: 750px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 15px;
     border: 1px solid #000;
     background: white;
     box-sizing: border-box;
+    font-size: 12px;
 }
 
 .voucher-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .voucher-title {
-    font-size: 18px;
-    margin-bottom: 5px;
+    font-size: 16px;
+    margin-bottom: 3px;
 }
 
 .voucher-type {
-    font-size: 16px;
-    margin-bottom: 15px;
+    font-size: 14px;
+    margin-bottom: 10px;
 }
 
 .voucher-body {
@@ -330,119 +301,132 @@
 .voucher-row {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
     width: 100%;
     justify-content: space-between;
 }
 
 .voucher-label {
     display: flex;
-    align-items: baseline;
-    margin-bottom: 8px;
+    align-items: center;
+    margin-bottom: 5px;
+    font-size: 12px;
     width: 100%;
     position: relative;
-    min-height: 1.5em;
+    min-height: 1.2em;
 }
 
 .half-width {
     width: 48%;
     margin-right: 2%;
-    min-width: 220px;
+    min-width: 200px;
 }
 
 .full-width {
     width: 100%;
-    min-width: 440px;
+    min-width: 100%;
 }
 
 .label-text {
-    min-width: 120px;
+    min-width: 100px;
     font-weight: bold;
-    margin-right: 8px;
-    flex-shrink: 0;
+    margin-right: 6px;
+    font-size: 11px;
 }
 
 .dots {
     border-bottom: 1px dotted #000;
-    flex: 0 1 80px;
-    margin: 0 5px;
+    flex: 1;
+    margin: 0 6px;
     height: 1em;
-    min-width: 60px;
-    max-width: 80px;
 }
 
 .input-value {
     display: inline-block;
-    padding-left: 5px;
+    vertical-align: top;
+    padding-left: 4px;
     width: auto;
-    flex: 1;
+    max-width: calc(100% - 110px);
     white-space: normal;
     word-break: break-word;
     overflow-wrap: break-word;
-    min-height: 1.2em;
+    min-height: 1em;
+    position: absolute;
+    left: 108px;
+    font-size: 11px;
 }
 
-/* Special handling for amount and transaction details */
 #preview-amountInWords {
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
-    min-height: 2.2em !important;
+    min-height: 1.8em !important;
+    padding-bottom: 2px;
+    padding-left: 40px;
+    font-size: 11px;
 }
 
 #preview-transactionDetails {
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
-    min-height: 2.2em !important;
+    min-height: 1.8em !important;
+    padding-bottom: 2px;
+    padding-left: 70px;
+    font-size: 11px;
 }
 
 #preview-withholdingTax {
     white-space: pre-wrap !important;
     word-break: break-word !important;
     overflow-wrap: break-word !important;
-    min-height: 2.2em !important;
+    min-height: 1.8em !important;
+    padding-bottom: 2px;
+    padding-left: 70px;
+    font-size: 11px;
 }
 
-/* Signature Section */
+/* Signature Section - Compact */
 .signature-section {
-    margin-top: 30px;
+    margin-top: 20px;
     width: 100%;
 }
 
 .sig-headings {
     display: flex;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     font-weight: bold;
-    font-size: 15px;
+    font-size: 11px;
 }
 
 .sig-label {
-    min-width: 120px;
+    min-width: 100px;
+    font-size: 11px;
 }
 
 .sig-heading {
     flex: 1;
     text-align: center;
-    min-width: 100px;
+    min-width: 80px;
+    font-size: 11px;
 }
 
 .sig-row {
     display: flex;
     align-items: center;
-    margin-bottom: 15px;
-    font-size: 15px;
+    margin-bottom: 10px;
+    font-size: 11px;
 }
 
 .sig-name-container {
     flex: 1;
     position: relative;
-    margin: 0 10px;
+    margin: 0 8px;
 }
 
 .sig-name-line {
     border-bottom: 1px dotted #000;
-    height: 1.5em;
+    height: 1.2em;
 }
 
 .sig-name-text {
@@ -452,14 +436,14 @@
     bottom: 0;
     text-align: center;
     padding-bottom: 2px;
+    font-size: 10px;
 }
 
 .sig-dots {
     flex: 1;
     border-bottom: 1px dotted #000;
-    height: 1.5em;
-    margin: 0 10px;
-    max-width: 100px;
+    height: 1.2em;
+    margin: 0 8px;
 }
 
 /* Modal Styles */
@@ -478,7 +462,7 @@
 .voucher-modal-content {
     background-color: #fff;
     margin: 2% auto;
-    padding: 20px;
+    padding: 15px;
     width: 210mm;
     max-width: 95%;
     position: relative;
@@ -489,35 +473,36 @@
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    margin-top: 20px;
+    gap: 8px;
+    margin-top: 15px;
 }
 
 .print-btn, .close-modal {
     padding: 8px 16px;
     border: none;
-    border-radius: 4px;
+    border-radius: 5px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 12px;
+    font-weight: 600;
     transition: all 0.3s ease;
 }
 
 .print-btn {
-    background-color: #4CAF50;
+    background: #2196F3;
     color: white;
 }
 
 .print-btn:hover {
-    background-color: #45a049;
+    background: #1976D2;
 }
 
 .close-modal {
-    background-color: #f44336;
+    background: #757575;
     color: white;
 }
 
 .close-modal:hover {
-    background-color: #d32f2f;
+    background: #616161;
 }
 
 /* Loading Modal */
@@ -536,21 +521,21 @@
 
 .modal-content {
     background: white;
-    padding: 30px 40px;
+    padding: 20px 30px;
     border-radius: 8px;
     text-align: center;
-    min-width: 300px;
-    max-width: 92vw;
+    min-width: 250px;
+    max-width: 90vw;
 }
 
 .loader {
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #4CAF50;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
     border-radius: 50%;
-    width: 50px;
-    height: 50px;
+    width: 35px;
+    height: 35px;
     animation: spin 1s linear infinite;
-    margin: 0 auto 18px auto;
+    margin: 0 auto 12px auto;
 }
 
 @keyframes spin {
@@ -560,25 +545,19 @@
 
 .success-message {
     color: #388e3c;
-    font-size: 1.15em;
-    margin-bottom: 15px;
+    font-size: 14px;
+    margin-bottom: 10px;
 }
 
 .download-button {
     background: #2196F3;
     border: none;
     color: #fff;
-    padding: 12px 26px;
+    padding: 8px 20px;
     border-radius: 4px;
-    font-size: 1em;
+    font-size: 12px;
     cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    margin-top: 10px;
-}
-
-.download-button:hover {
-    background: #1565c0;
+    margin-top: 8px;
 }
 
 .modal-close-button {
@@ -586,121 +565,290 @@
     color: #fff;
     border: none;
     border-radius: 4px;
-    padding: 8px 22px;
-    font-size: 1em;
+    padding: 6px 18px;
+    font-size: 12px;
     cursor: pointer;
-    margin-top: 16px;
-    display: inline-block;
-}
-
-.modal-close-button:hover {
-    background: #333;
+    margin-top: 12px;
 }
 
 .modal-error-message {
     color: #b71c1c;
-    font-size: 1.05em;
-    margin-top: 12px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-bottom: 8px;
 }
 
-/* PRINT STYLES - EXACT MATCH WITH SHORTER DOTS */
+/* ============================================
+   PRINT MEDIA STYLES - EXACT MODAL LAYOUT
+   ============================================ */
+
 @media print {
-    /* Hide everything except the voucher */
-    body * {
-        visibility: hidden !important;
-    }
-
-    #voucher-print, #voucher-print * {
-        visibility: visible !important;
-    }
-
-    /* Remove browser headers/footers via @page */
-    @page {
-        size: A4 portrait;
-        margin: 4mm;
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
 
     html, body {
         margin: 0 !important;
         padding: 0 !important;
-        width: 210mm !important;
-        height: 297mm !important;
-        overflow: hidden !important;
+        width: 100% !important;
+        height: 100% !important;
+        background: white !important;
     }
 
-    #voucher-print {
-        position: absolute !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 210mm !important;
-        padding: 5mm 10mm !important;
-        margin: 0 auto !important;
+    /* Hide all content except voucher modal */
+    body > * {
+        display: none !important;
+    }
+
+    .voucher-modal {
+        display: block !important;
+        position: static !important;
+        z-index: auto !important;
+        left: auto !important;
+        top: auto !important;
+        width: 100% !important;
+        height: auto !important;
         background-color: white !important;
-        border: 1px solid #000 !important;
-        box-sizing: border-box !important;
-        max-height: 287mm !important;
-        page-break-before: avoid !important;
-        page-break-after: avoid !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+        overflow: visible !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
     .voucher-modal-content {
-        box-shadow: none !important;
-        background: none !important;
-        padding: 0 !important;
+        background-color: white !important;
         margin: 0 !important;
+        padding: 0 !important;
+        width: 210mm !important;
+        max-width: 100% !important;
+        position: relative !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        page-break-after: always !important;
     }
 
+    .voucher-page {
+        font-family: Arial, sans-serif !important;
+        width: 210mm !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 10mm !important;
+        border: none !important;
+        background: white !important;
+        box-sizing: border-box !important;
+        font-size: 12px !important;
+        page-break-after: always !important;
+    }
+
+    /* Hide modal actions (print button and close button) */
     .modal-actions {
         display: none !important;
     }
 
-    * {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
+    /* Page setup */
+    @page {
+        size: A4 portrait;
+        margin: 0;
+        padding: 0;
     }
 
-    /* Ensure shorter dots on print */
-    .dots {
-        flex: 0 1 60px !important;
-        min-width: 50px !important;
-        max-width: 70px !important;
-        margin: 0 4px !important;
+    /* Ensure all content is visible */
+    .voucher-header {
+        text-align: center !important;
+        margin-bottom: 15px !important;
     }
-    
-    .sig-dots {
-        max-width: 80px !important;
+
+    .voucher-title {
+        font-size: 16px !important;
+        margin-bottom: 3px !important;
     }
-    
+
+    .voucher-type {
+        font-size: 14px !important;
+        margin-bottom: 10px !important;
+    }
+
+    .voucher-body {
+        width: 100% !important;
+    }
+
+    .voucher-row {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        margin-bottom: 6px !important;
+        width: 100% !important;
+        justify-content: space-between !important;
+        page-break-inside: avoid !important;
+    }
+
+    .voucher-label {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 5px !important;
+        font-size: 12px !important;
+        width: 100% !important;
+        position: relative !important;
+        min-height: 1.2em !important;
+    }
+
+    .half-width {
+        width: 48% !important;
+        margin-right: 2% !important;
+        min-width: 200px !important;
+    }
+
+    .full-width {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+
     .label-text {
-        min-width: 110px !important;
+        min-width: 100px !important;
+        font-weight: bold !important;
+        margin-right: 6px !important;
+        font-size: 11px !important;
+    }
+
+    .dots {
+        border-bottom: 1px dotted #000 !important;
+        flex: 1 !important;
+        margin: 0 6px !important;
+        height: 1em !important;
+    }
+
+    .input-value {
+        display: inline-block !important;
+        vertical-align: top !important;
+        padding-left: 4px !important;
+        width: auto !important;
+        max-width: calc(100% - 110px) !important;
+        white-space: normal !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        min-height: 1em !important;
+        position: absolute !important;
+        left: 108px !important;
+        font-size: 11px !important;
+        color: #000 !important;
+    }
+
+    #preview-amountInWords {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        min-height: 1.8em !important;
+        padding-bottom: 2px !important;
+        padding-left: 40px !important;
+        font-size: 11px !important;
+    }
+
+    #preview-transactionDetails {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        min-height: 1.8em !important;
+        padding-bottom: 2px !important;
+        padding-left: 70px !important;
+        font-size: 11px !important;
+    }
+
+    #preview-withholdingTax {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        min-height: 1.8em !important;
+        padding-bottom: 2px !important;
+        padding-left: 70px !important;
+        font-size: 11px !important;
+    }
+
+    .signature-section {
+        margin-top: 20px !important;
+        width: 100% !important;
+        page-break-inside: avoid !important;
+    }
+
+    .sig-headings {
+        display: flex !important;
+        margin-bottom: 4px !important;
+        font-weight: bold !important;
+        font-size: 11px !important;
+    }
+
+    .sig-label {
+        min-width: 100px !important;
+        font-size: 11px !important;
+    }
+
+    .sig-heading {
+        flex: 1 !important;
+        text-align: center !important;
+        min-width: 80px !important;
+        font-size: 11px !important;
+    }
+
+    .sig-row {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 10px !important;
+        font-size: 11px !important;
+        page-break-inside: avoid !important;
+    }
+
+    .sig-name-container {
+        flex: 1 !important;
+        position: relative !important;
+        margin: 0 8px !important;
+    }
+
+    .sig-name-line {
+        border-bottom: 1px dotted #000 !important;
+        height: 1.2em !important;
+    }
+
+    .sig-name-text {
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        text-align: center !important;
+        padding-bottom: 2px !important;
+        font-size: 10px !important;
+    }
+
+    .sig-dots {
+        flex: 1 !important;
+        border-bottom: 1px dotted #000 !important;
+        height: 1.2em !important;
+        margin: 0 8px !important;
     }
 }
 
 /* Responsive */
-@media (max-width: 1100px) {
+@media (max-width: 900px) {
     .main-layout {
         flex-direction: column;
-        gap: 20px;
+        gap: 15px;
         align-items: stretch;
     }
     
     .form-container {
         max-width: 100%;
-        margin: 0 auto 20px auto;
+        margin: 0 auto 15px auto;
     }
     
     .saved-voucher-table {
-        margin: 0 auto 20px auto;
+        margin: 0 auto 15px auto;
+        width: 100%;
+        max-width: 350px;
     }
 }
 
 @media (max-width: 768px) {
     .form-row {
         flex-direction: column;
-        gap: 12px;
+        gap: 8px;
     }
     
     .form-field {
@@ -717,20 +865,20 @@
     }
     
     .label-text {
-        min-width: 100px;
+        min-width: 85px;
     }
     
-    .dots {
-        flex: 0 1 50px;
-        min-width: 40px;
+    .input-value {
+        left: 95px;
+        max-width: calc(100% - 105px);
     }
     
     .sig-headings {
-        font-size: 12px;
+        font-size: 10px;
     }
     
     .sig-label {
-        min-width: 100px;
+        min-width: 85px;
     }
     
     .sig-heading {
@@ -739,8 +887,7 @@
     
     .voucher-modal-content {
         margin: 5% auto;
-        padding: 12px;
-        width: 95%;
+        padding: 10px;
     }
     
     .modal-actions {
@@ -750,27 +897,4 @@
     .print-btn, .close-modal {
         width: 100%;
     }
-}
-
-/* Hide PV Number and Date containers by default */
-#pvNumber-container, #date-container {
-    display: none;
-}
-
-.department-select, .account-code-input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1em;
-    box-sizing: border-box;
-}
-
-.top-row-field {
-    flex: 1;
-    min-width: 180px;
-}
-
-.withholding-tax-row {
-    margin-top: 10px;
 }
