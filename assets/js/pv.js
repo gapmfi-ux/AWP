@@ -1,7 +1,4 @@
-/* ============================================
-   PAYMENT VOUCHER MODULE JAVASCRIPT
-   Maintains original Google Apps Script logic
-   ============================================ */
+
 
 // Payment Voucher Module JavaScript
 let lastSubmittedVoucherData = null;
