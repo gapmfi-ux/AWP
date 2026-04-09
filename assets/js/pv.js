@@ -525,8 +525,16 @@ function previewVoucherFromLast() {
 }
 
 function printVoucher() {
-  // Use window.print() which respects print media CSS rules
-  window.print();
+  // Ensure modal is visible before printing
+  const modal = document.getElementById('voucher-preview-modal');
+  if (modal) {
+    modal.style.display = 'block';
+  }
+  
+  // Wait a moment to ensure rendering, then print
+  setTimeout(() => {
+    window.print();
+  }, 100);
 }
 
 function convertNumberToWords(amount) {
