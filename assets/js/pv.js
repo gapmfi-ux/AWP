@@ -1,5 +1,6 @@
 /* ============================================
    PAYMENT VOUCHER MODULE JAVASCRIPT
+   Maintains original Google Apps Script logic
    ============================================ */
 
 // Payment Voucher Module JavaScript
@@ -62,7 +63,7 @@ function showSuccess(action = 'created') {
       clearFormExceptPVDateType();
     }
     fetchPVTable();
-  }, 400);
+  }, 500);
 }
 
 function showError(error) {
@@ -492,18 +493,14 @@ function showVoucherPreview(voucherData) {
   
   if (previewAmount) {
     const amountNum = parseFloat(voucherData.amount);
-    if (!isNaN(amountNum)) {
-      previewAmount.textContent = amountNum.toLocaleString('en-US', {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-        useGrouping: true
-      });
-    } else {
-      previewAmount.textContent = '0.00';
-    }
+    previewAmount.textContent = amountNum.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      useGrouping: true
+    });
   }
   
-  if (previewAmountInWords) previewAmountInWords.textContent = voucherData.amountInWords || '';
+  if (previewAmountInWords) previewAmountInWords.textContent = voucherData.amountInWords;
   if (previewTransactionDetails) previewTransactionDetails.textContent = voucherData.transactionDetails;
   if (previewRequestedBy) previewRequestedBy.textContent = voucherData.requestedBy;
   if (previewReviewedBy) previewReviewedBy.textContent = voucherData.reviewedBy;
@@ -530,14 +527,9 @@ function previewVoucherFromLast() {
   showVoucherPreview(lastSubmittedVoucherData);
 }
 
-// EXACT PRINT FUNCTION FROM REFERENCE
 function printVoucher() {
-  const actions = document.querySelector('.modal-actions');
-  if (actions) actions.style.display = 'none';
+  // Use window.print() which respects print media CSS rules
   window.print();
-  setTimeout(() => {
-    if (actions) actions.style.display = 'flex';
-  }, 500);
 }
 
 function convertNumberToWords(amount) {
@@ -614,6 +606,7 @@ function toggleWithholdingTax() {
   }
 }
 
+// Initialize PV Module
 function initPVModule() {
   const today = new Date().toISOString().split('T')[0];
   var dateField = document.getElementById('date');
@@ -622,6 +615,7 @@ function initPVModule() {
   fetchPVTable();
 }
 
+// Event Listeners for PV Module
 window.addEventListener('click', function(event) {
   var voucherModal = document.getElementById('voucher-preview-modal');
   var loadingModal = document.getElementById('loading-modal');
@@ -645,9 +639,4 @@ document.addEventListener('click', function(event) {
   if (portal && portal.contains(event.target)) {
     event.stopPropagation();
   }
-});
-
-// Auto-initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', function() {
-  initPVModule();
 });
