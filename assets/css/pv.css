@@ -1,9 +1,6 @@
-/* ============================================
-   PAYMENT VOUCHER MODULE STYLES
-   Fixed layout - Dotted lines only under values
-   ============================================ */
 
-* {
+
+{
     margin: 0;
     padding: 0;
     box-sizing: border-box;
