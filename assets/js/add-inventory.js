@@ -1,297 +1,386 @@
-/* ============================================
-   ADD INVENTORY MODULE JAVASCRIPT
-   Using google.script.run (same pattern as add-asset)
-   ============================================ */
+<div class="investment-container">
+  <div class="investment-header">
+    <h1>Add New Investment</h1>
+  </div>
 
-// ============================================
-// INITIALIZATION
-// ============================================
+  <!-- New Investment Form -->
+  <form id="newInvestmentForm" onsubmit="event.preventDefault(); submitNewInvestment();">
+    <div class="form-row-two">
+      <div class="form-group">
+        <label for="investmentType">Investment Type:</label>
+        <select id="investmentType" name="investmentType" onchange="handleInvestmentTypeChange()" required>
+          <option value="">Select Investment Type</option>
+          <option value="Fixed Deposit">Fixed Deposit</option>
+          <option value="Treasury Bills">Treasury Bills</option>
+          <option value="Bonds">Bonds</option>
+          <option value="add-new">+ Add New Type</option>
+        </select>
+      </div>
 
-function initInventoryModule() {
-  console.log('Initializing Add Inventory Module');
-  
-  const today = new Date().toISOString().split('T')[0];
-  const dateField = document.getElementById('newDateOfPurchase');
-  if (dateField) dateField.value = today;
-  
-  loadExistingCategories();
-
-  // Close modal when clicking outside
-  window.addEventListener('click', function(event) {
-    const modal = document.getElementById('messageModal');
-    if (modal && event.target === modal) {
-      closeInventoryModal();
-    }
-  });
-}
-
-// ============================================
-// CATEGORY MANAGEMENT
-// ============================================
-
-function handleNewCategoryChange() {
-  const select = document.getElementById('newCategory');
-  const addNewFields = document.getElementById('addNewCategoryFields');
-
-  if (select.value === 'add-new') {
-    addNewFields.style.display = 'block';
-    generateCategoryCode();
-  } else {
-    addNewFields.style.display = 'none';
-    document.getElementById('categoryName').value = '';
-    document.getElementById('categoryCode').value = '';
-    document.getElementById('categoryDescription').value = '';
-  }
-}
-
-function generateCategoryCode() {
-  console.log('Generating inventory category code');
-  
-  google.script.run
-    .withSuccessHandler(function(response) {
-      const field = document.getElementById('categoryCode');
-      if (field && response && !response.error) {
-        field.value = response;
-        console.log('Category code generated:', response);
-      } else if (response && response.error) {
-        console.error('Error generating code:', response.error);
-        showInventoryMessage('Error generating category code: ' + response.error, 'error');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error generating category code:', error);
-      showInventoryMessage('Error generating category code: ' + (error.message || error), 'error');
-    })
-    .generateInventoryCategoryCode();
-}
-
-function loadExistingCategories() {
-  console.log('Loading existing categories');
-  
-  google.script.run
-    .withSuccessHandler(function(response) {
-      const select = document.getElementById('newCategory');
-      if (!select) return;
-      
-      // Clear existing options except the first two
-      while (select.options.length > 2) {
-        select.remove(2);
-      }
-      
-      if (response && !response.error && Array.isArray(response)) {
-        response.forEach(function(cat) {
-          const option = document.createElement('option');
-          option.value = cat.code;
-          option.textContent = cat.name + ' (' + cat.code + ')';
-          select.appendChild(option);
-        });
-        console.log('Loaded ' + response.length + ' categories');
-      } else if (response && response.error) {
-        console.error('Error loading categories:', response.error);
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error loading categories:', error);
-    })
-    .getInventoryCategories();
-}
-
-// ============================================
-// CALCULATIONS
-// ============================================
-
-function calculateUnitPrice() {
-  const totalCost = parseFloat(document.getElementById('newTotalCost').value) || 0;
-  const quantity = parseFloat(document.getElementById('newQuantity').value) || 0;
-  const unitPrice = quantity > 0 ? (totalCost / quantity).toFixed(2) : '0.00';
-  document.getElementById('newUnitPrice').value = unitPrice;
-}
-
-// ============================================
-// SUBMIT NEW INVENTORY - USING google.script.run
-// ============================================
-
-function submitNewInventory() {
-  const categorySelect = document.getElementById('newCategory');
-  const categoryValue = categorySelect.value;
-
-  let categoryCode, categoryName, categoryDescription;
-
-  if (categoryValue === 'add-new') {
-    categoryName = document.getElementById('categoryName').value;
-    categoryCode = document.getElementById('categoryCode').value;
-    categoryDescription = document.getElementById('categoryDescription').value;
-
-    if (!categoryName || !categoryCode) {
-      showInventoryMessage('Please fill in all category fields', 'error');
-      return;
-    }
-  } else if (categoryValue) {
-    categoryCode = categoryValue;
-    categoryName = categorySelect.options[categorySelect.selectedIndex].text.split('(')[0].trim();
-    categoryDescription = '';
-  } else {
-    showInventoryMessage('Please select a category', 'error');
-    return;
-  }
-
-  const totalCost = document.getElementById('newTotalCost').value;
-  const quantity = document.getElementById('newQuantity').value;
-  const unitPrice = document.getElementById('newUnitPrice').value;
-  const dateOfPurchase = document.getElementById('newDateOfPurchase').value;
-
-  if (!totalCost || !quantity || !dateOfPurchase) {
-    showInventoryMessage('Please fill in all required fields', 'error');
-    return;
-  }
-
-  showInventoryLoadingModal('Adding Inventory...');
-
-  const formData = {
-    categoryCode: categoryCode,
-    categoryName: categoryName,
-    categoryDescription: categoryDescription || '',
-    totalCost: parseFloat(totalCost),
-    quantity: parseInt(quantity),
-    unitPrice: parseFloat(unitPrice),
-    dateOfPurchase: dateOfPurchase
-  };
-
-  console.log('Submitting form data:', formData);
-
-  // FIX: Send formData directly, not wrapped
-  google.script.run
-    .withSuccessHandler(function(response) {
-      console.log('Success response:', response);
-      hideInventoryLoadingModal();
-      
-      if (response && response.success) {
-        showInventoryMessage('✓ Inventory added successfully!', 'success');
-        setTimeout(function() {
-          resetInventoryForm();
-        }, 1500);
-      } else {
-        showInventoryMessage('Error adding inventory: ' + (response?.error || response?.message || 'Unknown error'), 'error');
-      }
-    })
-    .withFailureHandler(function(error) {
-      console.error('Error:', error);
-      hideInventoryLoadingModal();
-      showInventoryMessage('Error adding inventory: ' + (error.message || error), 'error');
-    })
-    .addNewInventory(formData);  // FIX: Send formData directly
-}
-// ============================================
-// RESET FORM
-// ============================================
-
-function resetInventoryForm() {
-  document.getElementById('newInventoryForm').reset();
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('newDateOfPurchase').value = today;
-  document.getElementById('addNewCategoryFields').style.display = 'none';
-  document.getElementById('newCategory').value = '';
-  document.getElementById('categoryCode').value = '';
-  document.getElementById('categoryName').value = '';
-  document.getElementById('categoryDescription').value = '';
-  document.getElementById('newUnitPrice').value = '';
-  
-  // Reload categories to include newly added one
-  loadExistingCategories();
-}
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === '' || isNaN(value)) return '0.00';
-  const numValue = parseFloat(value);
-  if (isNaN(numValue)) return '0.00';
-  return numValue.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function showInventoryMessage(message, type) {
-  let modal = document.getElementById('messageModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'messageModal';
-    modal.className = 'inventory-message-modal';
-    document.body.appendChild(modal);
-  }
-  
-  let messageDiv = document.getElementById('modalMessage');
-  if (!messageDiv) {
-    const div = document.createElement('div');
-    div.id = 'modalMessage';
-    modal.appendChild(div);
-    messageDiv = div;
-  }
-  
-  const types = {
-    success: 'success-message',
-    error: 'error-message',
-    info: 'info-message',
-    warning: 'warning-message'
-  };
-
-  messageDiv.innerHTML = '<div class="' + (types[type] || types.info) + '">' + message + '</div>';
-  modal.style.display = 'flex';
-  
-  // Auto-hide after 3 seconds for non-error messages
-  if (type !== 'error') {
-    setTimeout(function() {
-      const modalElem = document.getElementById('messageModal');
-      if (modalElem) modalElem.style.display = 'none';
-    }, 3000);
-  }
-}
-
-function closeInventoryModal() {
-  const modal = document.getElementById('messageModal');
-  if (modal) modal.style.display = 'none';
-}
-
-function showInventoryLoadingModal(message) {
-  message = message || 'Processing...';
-  let modal = document.getElementById('inventoryLoadingModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'inventoryLoadingModal';
-    modal.className = 'inventory-loading-modal';
-    document.body.appendChild(modal);
-  }
-  
-  modal.innerHTML = `
-    <div class="loading-modal-content">
-      <div class="loading-spinner"></div>
-      <p>${message}</p>
+      <div class="form-group">
+        <label for="investmentDate">Investment Date:</label>
+        <input type="date" id="investmentDate" name="investmentDate" required onchange="calculateMaturityDate()">
+      </div>
     </div>
-  `;
-  modal.style.display = 'flex';
-}
 
-function hideInventoryLoadingModal() {
-  const modal = document.getElementById('inventoryLoadingModal');
-  if (modal) modal.style.display = 'none';
-}
+    <!-- Add New Investment Type Fields (Hidden by default) -->
+    <div id="addNewInvestmentTypeFields" class="toggle-fields" style="display: none;">
+      <div class="form-group">
+        <label for="newInvestmentType">New Investment Type:</label>
+        <input type="text" id="newInvestmentType" name="newInvestmentType" placeholder="e.g., Savings Bond">
+      </div>
+    </div>
 
-// Export functions for global use
-window.initInventoryModule = initInventoryModule;
-window.handleNewCategoryChange = handleNewCategoryChange;
-window.calculateUnitPrice = calculateUnitPrice;
-window.submitNewInventory = submitNewInventory;
-window.closeInventoryModal = closeInventoryModal;
+    <div class="form-row-two">
+      <div class="form-group">
+        <label for="investmentCode">Investment Code:</label>
+        <input type="text" id="investmentCode" name="investmentCode" readonly placeholder="Auto-generated">
+      </div>
+
+      <div class="form-group">
+        <label for="bankName">Bank Name:</label>
+        <select id="bankName" name="bankName" required onchange="handleBankChange()">
+          <option value="">Select Bank</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Add New Bank Fields (Hidden by default) -->
+    <div id="addNewBankFields" class="toggle-fields" style="display: none;">
+      <div class="form-row-two">
+        <div class="form-group">
+          <label for="newBankName">New Bank Name:</label>
+          <input type="text" id="newBankName" name="newBankName" placeholder="e.g., Bank of Ghana">
+        </div>
+        <div class="form-group">
+          <label for="newBankDayCount">Day Count:</label>
+          <select id="newBankDayCount" name="newBankDayCount">
+            <option value="365">365 Days (Actual/365)</option>
+            <option value="360">360 Days (Actual/360)</option>
+            <option value="364">364 Days (Treasury Bills)</option>
+          </select>
+          <small style="font-size: 10px; color: #718096;">Saved for future use</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-row-two">
+      <div class="form-group">
+        <label for="amount">Amount (GHc):</label>
+        <input type="number" id="amount" name="amount" step="0.01" placeholder="0.00" required oninput="calculateMaturityAmount()">
+      </div>
+
+      <div class="form-group">
+        <label for="interestRate">Interest Rate (%):</label>
+        <input type="number" id="interestRate" name="interestRate" step="0.01" placeholder="0.00" required oninput="calculateMaturityAmount()">
+      </div>
+    </div>
+
+    <div class="form-row-two">
+      <div class="form-group">
+        <label for="duration">Duration (Days):</label>
+        <input type="number" id="duration" name="duration" step="1" placeholder="0" required oninput="calculateMaturityDate(); calculateMaturityAmount();">
+      </div>
+
+      <div class="form-group">
+        <label for="maturityDate">Maturity Date:</label>
+        <input type="date" id="maturityDate" name="maturityDate" required onchange="calculateMaturityAmount()">
+      </div>
+    </div>
+
+    <!-- Calculated Fields - Side by Side -->
+    <div class="form-row-two calculated-row">
+      <div class="form-group">
+        <label for="interestAmount">Interest Amount (GHc):</label>
+        <input type="text" id="interestAmount" name="interestAmount" readonly placeholder="0.00">
+      </div>
+
+      <div class="form-group">
+        <label for="maturityAmount">Maturity Amount (GHc):</label>
+        <input type="text" id="maturityAmount" name="maturityAmount" readonly placeholder="0.00">
+      </div>
+    </div>
+
+    <button type="submit" class="submit-btn">
+      <i class="fas fa-plus"></i> Add Investment
+    </button>
+  </form>
+</div>
+
+<!-- Modal for Messages -->
+<div class="modal" id="messageModal" style="display: none;">
+  <div class="modal-content">
+    <div id="modalMessage"></div>
+    <button class="modal-close-btn" onclick="closeInvestmentModal()">Close</button>
+  </div>
+</div>
+
+<style>
+  .investment-container {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .investment-header {
+    text-align: center;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #4361ee;
+    padding-bottom: 6px;
+  }
+
+  .investment-header h1 {
+    color: #2d3748;
+    font-size: 18px;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .form-group {
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .form-group label {
+    margin-bottom: 3px;
+    color: #2d3748;
+    font-weight: 600;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .form-group input,
+  .form-group select {
+    padding: 6px 8px;
+    border: 1px solid #cbd5e0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    transition: all 0.2s;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+  }
+
+  .form-group input[readonly] {
+    background: #f7fafc;
+    cursor: not-allowed;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4361ee;
+  }
+
+  .form-row-two {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .calculated-row {
+    background: #f7fafc;
+    padding: 10px;
+    border-radius: 8px;
+    margin: 12px 0 0 0;
+    border: 1px solid #e2e8f0;
+  }
+
+  .calculated-row .form-group {
+    margin-bottom: 0;
+  }
+
+  .toggle-fields {
+    background: #f7fafc;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+  }
+
+  .submit-btn {
+    width: 100%;
+    max-width: 200px;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 16px auto 0 auto;
+  }
+
+  .submit-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(67, 97, 238, 0.3);
+  }
+
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal-content {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    max-width: 350px;
+    text-align: center;
+    animation: modalSlideIn 0.2s ease;
+  }
+
+  @keyframes modalSlideIn {
+    from {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  #modalMessage {
+    margin-bottom: 15px;
+    font-size: 13px;
+    color: #2d3748;
+    line-height: 1.4;
+  }
+
+  .modal-close-btn {
+    padding: 8px 20px;
+    background: #4361ee;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+
+  .modal-close-btn:hover {
+    background: #3a56d4;
+  }
+
+  .success-message {
+    color: #06d6a0;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .error-message {
+    color: #ef476f;
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  /* Loading Modal */
+  .investment-loading-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+  }
+
+  .loading-modal-content {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 10px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .loading-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid #e2e8f0;
+    border-top-color: #4361ee;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  .loading-modal-content p {
+    margin: 0;
+    font-size: 12px;
+    color: #2d3748;
+  }
+
+  @media (max-width: 640px) {
+    .investment-container {
+      padding: 12px;
+    }
+
+    .investment-header h1 {
+      font-size: 16px;
+    }
+
+    .form-row-two {
+      grid-template-columns: 1fr;
+      gap: 8px;
+    }
+
+    .form-group label {
+      font-size: 9px;
+    }
+
+    .form-group input,
+    .form-group select {
+      font-size: 11px;
+      padding: 5px 7px;
+    }
+
+    .calculated-row {
+      padding: 8px;
+    }
+
+    .submit-btn {
+      max-width: 100%;
+      padding: 8px 16px;
+      font-size: 12px;
+    }
+
+    .modal-content {
+      max-width: 85%;
+      padding: 18px;
+    }
+  }
+</style>
