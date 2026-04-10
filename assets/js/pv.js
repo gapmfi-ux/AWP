@@ -380,7 +380,7 @@ function showVoucherPreview(voucherData) {
   var wtRow = document.getElementById('preview-withholdingTax-row');
   var wtValue = document.getElementById('preview-withholdingTax');
   if (voucherData.withholdingTaxAmount && voucherData.withholdingTaxAmount > 0) {
-    wtRow.style.display = 'table-row';
+    wtRow.style.display = 'flex';
     wtValue.innerHTML = 'GHS ' + parseFloat(voucherData.withholdingTaxAmount).toFixed(2);
   } else {
     wtRow.style.display = 'none';
@@ -389,7 +389,7 @@ function showVoucherPreview(voucherData) {
   // Bank and Cheque fields
   var chequeFields = document.getElementById('preview-cheque-fields');
   if (voucherData.voucherType === 'Cheque Payment Voucher') {
-    chequeFields.style.display = 'table-row';
+    chequeFields.style.display = 'flex';
     document.getElementById('preview-bank').innerHTML = voucherData.bank || '';
     document.getElementById('preview-chequeNumber').innerHTML = voucherData.chequeNumber || '';
   } else {
