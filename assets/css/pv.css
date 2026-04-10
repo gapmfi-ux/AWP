@@ -1,6 +1,9 @@
+/* ============================================
+   PAYMENT VOUCHER MODULE STYLES
+   Compact layout - Single page print
+   ============================================ */
 
-
-{
+* {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -222,8 +225,8 @@ body {
 }
 
 /* ============================================
-   VOUCHER MODAL - PROPER TABLE LAYOUT
-   Fixed: Dotted lines only under values
+   VOUCHER MODAL - COMPACT GRID LAYOUT
+   Single page A4 print
    ============================================ */
 
 .voucher-modal {
@@ -241,7 +244,7 @@ body {
 .voucher-modal-content {
     background: white;
     margin: 20px auto;
-    padding: 20px;
+    padding: 15px;
     width: 210mm;
     max-width: 95%;
     border-radius: 8px;
@@ -250,13 +253,15 @@ body {
 .voucher-page {
     font-family: 'Segoe UI', Arial, sans-serif;
     background: white;
-    padding: 12mm 10mm;
+    padding: 8mm 10mm;
 }
 
 /* Header Styles */
 .voucher-header {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #1a3c6e;
+    padding-bottom: 10px;
 }
 
 .voucher-title {
@@ -266,92 +271,76 @@ body {
 }
 
 .voucher-type {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: bold;
-    margin-top: 5px;
+    margin-top: 3px;
+    color: #333;
 }
 
-/* Two-column layout for voucher data */
+.pv-number-top {
+    text-align: right;
+    margin-top: 8px;
+    font-weight: bold;
+    font-size: 12px;
+}
+
+/* 2-Column Grid Layout - Key Fix */
 .voucher-grid {
-    width: 100%;
-    margin-top: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 20px;
+    margin: 15px 0;
 }
 
-.voucher-row {
+.grid-item {
     display: flex;
-    margin-bottom: 12px;
     align-items: baseline;
     flex-wrap: wrap;
 }
 
-.voucher-label {
-    width: 130px;
+.grid-label {
+    width: 110px;
     font-weight: bold;
     font-size: 11px;
     color: #333;
     flex-shrink: 0;
 }
 
-.voucher-value {
+.grid-value {
     flex: 1;
     border-bottom: 1px dotted #000;
     padding-bottom: 3px;
-    font-size: 12px;
-    min-width: 150px;
+    font-size: 11px;
+    min-width: 120px;
 }
 
-/* Two items per row layout */
-.two-col-row {
-    display: flex;
-    width: 100%;
-    gap: 20px;
-    margin-bottom: 12px;
-}
-
-.two-col-row .col {
-    flex: 1;
+/* Full width items (span both columns) */
+.full-width-item {
+    grid-column: span 2;
     display: flex;
     align-items: baseline;
 }
 
-.two-col-row .col .voucher-label {
+.full-width-item .grid-label {
     width: 110px;
 }
 
-.two-col-row .col .voucher-value {
+.full-width-item .grid-value {
     flex: 1;
     border-bottom: 1px dotted #000;
     padding-bottom: 3px;
 }
 
-/* Full width row */
-.full-row {
-    display: flex;
-    margin-bottom: 12px;
-    align-items: baseline;
-}
-
-.full-row .voucher-label {
-    width: 130px;
-}
-
-.full-row .voucher-value {
-    flex: 1;
-    border-bottom: 1px dotted #000;
-    padding-bottom: 3px;
-}
-
-/* Amount in words special handling */
-.amount-words-row .voucher-value {
-    border-bottom: 1px dotted #000;
+/* Amount in words row */
+.amount-words-row .grid-value {
     word-break: break-word;
 }
 
-/* Signature Section - Table Layout */
+/* Signature Section - Compact */
 .signature-section {
-    margin-top: 30px;
+    margin-top: 20px;
     border-top: 1px solid #ccc;
-    padding-top: 15px;
+    padding-top: 12px;
 }
 
 .signature-table {
@@ -362,32 +351,32 @@ body {
 .signature-table th {
     text-align: center;
     font-weight: bold;
-    font-size: 11px;
-    padding: 8px 5px;
+    font-size: 10px;
+    padding: 6px 3px;
     border-bottom: 1px solid #999;
 }
 
 .signature-table td {
-    padding: 10px 5px;
+    padding: 8px 3px;
     vertical-align: top;
 }
 
 .signature-table td:first-child {
-    width: 120px;
+    width: 100px;
     font-weight: bold;
-    font-size: 11px;
+    font-size: 10px;
 }
 
 .sig-name-cell {
     border-bottom: 1px dotted #000;
-    min-width: 120px;
-    font-size: 11px;
-    padding-bottom: 3px;
+    min-width: 100px;
+    font-size: 10px;
+    padding-bottom: 2px;
 }
 
 .sig-dots-cell {
     border-bottom: 1px dotted #000;
-    min-width: 100px;
+    min-width: 80px;
 }
 
 /* Modal Actions */
@@ -395,8 +384,8 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
-    margin-top: 20px;
-    padding-top: 15px;
+    margin-top: 15px;
+    padding-top: 12px;
     border-top: 1px solid #eee;
 }
 
@@ -475,11 +464,11 @@ body {
     margin-top: 10px;
 }
 
-/* Print Styles - SINGLE PAGE A4 */
+/* PRINT STYLES - SINGLE PAGE A4 */
 @media print {
     @page {
         size: A4;
-        margin: 0;
+        margin: 8mm;
     }
     
     body * {
@@ -496,27 +485,44 @@ body {
         left: 0;
         width: 100%;
         height: auto;
-        padding: 10mm 12mm;
+        padding: 0;
         margin: 0;
         background: white;
-        page-break-after: avoid;
-        page-break-inside: avoid;
     }
     
     .voucher-page {
         padding: 0;
         margin: 0;
-        page-break-inside: avoid;
-        break-inside: avoid;
     }
     
     .modal-actions {
         display: none;
     }
     
-    .signature-section {
-        page-break-inside: avoid;
-        break-inside: avoid;
+    .voucher-grid {
+        gap: 6px 20px;
+    }
+    
+    .grid-label {
+        width: 105px;
+        font-size: 10px;
+    }
+    
+    .grid-value {
+        font-size: 10px;
+    }
+    
+    .signature-table th {
+        font-size: 9px;
+        padding: 4px 2px;
+    }
+    
+    .signature-table td {
+        padding: 6px 2px;
+    }
+    
+    .sig-name-cell, .sig-dots-cell {
+        font-size: 9px;
     }
 }
 
@@ -536,8 +542,12 @@ body {
         margin: 0 auto;
     }
     
-    .two-col-row {
-        flex-direction: column;
-        gap: 12px;
+    .voucher-grid {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .full-width-item {
+        grid-column: span 1;
     }
 }
