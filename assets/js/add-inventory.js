@@ -1,386 +1,600 @@
-<div class="investment-container">
-  <div class="investment-header">
-    <h1>Add New Investment</h1>
-  </div>
+/* ============================================
+   ADD INVESTMENT MODULE JAVASCRIPT
+   With Auto-loaded Banks from Google Sheet
+   ============================================ */
 
-  <!-- New Investment Form -->
-  <form id="newInvestmentForm" onsubmit="event.preventDefault(); submitNewInvestment();">
-    <div class="form-row-two">
-      <div class="form-group">
-        <label for="investmentType">Investment Type:</label>
-        <select id="investmentType" name="investmentType" onchange="handleInvestmentTypeChange()" required>
-          <option value="">Select Investment Type</option>
-          <option value="Fixed Deposit">Fixed Deposit</option>
-          <option value="Treasury Bills">Treasury Bills</option>
-          <option value="Bonds">Bonds</option>
-          <option value="add-new">+ Add New Type</option>
-        </select>
-      </div>
+// Storage key for bank day counts
+const BANK_DAY_COUNT_STORAGE_KEY = 'investment_bank_day_counts';
 
-      <div class="form-group">
-        <label for="investmentDate">Investment Date:</label>
-        <input type="date" id="investmentDate" name="investmentDate" required onchange="calculateMaturityDate()">
-      </div>
+// ============================================
+// INITIALIZATION
+// ============================================
+
+function initInvestmentModule() {
+  console.log('Initializing Add Investment Module');
+  
+  const today = new Date().toISOString().split('T')[0];
+  const dateField = document.getElementById('investmentDate');
+  if (dateField) dateField.value = today;
+
+  // Load banks from Google Sheet
+  loadBanksFromSheet();
+
+  // Add event listeners for real-time calculations
+  const amountField = document.getElementById('amount');
+  const interestRateField = document.getElementById('interestRate');
+  const durationField = document.getElementById('duration');
+  const investmentDateField = document.getElementById('investmentDate');
+  const maturityDateField = document.getElementById('maturityDate');
+
+  if (amountField) {
+    amountField.addEventListener('input', calculateMaturityAmount);
+  }
+  if (interestRateField) {
+    interestRateField.addEventListener('input', calculateMaturityAmount);
+  }
+  if (durationField) {
+    durationField.addEventListener('input', function() {
+      calculateMaturityDate();
+      calculateMaturityAmount();
+    });
+  }
+  if (investmentDateField) {
+    investmentDateField.addEventListener('change', function() {
+      calculateMaturityDate();
+      calculateMaturityAmount();
+    });
+  }
+  if (maturityDateField) {
+    maturityDateField.addEventListener('change', calculateMaturityAmount);
+  }
+
+  // Close modal when clicking outside
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('messageModal');
+    if (modal && event.target === modal) {
+      closeInvestmentModal();
+    }
+  });
+}
+
+// ============================================
+// LOAD BANKS FROM GOOGLE SHEET
+// ============================================
+
+function loadBanksFromSheet() {
+  console.log('Loading banks from Google Sheet...');
+  
+  google.script.run
+    .withSuccessHandler(function(banks) {
+      console.log('Banks loaded:', banks);
+      populateBankDropdown(banks);
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error loading banks:', error);
+      // Fallback to default banks if sheet fails
+      const defaultBanks = ['Fidelity', 'CBG', 'Ecobank', 'GCB'];
+      populateBankDropdown(defaultBanks);
+    })
+    .getUniqueBanks();
+}
+
+function populateBankDropdown(banks) {
+  const bankSelect = document.getElementById('bankName');
+  if (!bankSelect) return;
+  
+  // Clear existing options (keep only the first placeholder if exists)
+  while (bankSelect.options.length > 0) {
+    bankSelect.remove(0);
+  }
+  
+  // Add placeholder option
+  const placeholderOption = document.createElement('option');
+  placeholderOption.value = '';
+  placeholderOption.textContent = 'Select Bank';
+  bankSelect.appendChild(placeholderOption);
+  
+  // Add bank options
+  if (banks && banks.length > 0) {
+    banks.forEach(bank => {
+      if (bank && bank.trim() !== '') {
+        const option = document.createElement('option');
+        option.value = bank;
+        option.textContent = bank;
+        
+        // Add day count attribute if available
+        const dayCount = getBankDayCount(bank);
+        option.setAttribute('data-day-count', dayCount);
+        
+        bankSelect.appendChild(option);
+      }
+    });
+  }
+  
+  // Add "Add New Bank" option at the end
+  const addNewOption = document.createElement('option');
+  addNewOption.value = 'add-new';
+  addNewOption.textContent = '+ Add New Bank';
+  bankSelect.appendChild(addNewOption);
+  
+  console.log(`Populated ${banks.length} banks into dropdown`);
+}
+
+// ============================================
+// BANK DAY COUNT MANAGEMENT
+// ============================================
+
+function getBankDayCounts() {
+  const stored = localStorage.getItem(BANK_DAY_COUNT_STORAGE_KEY);
+  if (stored) {
+    return JSON.parse(stored);
+  }
+  // Default day counts for common banks
+  return {
+    'Fidelity': 365,
+    'CBG': 365,
+    'Ecobank': 360,
+    'GCB': 365
+  };
+}
+
+function saveBankDayCount(bankName, dayCount) {
+  const counts = getBankDayCounts();
+  counts[bankName] = parseInt(dayCount);
+  localStorage.setItem(BANK_DAY_COUNT_STORAGE_KEY, JSON.stringify(counts));
+  console.log(`Saved day count ${dayCount} for bank: ${bankName}`);
+}
+
+function getBankDayCount(bankName) {
+  const counts = getBankDayCounts();
+  return counts[bankName] || 365;
+}
+
+// ============================================
+// INVESTMENT TYPE HANDLER
+// ============================================
+
+function handleInvestmentTypeChange() {
+  const investmentType = document.getElementById('investmentType').value;
+  const codeField = document.getElementById('investmentCode');
+  const addNewFields = document.getElementById('addNewInvestmentTypeFields');
+
+  if (investmentType === 'add-new') {
+    if (addNewFields) addNewFields.style.display = 'block';
+    if (codeField) {
+      codeField.value = '';
+      codeField.readOnly = false;
+    }
+  } else {
+    if (addNewFields) addNewFields.style.display = 'none';
+    const newTypeField = document.getElementById('newInvestmentType');
+    if (newTypeField) newTypeField.value = '';
+    
+    if (investmentType) {
+      codeField.value = 'Generating...';
+      codeField.readOnly = true;
+      generateInvestmentCode(investmentType);
+    } else {
+      if (codeField) {
+        codeField.value = '';
+        codeField.readOnly = false;
+      }
+    }
+  }
+}
+
+function handleBankChange() {
+  const bankName = document.getElementById('bankName').value;
+  const addNewBankFields = document.getElementById('addNewBankFields');
+
+  if (bankName === 'add-new') {
+    if (addNewBankFields) {
+      addNewBankFields.style.display = 'block';
+    }
+  } else {
+    if (addNewBankFields) {
+      addNewBankFields.style.display = 'none';
+    }
+    // Clear the new bank input fields
+    const newBankField = document.getElementById('newBankName');
+    if (newBankField) newBankField.value = '';
+    
+    const newBankDayCount = document.getElementById('newBankDayCount');
+    if (newBankDayCount) newBankDayCount.value = '365';
+    
+    // Recalculate maturity amount when bank changes (day count may affect)
+    calculateMaturityAmount();
+  }
+}
+
+function addNewBankToDropdown(bankName, dayCount) {
+  const bankSelect = document.getElementById('bankName');
+  if (!bankSelect) return;
+  
+  // Check if bank already exists
+  for (let i = 0; i < bankSelect.options.length; i++) {
+    if (bankSelect.options[i].value === bankName) {
+      return; // Bank already exists
+    }
+  }
+  
+  // Create new option
+  const option = document.createElement('option');
+  option.value = bankName;
+  option.textContent = bankName;
+  option.setAttribute('data-day-count', dayCount);
+  
+  // Insert before the "add-new" option
+  const addNewOption = bankSelect.querySelector('option[value="add-new"]');
+  if (addNewOption) {
+    bankSelect.insertBefore(option, addNewOption);
+  } else {
+    bankSelect.appendChild(option);
+  }
+  
+  // Select the new bank
+  bankSelect.value = bankName;
+  
+  console.log(`Added ${bankName} to dropdown with day count ${dayCount}`);
+}
+
+function generateInvestmentCode(investmentType) {
+  console.log('Generating investment code for:', investmentType);
+  
+  google.script.run
+    .withSuccessHandler(function(response) {
+      const field = document.getElementById('investmentCode');
+      if (field && response) {
+        field.value = response;
+        console.log('Investment code generated:', response);
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error generating investment code:', error);
+      const field = document.getElementById('investmentCode');
+      if (field) {
+        field.value = '';
+        showInvestmentMessage('Error generating investment code: ' + (error.message || error), 'error');
+      }
+    })
+    .generateInvestmentCode(investmentType);
+}
+
+// ============================================
+// CALCULATIONS WITH DAY COUNT
+// ============================================
+
+function calculateMaturityDate() {
+  const investmentDate = document.getElementById('investmentDate');
+  const durationField = document.getElementById('duration');
+  
+  if (!investmentDate || !durationField) return;
+  
+  const investmentDateValue = investmentDate.value;
+  const duration = parseInt(durationField.value) || 0;
+
+  if (!investmentDateValue || duration <= 0) {
+    const maturityDateField = document.getElementById('maturityDate');
+    if (maturityDateField) maturityDateField.value = '';
+    return;
+  }
+
+  const startDate = new Date(investmentDateValue);
+  const maturityDate = new Date(startDate.getTime() + (duration * 24 * 60 * 60 * 1000));
+  
+  const year = maturityDate.getFullYear();
+  const month = String(maturityDate.getMonth() + 1).padStart(2, '0');
+  const day = String(maturityDate.getDate()).padStart(2, '0');
+  
+  const maturityDateField = document.getElementById('maturityDate');
+  if (maturityDateField) maturityDateField.value = `${year}-${month}-${day}`;
+  calculateMaturityAmount();
+}
+
+function calculateMaturityAmount() {
+  const amountField = document.getElementById('amount');
+  const interestRateField = document.getElementById('interestRate');
+  const durationField = document.getElementById('duration');
+  const bankSelect = document.getElementById('bankName');
+  
+  if (!amountField || !interestRateField || !durationField) return;
+  
+  const amount = parseFloat(amountField.value) || 0;
+  const interestRate = parseFloat(interestRateField.value) || 0;
+  const duration = parseInt(durationField.value) || 0;
+  
+  // Get day count from selected bank or use default
+  let dayCount = 365;
+  const selectedBank = bankSelect ? bankSelect.value : '';
+  if (selectedBank && selectedBank !== 'add-new' && selectedBank !== '') {
+    dayCount = getBankDayCount(selectedBank);
+  }
+
+  const interestAmountField = document.getElementById('interestAmount');
+  const maturityAmountField = document.getElementById('maturityAmount');
+  
+  if (amount <= 0 || interestRate < 0 || duration <= 0) {
+    if (interestAmountField) interestAmountField.value = '0.00';
+    if (maturityAmountField) maturityAmountField.value = '0.00';
+    return;
+  }
+
+  // Interest = Principal * Rate * (Duration / DayCount)
+  const timeInYears = duration / dayCount;
+  const interestAmount = (amount * interestRate * timeInYears) / 100;
+  const maturityAmount = amount + interestAmount;
+
+  if (interestAmountField) interestAmountField.value = formatCurrency(interestAmount);
+  if (maturityAmountField) maturityAmountField.value = formatCurrency(maturityAmount);
+}
+
+// ============================================
+// SUBMIT NEW INVESTMENT
+// ============================================
+
+function submitNewInvestment() {
+  let investmentType = document.getElementById('investmentType').value;
+  const investmentCode = document.getElementById('investmentCode').value;
+  let bankName = document.getElementById('bankName').value;
+  const amount = document.getElementById('amount').value;
+  const interestRate = document.getElementById('interestRate').value;
+  const duration = document.getElementById('duration').value;
+  const investmentDate = document.getElementById('investmentDate').value;
+  const maturityDate = document.getElementById('maturityDate').value;
+  let dayCount = 365;
+
+  // Validation
+  if (!investmentType || investmentType === 'add-new') {
+    if (investmentType === 'add-new') {
+      const newType = document.getElementById('newInvestmentType').value;
+      if (!newType || newType.trim() === '') {
+        showInvestmentMessage('Please enter a new investment type', 'error');
+        return;
+      }
+      investmentType = newType;
+    } else {
+      showInvestmentMessage('Please select an investment type', 'error');
+      return;
+    }
+  }
+
+  if (!investmentCode || investmentCode.trim() === '' || investmentCode === 'Generating...') {
+    showInvestmentMessage('Please wait for the investment code to be generated', 'error');
+    return;
+  }
+
+  // Handle new bank addition
+  let isNewBank = false;
+  if (bankName === 'add-new') {
+    const newBankName = document.getElementById('newBankName').value;
+    const newBankDayCount = document.getElementById('newBankDayCount').value;
+    
+    if (!newBankName || newBankName.trim() === '') {
+      showInvestmentMessage('Please enter a new bank name', 'error');
+      return;
+    }
+    
+    bankName = newBankName.trim();
+    dayCount = parseInt(newBankDayCount);
+    isNewBank = true;
+  } else {
+    // Get day count for existing bank
+    dayCount = getBankDayCount(bankName);
+  }
+
+  if (!bankName || bankName === '' || bankName === 'add-new') {
+    showInvestmentMessage('Please select a bank', 'error');
+    return;
+  }
+
+  if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+    showInvestmentMessage('Please enter a valid amount', 'error');
+    return;
+  }
+
+  if (!interestRate || isNaN(interestRate) || parseFloat(interestRate) < 0) {
+    showInvestmentMessage('Please enter a valid interest rate', 'error');
+    return;
+  }
+
+  if (!duration || isNaN(duration) || parseInt(duration) <= 0) {
+    showInvestmentMessage('Please enter a valid duration', 'error');
+    return;
+  }
+
+  if (!investmentDate) {
+    showInvestmentMessage('Please select an investment date', 'error');
+    return;
+  }
+
+  if (!maturityDate) {
+    showInvestmentMessage('Please enter a maturity date', 'error');
+    return;
+  }
+
+  // Save the bank's day count if it's a new bank
+  if (isNewBank) {
+    saveBankDayCount(bankName, dayCount);
+    // Add the new bank to the dropdown for future use
+    addNewBankToDropdown(bankName, dayCount);
+  }
+
+  // Calculate final amounts with day count
+  const timeInYears = parseInt(duration) / dayCount;
+  const calculatedInterestAmount = (parseFloat(amount) * parseFloat(interestRate) * timeInYears) / 100;
+  const calculatedMaturityAmount = parseFloat(amount) + calculatedInterestAmount;
+
+  showInvestmentLoadingModal('Adding Investment...');
+
+  // Create data object
+  const investmentData = {
+    investmentType: investmentType.trim(),
+    investmentCode: investmentCode.trim(),
+    bankName: bankName.trim(),
+    amount: parseFloat(amount),
+    interestRate: parseFloat(interestRate),
+    duration: parseInt(duration),
+    investmentDate: investmentDate,
+    maturityDate: maturityDate,
+    interestAmount: calculatedInterestAmount,
+    maturityAmount: calculatedMaturityAmount,
+    dayCount: dayCount
+  };
+
+  console.log('Submitting investment data:', investmentData);
+
+  google.script.run
+    .withSuccessHandler(function(response) {
+      console.log('Success response:', response);
+      hideInvestmentLoadingModal();
+      if (response && response.success) {
+        showInvestmentMessage('✓ Investment added successfully!', 'success');
+        setTimeout(() => {
+          resetInvestmentForm();
+          // Refresh bank list after adding new investment
+          loadBanksFromSheet();
+        }, 1500);
+      } else {
+        showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error');
+      }
+    })
+    .withFailureHandler(function(error) {
+      console.error('Error details:', error);
+      hideInvestmentLoadingModal();
+      showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
+    })
+    .addNewInvestment(investmentData);
+}
+
+// ============================================
+// RESET FORM
+// ============================================
+
+function resetInvestmentForm() {
+  const form = document.getElementById('newInvestmentForm');
+  if (form) form.reset();
+  
+  const today = new Date().toISOString().split('T')[0];
+  const investmentDateField = document.getElementById('investmentDate');
+  if (investmentDateField) investmentDateField.value = today;
+  
+  const codeField = document.getElementById('investmentCode');
+  if (codeField) {
+    codeField.value = '';
+    codeField.readOnly = false;
+  }
+  
+  const interestAmountField = document.getElementById('interestAmount');
+  if (interestAmountField) interestAmountField.value = '0.00';
+  
+  const maturityAmountField = document.getElementById('maturityAmount');
+  if (maturityAmountField) maturityAmountField.value = '0.00';
+  
+  const typeField = document.getElementById('investmentType');
+  if (typeField) typeField.value = '';
+  
+  const bankField = document.getElementById('bankName');
+  if (bankField) bankField.value = '';
+  
+  // Hide toggle fields
+  const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
+  if (addNewTypeFields) addNewTypeFields.style.display = 'none';
+  
+  const addNewBankFields = document.getElementById('addNewBankFields');
+  if (addNewBankFields) addNewBankFields.style.display = 'none';
+  
+  // Clear input fields
+  const newTypeField = document.getElementById('newInvestmentType');
+  if (newTypeField) newTypeField.value = '';
+  
+  const newBankField = document.getElementById('newBankName');
+  if (newBankField) newBankField.value = '';
+  
+  const newBankDayCount = document.getElementById('newBankDayCount');
+  if (newBankDayCount) newBankDayCount.value = '365';
+}
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '0.00';
+  const numValue = parseFloat(value);
+  if (isNaN(numValue)) return '0.00';
+  return numValue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function showInvestmentMessage(message, type) {
+  let modal = document.getElementById('messageModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'messageModal';
+    modal.className = 'modal';
+    document.body.appendChild(modal);
+  }
+  
+  let messageDiv = document.getElementById('modalMessage');
+  if (!messageDiv) {
+    const div = document.createElement('div');
+    div.id = 'modalMessage';
+    modal.appendChild(div);
+    messageDiv = div;
+  }
+  
+  const types = {
+    success: 'success-message',
+    error: 'error-message',
+    info: 'info-message',
+    warning: 'warning-message'
+  };
+
+  messageDiv.innerHTML = `<div class="${types[type] || types.info}">${message}</div>`;
+  modal.style.display = 'flex';
+  
+  setTimeout(() => {
+    if (modal) modal.style.display = 'none';
+  }, 3000);
+}
+
+function closeInvestmentModal() {
+  const modal = document.getElementById('messageModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function showInvestmentLoadingModal(message = 'Adding Investment...') {
+  let modal = document.getElementById('investmentLoadingModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'investmentLoadingModal';
+    modal.className = 'investment-loading-modal';
+    document.body.appendChild(modal);
+  }
+  
+  modal.innerHTML = `
+    <div class="loading-modal-content">
+      <div class="loading-spinner"></div>
+      <p>${message}</p>
     </div>
+  `;
+  modal.style.display = 'flex';
+}
 
-    <!-- Add New Investment Type Fields (Hidden by default) -->
-    <div id="addNewInvestmentTypeFields" class="toggle-fields" style="display: none;">
-      <div class="form-group">
-        <label for="newInvestmentType">New Investment Type:</label>
-        <input type="text" id="newInvestmentType" name="newInvestmentType" placeholder="e.g., Savings Bond">
-      </div>
-    </div>
+function hideInvestmentLoadingModal() {
+  const modal = document.getElementById('investmentLoadingModal');
+  if (modal) modal.style.display = 'none';
+}
 
-    <div class="form-row-two">
-      <div class="form-group">
-        <label for="investmentCode">Investment Code:</label>
-        <input type="text" id="investmentCode" name="investmentCode" readonly placeholder="Auto-generated">
-      </div>
-
-      <div class="form-group">
-        <label for="bankName">Bank Name:</label>
-        <select id="bankName" name="bankName" required onchange="handleBankChange()">
-          <option value="">Select Bank</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Add New Bank Fields (Hidden by default) -->
-    <div id="addNewBankFields" class="toggle-fields" style="display: none;">
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="newBankName">New Bank Name:</label>
-          <input type="text" id="newBankName" name="newBankName" placeholder="e.g., Bank of Ghana">
-        </div>
-        <div class="form-group">
-          <label for="newBankDayCount">Day Count:</label>
-          <select id="newBankDayCount" name="newBankDayCount">
-            <option value="365">365 Days (Actual/365)</option>
-            <option value="360">360 Days (Actual/360)</option>
-            <option value="364">364 Days (Treasury Bills)</option>
-          </select>
-          <small style="font-size: 10px; color: #718096;">Saved for future use</small>
-        </div>
-      </div>
-    </div>
-
-    <div class="form-row-two">
-      <div class="form-group">
-        <label for="amount">Amount (GHc):</label>
-        <input type="number" id="amount" name="amount" step="0.01" placeholder="0.00" required oninput="calculateMaturityAmount()">
-      </div>
-
-      <div class="form-group">
-        <label for="interestRate">Interest Rate (%):</label>
-        <input type="number" id="interestRate" name="interestRate" step="0.01" placeholder="0.00" required oninput="calculateMaturityAmount()">
-      </div>
-    </div>
-
-    <div class="form-row-two">
-      <div class="form-group">
-        <label for="duration">Duration (Days):</label>
-        <input type="number" id="duration" name="duration" step="1" placeholder="0" required oninput="calculateMaturityDate(); calculateMaturityAmount();">
-      </div>
-
-      <div class="form-group">
-        <label for="maturityDate">Maturity Date:</label>
-        <input type="date" id="maturityDate" name="maturityDate" required onchange="calculateMaturityAmount()">
-      </div>
-    </div>
-
-    <!-- Calculated Fields - Side by Side -->
-    <div class="form-row-two calculated-row">
-      <div class="form-group">
-        <label for="interestAmount">Interest Amount (GHc):</label>
-        <input type="text" id="interestAmount" name="interestAmount" readonly placeholder="0.00">
-      </div>
-
-      <div class="form-group">
-        <label for="maturityAmount">Maturity Amount (GHc):</label>
-        <input type="text" id="maturityAmount" name="maturityAmount" readonly placeholder="0.00">
-      </div>
-    </div>
-
-    <button type="submit" class="submit-btn">
-      <i class="fas fa-plus"></i> Add Investment
-    </button>
-  </form>
-</div>
-
-<!-- Modal for Messages -->
-<div class="modal" id="messageModal" style="display: none;">
-  <div class="modal-content">
-    <div id="modalMessage"></div>
-    <button class="modal-close-btn" onclick="closeInvestmentModal()">Close</button>
-  </div>
-</div>
-
-<style>
-  .investment-container {
-    background: white;
-    border-radius: 10px;
-    padding: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    max-width: 700px;
-    margin: 0 auto;
-  }
-
-  .investment-header {
-    text-align: center;
-    margin-bottom: 12px;
-    border-bottom: 2px solid #4361ee;
-    padding-bottom: 6px;
-  }
-
-  .investment-header h1 {
-    color: #2d3748;
-    font-size: 18px;
-    margin: 0;
-    font-weight: 600;
-  }
-
-  .form-group {
-    margin-bottom: 10px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .form-group label {
-    margin-bottom: 3px;
-    color: #2d3748;
-    font-weight: 600;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-  }
-
-  .form-group input,
-  .form-group select {
-    padding: 6px 8px;
-    border: 1px solid #cbd5e0;
-    border-radius: 6px;
-    font-size: 12px;
-    font-family: inherit;
-    transition: all 0.2s;
-  }
-
-  .form-group input:focus,
-  .form-group select:focus {
-    outline: none;
-    border-color: #4361ee;
-    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
-  }
-
-  .form-group input[readonly] {
-    background: #f7fafc;
-    cursor: not-allowed;
-    font-size: 12px;
-    font-weight: 500;
-    color: #4361ee;
-  }
-
-  .form-row-two {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    margin-bottom: 10px;
-  }
-
-  .calculated-row {
-    background: #f7fafc;
-    padding: 10px;
-    border-radius: 8px;
-    margin: 12px 0 0 0;
-    border: 1px solid #e2e8f0;
-  }
-
-  .calculated-row .form-group {
-    margin-bottom: 0;
-  }
-
-  .toggle-fields {
-    background: #f7fafc;
-    padding: 10px;
-    border-radius: 8px;
-    border: 1px solid #e2e8f0;
-    margin-bottom: 10px;
-    transition: all 0.3s ease;
-  }
-
-  .submit-btn {
-    width: 100%;
-    max-width: 200px;
-    padding: 8px 20px;
-    background: linear-gradient(135deg, #4361ee, #7209b7);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    margin: 16px auto 0 auto;
-  }
-
-  .submit-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 3px 10px rgba(67, 97, 238, 0.3);
-  }
-
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-  }
-
-  .modal-content {
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    max-width: 350px;
-    text-align: center;
-    animation: modalSlideIn 0.2s ease;
-  }
-
-  @keyframes modalSlideIn {
-    from {
-      transform: translateY(-30px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  #modalMessage {
-    margin-bottom: 15px;
-    font-size: 13px;
-    color: #2d3748;
-    line-height: 1.4;
-  }
-
-  .modal-close-btn {
-    padding: 8px 20px;
-    background: #4361ee;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: 600;
-    transition: all 0.2s;
-  }
-
-  .modal-close-btn:hover {
-    background: #3a56d4;
-  }
-
-  .success-message {
-    color: #06d6a0;
-    font-weight: 600;
-    font-size: 14px;
-  }
-
-  .error-message {
-    color: #ef476f;
-    font-weight: 600;
-    font-size: 14px;
-  }
-
-  /* Loading Modal */
-  .investment-loading-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
-  }
-
-  .loading-modal-content {
-    background: white;
-    padding: 20px 30px;
-    border-radius: 10px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .loading-spinner {
-    width: 30px;
-    height: 30px;
-    border: 3px solid #e2e8f0;
-    border-top-color: #4361ee;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .loading-modal-content p {
-    margin: 0;
-    font-size: 12px;
-    color: #2d3748;
-  }
-
-  @media (max-width: 640px) {
-    .investment-container {
-      padding: 12px;
-    }
-
-    .investment-header h1 {
-      font-size: 16px;
-    }
-
-    .form-row-two {
-      grid-template-columns: 1fr;
-      gap: 8px;
-    }
-
-    .form-group label {
-      font-size: 9px;
-    }
-
-    .form-group input,
-    .form-group select {
-      font-size: 11px;
-      padding: 5px 7px;
-    }
-
-    .calculated-row {
-      padding: 8px;
-    }
-
-    .submit-btn {
-      max-width: 100%;
-      padding: 8px 16px;
-      font-size: 12px;
-    }
-
-    .modal-content {
-      max-width: 85%;
-      padding: 18px;
-    }
-  }
-</style>
+// Export functions for global use
+window.initInvestmentModule = initInvestmentModule;
+window.handleInvestmentTypeChange = handleInvestmentTypeChange;
+window.handleBankChange = handleBankChange;
+window.calculateMaturityDate = calculateMaturityDate;
+window.calculateMaturityAmount = calculateMaturityAmount;
+window.submitNewInvestment = submitNewInvestment;
+window.resetInvestmentForm = resetInvestmentForm;
+window.generateInvestmentCode = generateInvestmentCode;
+window.closeInvestmentModal = closeInvestmentModal;
