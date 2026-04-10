@@ -27,11 +27,21 @@
 .form-header {
     text-align: center;
     margin-bottom: 12px;
+    position: relative;
 }
 
 .form-header h1 {
     font-size: 20px;
     margin: 0;
+}
+
+#pvNumberDisplay {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #1565c0;
 }
 
 .form-fields {
@@ -264,16 +274,15 @@
 }
 
 /* ============================================
-   VOUCHER MODAL / PRINT STYLES - Compact
+   VOUCHER MODAL / PRINT STYLES - A4 Optimized
    ============================================ */
 
 .voucher-page {
     font-family: Arial, sans-serif;
     width: 100%;
-    max-width: 750px;
+    max-width: 210mm;
     margin: 0 auto;
-    padding: 15px;
-    border: 1px solid #000;
+    padding: 12mm 10mm;
     background: white;
     box-sizing: border-box;
     font-size: 12px;
@@ -281,17 +290,19 @@
 
 .voucher-header {
     text-align: center;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
 }
 
 .voucher-title {
-    font-size: 16px;
-    margin-bottom: 3px;
+    font-size: 18px;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .voucher-type {
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-bottom: 5px;
+    font-weight: bold;
 }
 
 .voucher-body {
@@ -301,19 +312,18 @@
 .voucher-row {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 6px;
+    margin-bottom: 14px;
     width: 100%;
-    justify-content: space-between;
+    align-items: baseline;
 }
 
 .voucher-label {
     display: flex;
-    align-items: center;
+    align-items: baseline;
     margin-bottom: 5px;
     font-size: 12px;
     width: 100%;
     position: relative;
-    min-height: 1.2em;
 }
 
 .half-width {
@@ -328,80 +338,51 @@
 }
 
 .label-text {
-    min-width: 100px;
+    min-width: 110px;
     font-weight: bold;
-    margin-right: 6px;
+    margin-right: 5px;
     font-size: 11px;
 }
 
 .dots {
     border-bottom: 1px dotted #000;
     flex: 1;
-    margin: 0 6px;
-    height: 1em;
+    margin: 0 8px;
+    height: 1.2em;
 }
 
 .input-value {
     display: inline-block;
-    vertical-align: top;
-    padding-left: 4px;
-    width: auto;
-    max-width: calc(100% - 110px);
     white-space: normal;
     word-break: break-word;
     overflow-wrap: break-word;
-    min-height: 1em;
-    position: absolute;
-    left: 108px;
     font-size: 11px;
-}
-
-#preview-amountInWords {
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    min-height: 1.8em !important;
+    min-width: 120px;
+    border-bottom: 1px dotted #000;
     padding-bottom: 2px;
-    padding-left: 40px;
-    font-size: 11px;
 }
 
-#preview-transactionDetails {
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    min-height: 1.8em !important;
-    padding-bottom: 2px;
-    padding-left: 70px;
-    font-size: 11px;
-}
-
-#preview-withholdingTax {
-    white-space: pre-wrap !important;
-    word-break: break-word !important;
-    overflow-wrap: break-word !important;
-    min-height: 1.8em !important;
-    padding-bottom: 2px;
-    padding-left: 70px;
-    font-size: 11px;
-}
-
-/* Signature Section - Compact */
+/* Signature Section - No "Role" header, Name/Signature/Date headers present */
 .signature-section {
-    margin-top: 20px;
+    margin-top: 28px;
     width: 100%;
+    border-top: 1px dashed #999;
+    padding-top: 18px;
 }
 
 .sig-headings {
     display: flex;
-    margin-bottom: 4px;
+    margin-bottom: 12px;
     font-weight: bold;
     font-size: 11px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ccc;
 }
 
 .sig-label {
-    min-width: 100px;
+    min-width: 110px;
     font-size: 11px;
+    font-weight: bold;
 }
 
 .sig-heading {
@@ -414,7 +395,7 @@
 .sig-row {
     display: flex;
     align-items: center;
-    margin-bottom: 10px;
+    margin-bottom: 18px;
     font-size: 11px;
 }
 
@@ -434,7 +415,6 @@
     left: 0;
     right: 0;
     bottom: 0;
-    text-align: center;
     padding-bottom: 2px;
     font-size: 10px;
 }
@@ -488,21 +468,21 @@
 }
 
 .print-btn {
-    background: #2196F3;
+    background: #4361ee;
     color: white;
 }
 
 .print-btn:hover {
-    background: #1976D2;
+    background: #3045b8;
 }
 
 .close-modal {
-    background: #757575;
+    background: #6c757d;
     color: white;
 }
 
 .close-modal:hover {
-    background: #616161;
+    background: #5a6268;
 }
 
 /* Loading Modal */
@@ -578,333 +558,121 @@
     margin-bottom: 8px;
 }
 
-/* ============================================
-   PRINT MEDIA STYLES - FIXED
-   ============================================ */
-
+/* Print Styles - A4 with NO headers/footers */
 @media print {
-    /* Allow exact color printing */
-    * {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-        color-adjust: exact !important;
+    @page {
+        size: A4;
+        margin: 0mm;
+    }
+    
+    body * {
+        visibility: hidden !important;
     }
 
-    /* Reset page */
+    #voucher-print, #voucher-print * {
+        visibility: visible !important;
+    }
+
     html, body {
         margin: 0 !important;
         padding: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        background: white !important;
+        width: 210mm !important;
+        height: 297mm !important;
     }
 
-    /* Hide everything by default */
-    body > * {
-        display: none !important;
-    }
-
-    /* Show ONLY the voucher modal and all its contents */
-    #voucher-preview-modal,
-    #voucher-preview-modal * {
-        display: block !important;
-        visibility: visible !important;
-    }
-
-    /* Configure the modal itself */
-    #voucher-preview-modal {
-        display: block !important;
-        position: static !important;
-        z-index: auto !important;
-        left: auto !important;
-        top: auto !important;
-        width: 100% !important;
-        height: auto !important;
-        background-color: transparent !important;
-        overflow: visible !important;
+    #voucher-print {
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 210mm !important;
+        padding: 10mm 12mm !important;
         margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
-        box-shadow: none !important;
-    }
-
-    /* Modal content wrapper */
-    .voucher-modal-content {
         background-color: white !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        width: 210mm !important;
-        max-width: 210mm !important;
-        position: relative !important;
-        border-radius: 0 !important;
-        box-shadow: none !important;
-        page-break-after: always !important;
-    }
-
-    /* Main voucher page */
-    #voucher-print,
-    .voucher-page {
-        font-family: Arial, sans-serif !important;
-        width: 210mm !important;
-        max-width: 210mm !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 10mm !important;
-        border: 1px solid #000 !important;
-        background: white !important;
         box-sizing: border-box !important;
-        font-size: 12px !important;
-        display: block !important;
-        position: relative !important;
-        page-break-after: always !important;
     }
 
-    /* Hide print buttons */
+    .voucher-modal-content {
+        box-shadow: none !important;
+        background: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
     .modal-actions {
         display: none !important;
     }
-
-    .print-btn,
-    .close-modal {
+    
+    /* Hide any browser-generated headers/footers */
+    header, footer, #header, #footer {
         display: none !important;
     }
+}
 
-    /* Ensure all voucher content displays */
-    .voucher-header {
-        text-align: center !important;
-        margin-bottom: 15px !important;
-        display: block !important;
+/* Responsive */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
     }
-
-    .voucher-title {
-        font-size: 16px !important;
-        margin-bottom: 3px !important;
-        display: block !important;
+    
+    .form-container {
+        max-width: 100%;
+        margin: 0 auto 15px auto;
     }
-
-    .voucher-type {
-        font-size: 14px !important;
-        margin-bottom: 10px !important;
-        display: block !important;
+    
+    .saved-voucher-table {
+        margin: 0 auto 15px auto;
+        width: 100%;
+        max-width: 350px;
     }
+}
 
-    .voucher-body {
-        width: 100% !important;
-        display: block !important;
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 8px;
     }
-
-    .voucher-row {
-        display: flex !important;
-        flex-wrap: wrap !important;
-        margin-bottom: 6px !important;
-        width: 100% !important;
-        justify-content: space-between !important;
-        page-break-inside: avoid !important;
-        visibility: visible !important;
+    
+    .form-field {
+        min-width: 100%;
     }
-
-    .voucher-label {
-        display: flex !important;
-        align-items: center !important;
-        margin-bottom: 5px !important;
-        font-size: 12px !important;
-        width: 100% !important;
-        position: relative !important;
-        min-height: 1.2em !important;
-        visibility: visible !important;
-    }
-
+    
     .half-width {
-        width: 48% !important;
-        margin-right: 2% !important;
-        min-width: 200px !important;
+        width: 100%;
+        margin-right: 0;
     }
-
+    
     .full-width {
-        width: 100% !important;
-        min-width: 100% !important;
+        min-width: 100%;
     }
-
+    
     .label-text {
-        min-width: 100px !important;
-        font-weight: bold !important;
-        margin-right: 6px !important;
-        font-size: 11px !important;
-        display: inline !important;
+        min-width: 85px;
     }
-
-    .dots {
-        border-bottom: 1px dotted #000 !important;
-        flex: 1 !important;
-        margin: 0 6px !important;
-        height: 1em !important;
-        display: block !important;
-    }
-
-    .input-value {
-        display: inline-block !important;
-        vertical-align: top !important;
-        padding-left: 4px !important;
-        width: auto !important;
-        max-width: calc(100% - 110px) !important;
-        white-space: normal !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        min-height: 1em !important;
-        position: absolute !important;
-        left: 108px !important;
-        font-size: 11px !important;
-        color: #000 !important;
-        visibility: visible !important;
-    }
-
-    #preview-pvNumber {
-        display: inline-block !important;
-        font-weight: bold !important;
-        text-align: right !important;
-        color: #000 !important;
-    }
-
-    #preview-payableTo,
-    #preview-date,
-    #preview-address,
-    #preview-department,
-    #preview-accountCode,
-    #preview-invoiceDate,
-    #preview-invoiceNo,
-    #preview-amount,
-    #preview-amountInWords,
-    #preview-transactionDetails,
-    #preview-bank,
-    #preview-chequeNumber,
-    #preview-requestedBy,
-    #preview-reviewedBy,
-    #preview-authorizedBy,
-    #preview-receivedBy,
-    #preview-withholdingTax {
-        color: #000 !important;
-        visibility: visible !important;
-        display: inline-block !important;
-    }
-
-    #preview-amountInWords {
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        min-height: 1.8em !important;
-        padding-bottom: 2px !important;
-        padding-left: 40px !important;
-        font-size: 11px !important;
-        display: inline-block !important;
-    }
-
-    #preview-transactionDetails {
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        min-height: 1.8em !important;
-        padding-bottom: 2px !important;
-        padding-left: 70px !important;
-        font-size: 11px !important;
-        display: inline-block !important;
-    }
-
-    #preview-withholdingTax {
-        white-space: pre-wrap !important;
-        word-break: break-word !important;
-        overflow-wrap: break-word !important;
-        min-height: 1.8em !important;
-        padding-bottom: 2px !important;
-        padding-left: 70px !important;
-        font-size: 11px !important;
-        display: inline-block !important;
-    }
-
-    #preview-cheque-fields {
-        display: flex !important;
-    }
-
-    #preview-withholdingTax-row {
-        display: flex !important;
-    }
-
-    /* Signature section */
-    .signature-section {
-        margin-top: 20px !important;
-        width: 100% !important;
-        page-break-inside: avoid !important;
-        display: block !important;
-    }
-
+    
     .sig-headings {
-        display: flex !important;
-        margin-bottom: 4px !important;
-        font-weight: bold !important;
-        font-size: 11px !important;
+        font-size: 10px;
     }
-
+    
     .sig-label {
-        min-width: 100px !important;
-        font-size: 11px !important;
-        display: inline-block !important;
+        min-width: 85px;
     }
-
+    
     .sig-heading {
-        flex: 1 !important;
-        text-align: center !important;
-        min-width: 80px !important;
-        font-size: 11px !important;
-        display: inline-block !important;
+        min-width: 60px;
     }
-
-    .sig-row {
-        display: flex !important;
-        align-items: center !important;
-        margin-bottom: 10px !important;
-        font-size: 11px !important;
-        page-break-inside: avoid !important;
+    
+    .voucher-modal-content {
+        margin: 5% auto;
+        padding: 10px;
     }
-
-    .sig-name-container {
-        flex: 1 !important;
-        position: relative !important;
-        margin: 0 8px !important;
+    
+    .modal-actions {
+        flex-direction: column;
     }
-
-    .sig-name-line {
-        border-bottom: 1px dotted #000 !important;
-        height: 1.2em !important;
-        display: block !important;
-    }
-
-    .sig-name-text {
-        position: absolute !important;
-        left: 0 !important;
-        right: 0 !important;
-        bottom: 0 !important;
-        text-align: center !important;
-        padding-bottom: 2px !important;
-        font-size: 10px !important;
-        display: block !important;
-    }
-
-    .sig-dots {
-        flex: 1 !important;
-        border-bottom: 1px dotted #000 !important;
-        height: 1.2em !important;
-        margin: 0 8px !important;
-        display: block !important;
-    }
-
-    /* Cheque fields container */
-    .cheque-fields {
-        display: flex !important;
-    }
-
-    /* Page setup */
-    @page {
-        size: A4 portrait;
-        margin: 0;
-        padding: 0;
+    
+    .print-btn, .close-modal {
+        width: 100%;
     }
 }
