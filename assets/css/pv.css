@@ -319,6 +319,15 @@
     width: 100%;
 }
 
+/* Extra spacing for specific rows */
+.voucher-row-account-amount {
+    margin-bottom: 36px;  /* Double space between ACCOUNT CODE and AMOUNT */
+}
+
+.voucher-row-transaction-signature {
+    margin-bottom: 36px;  /* Extra space between TRANSACTION DETAILS and signature section */
+}
+
 .half-width {
     width: 48%;
     min-width: 210px;
@@ -355,7 +364,7 @@
 
 /* Signature Section */
 .signature-section {
-    margin-top: 32px;
+    margin-top: 20px;
     border-top: 1px dashed #b9d0e5;
     padding-top: 24px;
 }
@@ -498,7 +507,7 @@
     background: #5a6268;
 }
 
-/* Loading Modal */
+/* Loading Modal - Reduced width */
 .modal {
     display: none;
     position: fixed;
@@ -514,21 +523,22 @@
 
 .modal-content {
     background: white;
-    padding: 20px 30px;
+    padding: 20px 25px;
     border-radius: 8px;
     text-align: center;
-    min-width: 250px;
-    max-width: 90vw;
+    min-width: 200px;
+    max-width: 280px;
+    width: auto;
 }
 
 .loader {
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #4CAF50;
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #4CAF50;
     border-radius: 50%;
-    width: 35px;
-    height: 35px;
+    width: 30px;
+    height: 30px;
     animation: spin 1s linear infinite;
-    margin: 0 auto 12px auto;
+    margin: 0 auto 10px auto;
 }
 
 @keyframes spin {
@@ -538,19 +548,19 @@
 
 .success-message {
     color: #388e3c;
-    font-size: 14px;
-    margin-bottom: 10px;
+    font-size: 13px;
+    margin-bottom: 8px;
 }
 
 .download-button {
     background: #2196F3;
     border: none;
     color: #fff;
-    padding: 8px 20px;
+    padding: 6px 16px;
     border-radius: 4px;
-    font-size: 12px;
+    font-size: 11px;
     cursor: pointer;
-    margin-top: 8px;
+    margin-top: 6px;
 }
 
 .modal-close-button {
@@ -558,17 +568,721 @@
     color: #fff;
     border: none;
     border-radius: 4px;
-    padding: 6px 18px;
-    font-size: 12px;
+    padding: 5px 15px;
+    font-size: 11px;
     cursor: pointer;
-    margin-top: 12px;
+    margin-top: 10px;
 }
 
 .modal-error-message {
     color: #b71c1c;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+}
+
+/* PRINT STYLES - REFERENCE APPROACH: A4 size, NO headers/footers */
+@media print {
+    @page {
+        size: A4;
+        margin: 0;
+    }
+    
+    body {
+        margin: 0;
+        padding: 0;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    
+    body * {
+        visibility: hidden;
+    }
+    
+    #voucher-print, #voucher-print * {
+        visibility: visible;
+    }
+    
+    #voucher-print {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        padding: 12mm 10mm;
+        border: none;
+        box-shadow: none;
+        background: white;
+    }
+    
+    .voucher-page {
+        padding: 0;
+        margin: 0;
+        border: none;
+    }
+    
+    .sig-dotted-col, .sig-name-field, .input-value {
+        border-bottom: 1px dotted #000 !important;
+    }
+    
+    .modal-actions {
+        display: none;
+    }
+    
+    /* Hide any browser-generated headers/footers */
+    header, footer, #header, #footer {
+        display: none !important;
+    }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .form-container {
+        max-width: 100%;
+        margin: 0 auto 15px auto;
+    }
+    
+    .saved-voucher-table {
+        margin: 0 auto 15px auto;
+        width: 100%;
+        max-width: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .form-field {
+        min-width: 100%;
+    }
+    
+    .half-width {
+        width: 100%;
+        margin-right: 0;
+    }
+    
+    .full-width {
+        min-width: 100%;
+    }
+    
+    .label-text {
+        min-width: 85px;
+    }
+    
+    .sig-headings {
+        font-size: 10px;
+    }
+    
+    .sig-label {
+        min-width: 85px;
+    }
+    
+    .sig-heading {
+        min-width: 60px;
+    }
+    
+    .voucher-modal-content {
+        margin: 5% auto;
+        padding: 10px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .print-btn, .close-modal {
+        width: 100%;
+    }
+}/* ============================================
+   PAYMENT VOUCHER MODULE STYLES - COMPACT VERSION
+   ============================================ */
+
+.main-layout {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+/* Form Container */
+.form-container {
+    border: 1px solid #ddd;
+    padding: 15px;
+    max-width: 850px;
+    min-width: 320px;
+    border-radius: 8px;
+    background: #fafafa;
+    position: relative;
+    flex: 1 1 320px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.form-header h1 {
+    font-size: 20px;
+    margin: 0;
+}
+
+#pvNumberDisplay {
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #1565c0;
+}
+
+.form-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+.form-field {
+    flex: 1 1 0;
+    min-width: 180px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-field label {
+    margin-bottom: 3px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #2d3748;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    font-size: 12px;
+    box-sizing: border-box;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+.form-field textarea {
+    resize: vertical;
+    min-height: 32px;
+    max-height: 65px;
+}
+
+/* Checkbox Container */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 3px;
+}
+
+.checkbox-container label {
+    margin-bottom: 0;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+/* Submit Buttons */
+.submit-button {
+    display: block;
+    width: 100%;
+    max-width: 240px;
+    margin: 20px auto 0 auto;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
     font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
+}
+
+.submit-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(67, 97, 238, 0.3);
+}
+
+.update-button {
+    background: linear-gradient(135deg, #2196F3, #1976D2) !important;
+    margin-top: 10px !important;
+}
+
+/* Saved Voucher Table - Compact */
+.saved-voucher-table {
+    border: 2px solid #004ba0;
+    width: 260px;
+    background: #f7fafd;
+    font-family: 'Courier New', Courier, monospace;
+    border-radius: 10px;
+    box-shadow: 0 1px 5px rgba(10,60,160,.08);
+    flex-shrink: 0;
+}
+
+.svt-title {
+    text-align: left;
+    padding: 10px 0 6px 15px;
+    font-size: 13px;
+    font-weight: bold;
+    border-bottom: 2px solid #004ba0;
+    letter-spacing: 1px;
+    color: #004ba0;
+    background: #e6f0ff;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+}
+
+.svt-section {
+    border: 1px solid #bcd;
+    border-left: none;
+    border-right: none;
+    margin: 12px 12px 0 12px;
+    padding: 0 0 8px 0;
+    min-height: 50px;
+    background: #f9fbff;
+    border-radius: 6px;
+}
+
+.svt-header {
+    text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    margin: 8px 0 5px 0;
+    letter-spacing: 1px;
+    color: #1565c0;
+    border-bottom: 1px dashed #aac4db;
+    padding-bottom: 4px;
+}
+
+.svt-list {
+    min-height: 15px;
+    padding: 3px 5px;
+    font-size: 11px;
+    text-align: center;
+    color: #1a1a2e;
+    max-height: 95px;
+    overflow-y: auto;
+}
+
+.svt-list div {
+    padding: 4px 0;
+    border-bottom: 1px dotted #c9d7e5;
+}
+
+.svt-list div:last-child {
+    border-bottom: none;
+}
+
+/* PV Buttons in List */
+.pv-btn {
+    background: none;
+    border: none;
+    color: #1565c0;
+    font-size: 11px;
+    padding: 4px 0;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    border-bottom: 1px dotted #c9d7e5;
+    transition: background 0.08s;
+}
+
+.pv-btn:hover {
+    background: #e3f2fd;
+}
+
+/* Dropdown Portal */
+#pv-dropdown-portal {
+    position: absolute;
+    z-index: 9999;
+    min-width: 100px;
+    display: none;
+}
+
+.pv-dropdown-content-portal {
+    background: #fff;
+    border: 1px solid #aac4db;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(20,60,120,.13);
+    font-size: 12px;
+    padding: 3px 0;
+    display: block;
+}
+
+.pv-dropdown-content-portal .dropdown-item {
+    padding: 6px 16px;
+    cursor: pointer;
+    color: #333;
+    border-bottom: 1px solid #f3f3f3;
+    text-align: left;
+    background: none;
+    border: none;
+    width: 100%;
+    display: block;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.pv-dropdown-content-portal .dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.pv-dropdown-content-portal .dropdown-item:hover {
+    background: #e6f0ff;
+    color: #1565c0;
+}
+
+/* ============================================
+   VOUCHER MODAL / PRINT STYLES - REFERENCE APPROACH
+   ============================================ */
+
+.voucher-page {
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
+    padding: 20px 24px;
+    border: 1px solid #cfdfed;
+    border-radius: 12px;
+    background: white;
+    box-sizing: border-box;
+}
+
+.voucher-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.voucher-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #0b3b5f;
+    letter-spacing: 1px;
+}
+
+.voucher-type {
+    font-size: 13px;
+    font-weight: 800;
+    background: #e9f1f9;
+    display: inline-block;
+    padding: 5px 28px;
+    border-radius: 40px;
     margin-top: 8px;
+}
+
+.voucher-row {
+    display: flex;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+    align-items: baseline;
+    width: 100%;
+}
+
+/* Extra spacing for specific rows */
+.voucher-row-account-amount {
+    margin-bottom: 36px;  /* Double space between ACCOUNT CODE and AMOUNT */
+}
+
+.voucher-row-transaction-signature {
+    margin-bottom: 36px;  /* Extra space between TRANSACTION DETAILS and signature section */
+}
+
+.half-width {
+    width: 48%;
+    min-width: 210px;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.label-text {
+    font-weight: 700;
+    min-width: 130px;
+    font-size: 11.5px;
+    color: #1f3a4b;
+    letter-spacing: 0.3px;
+}
+
+.dots-line {
+    flex: 1;
+    border-bottom: 1.2px dotted #2c3e50;
+    margin: 0 10px;
+    height: 1.2em;
+}
+
+.input-value {
+    font-size: 12px;
+    font-weight: 500;
+    color: #000;
+    border-bottom: 1px dotted #2c3e50;
+    padding-bottom: 2px;
+    min-width: 140px;
+    display: inline-block;
+}
+
+/* Signature Section */
+.signature-section {
+    margin-top: 20px;
+    border-top: 1px dashed #b9d0e5;
+    padding-top: 24px;
+}
+
+.sig-headers {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #cbdde9;
+}
+
+.sig-header-name, .sig-header-signature, .sig-header-date {
+    font-weight: 800;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #2c5282;
+    letter-spacing: 0.5px;
+}
+
+.sig-header-name {
+    flex: 1;
+    text-align: left;
+    margin-left: 125px;
+}
+.sig-header-signature {
+    flex: 1;
+    text-align: center;
+}
+.sig-header-date {
+    flex: 1;
+    text-align: center;
+}
+
+.sig-row-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 26px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.sig-role {
+    min-width: 125px;
+    font-weight: 800;
+    font-size: 12px;
+    color: #1e3a5f;
+    letter-spacing: 0.3px;
+}
+
+.sig-name-field {
+    flex: 1;
+    border-bottom: 1px dotted #2d3748;
+    min-height: 32px;
+    position: relative;
+}
+
+.sig-name-text {
+    position: absolute;
+    bottom: 3px;
+    left: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+.sig-dotted-col {
+    flex: 1;
+    border-bottom: 1px dotted #2d3748;
+    margin: 0 6px;
+    min-height: 32px;
+    position: relative;
+}
+
+.placeholder-text {
+    position: absolute;
+    bottom: 3px;
+    left: 8px;
+    font-size: 9px;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Modal Styles */
+.voucher-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    overflow: auto;
+}
+
+.voucher-modal-content {
+    background-color: #fff;
+    margin: 2% auto;
+    padding: 15px;
+    width: 210mm;
+    max-width: 95%;
+    position: relative;
+    border-radius: 5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.print-btn, .close-modal {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.print-btn {
+    background: #4361ee;
+    color: white;
+}
+
+.print-btn:hover {
+    background: #3045b8;
+}
+
+.close-modal {
+    background: #6c757d;
+    color: white;
+}
+
+.close-modal:hover {
+    background: #5a6268;
+}
+
+/* Loading Modal - Reduced width */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px 25px;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 200px;
+    max-width: 280px;
+    width: auto;
+}
+
+.loader {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #4CAF50;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.success-message {
+    color: #388e3c;
+    font-size: 13px;
     margin-bottom: 8px;
+}
+
+.download-button {
+    background: #2196F3;
+    border: none;
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 4px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 6px;
+}
+
+.modal-close-button {
+    background: #888;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 5px 15px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 10px;
+}
+
+.modal-error-message {
+    color: #b71c1c;
+    font-size: 12px;
+    margin-top: 6px;
+    margin-bottom: 6px;
 }
 
 /* PRINT STYLES - REFERENCE APPROACH: A4 size, NO headers/footers */
