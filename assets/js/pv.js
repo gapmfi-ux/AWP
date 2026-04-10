@@ -408,6 +408,7 @@ function showVoucherPreview(voucherData) {
   
   document.getElementById('voucher-preview-modal').style.display = 'block';
 }
+
 function closeVoucherModal() {
   document.getElementById('voucher-preview-modal').style.display = 'none';
 }
