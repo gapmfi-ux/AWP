@@ -1,253 +1,291 @@
 /* ============================================
-   PAYMENT VOUCHER MODULE STYLES
+   PAYMENT VOUCHER MODULE STYLES - COMPACT VERSION
    ============================================ */
-
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
-    background: #eef2f8;
-    padding: 28px 20px;
-}
 
 .main-layout {
     display: flex;
     flex-direction: row;
     justify-content: center;
     align-items: flex-start;
-    gap: 30px;
+    gap: 24px;
     flex-wrap: wrap;
-    max-width: 1500px;
-    margin: 0 auto;
 }
 
+/* Form Container */
 .form-container {
-    background: #ffffff;
-    border-radius: 28px;
-    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.05);
-    padding: 24px 28px;
-    flex: 2 1 620px;
-    border: 1px solid #e2edf7;
+    border: 1px solid #ddd;
+    padding: 15px;
+    max-width: 850px;
+    min-width: 320px;
+    border-radius: 8px;
+    background: #fafafa;
+    position: relative;
+    flex: 1 1 320px;
+    box-shadow: 0 1px 5px rgba(0,0,0,0.05);
 }
 
 .form-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    flex-wrap: wrap;
-    margin-bottom: 20px;
-    border-bottom: 2px solid #e0edf5;
-    padding-bottom: 12px;
+    text-align: center;
+    margin-bottom: 12px;
+    position: relative;
 }
 
 .form-header h1 {
-    font-size: 26px;
-    font-weight: 800;
-    background: linear-gradient(135deg, #0b3b5f, #1b5a7a);
-    -webkit-background-clip: text;
-    background-clip: text;
-    color: transparent;
+    font-size: 20px;
+    margin: 0;
 }
 
 #pvNumberDisplay {
-    font-family: 'SF Mono', 'Courier New', monospace;
-    font-weight: 800;
-    background: #f0f6fe;
-    padding: 6px 16px;
-    border-radius: 60px;
-    font-size: 0.9rem;
-    color: #0a5e8a;
-}
-
-.demo-actions {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 22px;
-    flex-wrap: wrap;
-}
-
-.demo-button {
-    background: #f0f4f9;
-    border: none;
-    padding: 6px 16px;
-    border-radius: 40px;
-    font-weight: 600;
-    font-size: 12px;
-    cursor: pointer;
-    transition: 0.2s;
-    color: #1a4c6e;
-}
-
-.demo-button:hover {
-    background: #e2eaf1;
-    transform: translateY(-1px);
+    position: absolute;
+    right: 0;
+    top: 0;
+    font-weight: bold;
+    font-size: 1.1em;
+    color: #1565c0;
 }
 
 .form-fields {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 10px;
+    margin-bottom: 15px;
 }
 
 .form-row {
     display: flex;
-    gap: 18px;
+    gap: 12px;
     flex-wrap: wrap;
+    width: 100%;
 }
 
 .form-field {
     flex: 1 1 0;
-    min-width: 170px;
+    min-width: 180px;
     display: flex;
     flex-direction: column;
 }
 
 .form-field label {
+    margin-bottom: 3px;
+    font-weight: 600;
     font-size: 11px;
-    font-weight: 800;
+    color: #2d3748;
     text-transform: uppercase;
-    color: #2c4e6e;
     letter-spacing: 0.3px;
-    margin-bottom: 5px;
 }
 
-.form-field input, .form-field select, .form-field textarea {
-    padding: 9px 12px;
-    border: 1px solid #cbdde9;
-    border-radius: 16px;
-    font-size: 13px;
-    background: #ffffff;
-    transition: 0.2s;
+.form-field input,
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid #cbd5e0;
+    border-radius: 5px;
+    font-size: 12px;
+    box-sizing: border-box;
+    transition: all 0.3s;
+    font-family: inherit;
 }
 
-.form-field input:focus, .form-field select:focus, .form-field textarea:focus {
-    border-color: #2c7da0;
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(44,125,160,0.1);
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
 }
 
+.form-field textarea {
+    resize: vertical;
+    min-height: 32px;
+    max-height: 65px;
+}
+
+/* Checkbox Container */
 .checkbox-container {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 6px;
+    margin-bottom: 3px;
 }
 
-.submit-button, .update-button {
-    background: linear-gradient(100deg, #1f6e9c, #0e4b70);
+.checkbox-container label {
+    margin-bottom: 0;
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.checkbox-container input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+}
+
+/* Submit Buttons */
+.submit-button {
+    display: block;
+    width: 100%;
+    max-width: 240px;
+    margin: 20px auto 0 auto;
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
     color: white;
     border: none;
-    padding: 12px 20px;
-    border-radius: 44px;
-    font-weight: 700;
+    border-radius: 6px;
     cursor: pointer;
-    width: 100%;
-    max-width: 260px;
-    margin-top: 8px;
-    font-size: 14px;
-    transition: all 0.2s;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    transition: all 0.3s;
 }
 
-.submit-button:hover, .update-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 60, 100, 0.2);
+.submit-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(67, 97, 238, 0.3);
 }
 
+.update-button {
+    background: linear-gradient(135deg, #2196F3, #1976D2) !important;
+    margin-top: 10px !important;
+}
+
+/* Saved Voucher Table - Compact */
 .saved-voucher-table {
-    background: white;
-    width: 280px;
-    border-radius: 28px;
-    border: 1px solid #e2edf7;
-    overflow: hidden;
-    box-shadow: 0 6px 14px rgba(0,0,0,0.03);
+    border: 2px solid #004ba0;
+    width: 260px;
+    background: #f7fafd;
+    font-family: 'Courier New', Courier, monospace;
+    border-radius: 10px;
+    box-shadow: 0 1px 5px rgba(10,60,160,.08);
     flex-shrink: 0;
 }
 
 .svt-title {
-    background: #f7fbfe;
-    padding: 16px;
-    font-weight: 800;
-    font-size: 15px;
-    color: #11517c;
-    border-bottom: 2px solid #e0eef9;
+    text-align: left;
+    padding: 10px 0 6px 15px;
+    font-size: 13px;
+    font-weight: bold;
+    border-bottom: 2px solid #004ba0;
+    letter-spacing: 1px;
+    color: #004ba0;
+    background: #e6f0ff;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
 }
 
 .svt-section {
-    margin: 12px 12px 12px 12px;
-    background: #ffffff;
-    border-radius: 20px;
-    border: 1px solid #e5eff6;
+    border: 1px solid #bcd;
+    border-left: none;
+    border-right: none;
+    margin: 12px 12px 0 12px;
+    padding: 0 0 8px 0;
+    min-height: 50px;
+    background: #f9fbff;
+    border-radius: 6px;
 }
 
 .svt-header {
-    background: #eef4fa;
-    padding: 8px;
-    font-weight: 800;
-    font-size: 12px;
     text-align: center;
+    font-size: 11px;
+    font-weight: bold;
+    margin: 8px 0 5px 0;
+    letter-spacing: 1px;
+    color: #1565c0;
+    border-bottom: 1px dashed #aac4db;
+    padding-bottom: 4px;
 }
 
 .svt-list {
-    max-height: 130px;
+    min-height: 15px;
+    padding: 3px 5px;
+    font-size: 11px;
+    text-align: center;
+    color: #1a1a2e;
+    max-height: 95px;
     overflow-y: auto;
-    padding: 5px;
 }
 
+.svt-list div {
+    padding: 4px 0;
+    border-bottom: 1px dotted #c9d7e5;
+}
+
+.svt-list div:last-child {
+    border-bottom: none;
+}
+
+/* PV Buttons in List */
 .pv-btn {
     background: none;
     border: none;
+    color: #1565c0;
+    font-size: 11px;
+    padding: 4px 0;
     width: 100%;
     text-align: left;
-    padding: 8px 10px;
-    font-size: 11px;
-    font-weight: 500;
-    border-bottom: 1px solid #eef2f8;
     cursor: pointer;
-    font-family: monospace;
+    border-bottom: 1px dotted #c9d7e5;
+    transition: background 0.08s;
 }
 
 .pv-btn:hover {
-    background: #e9f2fa;
-    color: #0059b3;
+    background: #e3f2fd;
+}
+
+/* Dropdown Portal */
+#pv-dropdown-portal {
+    position: absolute;
+    z-index: 9999;
+    min-width: 100px;
+    display: none;
+}
+
+.pv-dropdown-content-portal {
+    background: #fff;
+    border: 1px solid #aac4db;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(20,60,120,.13);
+    font-size: 12px;
+    padding: 3px 0;
+    display: block;
+}
+
+.pv-dropdown-content-portal .dropdown-item {
+    padding: 6px 16px;
+    cursor: pointer;
+    color: #333;
+    border-bottom: 1px solid #f3f3f3;
+    text-align: left;
+    background: none;
+    border: none;
+    width: 100%;
+    display: block;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.pv-dropdown-content-portal .dropdown-item:last-child {
+    border-bottom: none;
+}
+
+.pv-dropdown-content-portal .dropdown-item:hover {
+    background: #e6f0ff;
+    color: #1565c0;
 }
 
 /* ============================================
-   MODAL & PRINT STYLES - A4 OPTIMIZED
+   VOUCHER MODAL / PRINT STYLES - REFERENCE APPROACH
    ============================================ */
-.voucher-modal {
-    display: none;
-    position: fixed;
-    z-index: 2000;
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.75);
-    overflow: auto;
-}
-
-.voucher-modal-content {
-    background: #fff;
-    margin: 2% auto;
-    padding: 20px;
-    width: 210mm;
-    max-width: 94%;
-    border-radius: 20px;
-    box-shadow: 0 25px 40px rgba(0,0,0,0.3);
-}
 
 .voucher-page {
     font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    background: white;
+    width: 100%;
+    max-width: 210mm;
+    margin: 0 auto;
     padding: 20px 24px;
     border: 1px solid #cfdfed;
     border-radius: 12px;
-    width: 100%;
+    background: white;
     box-sizing: border-box;
 }
 
@@ -315,10 +353,7 @@ body {
     display: inline-block;
 }
 
-.voucher-row-spaced {
-    margin-bottom: 24px;
-}
-
+/* Signature Section */
 .signature-section {
     margin-top: 32px;
     border-top: 1px dashed #b9d0e5;
@@ -404,59 +439,161 @@ body {
     font-style: italic;
 }
 
+/* Modal Styles */
+.voucher-modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    overflow: auto;
+}
+
+.voucher-modal-content {
+    background-color: #fff;
+    margin: 2% auto;
+    padding: 15px;
+    width: 210mm;
+    max-width: 95%;
+    position: relative;
+    border-radius: 5px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 14px;
-    margin-top: 20px;
+    gap: 8px;
+    margin-top: 15px;
 }
 
 .print-btn, .close-modal {
-    background: #1f6392;
-    color: white;
+    padding: 8px 16px;
     border: none;
-    padding: 10px 20px;
-    border-radius: 40px;
-    font-weight: 700;
+    border-radius: 5px;
     cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.print-btn {
+    background: #4361ee;
+    color: white;
+}
+
+.print-btn:hover {
+    background: #3045b8;
 }
 
 .close-modal {
     background: #6c757d;
-}
-
-.toast-message {
-    position: fixed;
-    bottom: 28px;
-    right: 28px;
-    background: #1e2f3c;
     color: white;
-    padding: 12px 26px;
-    border-radius: 50px;
-    font-size: 13px;
-    z-index: 3000;
-    box-shadow: 0 5px 12px rgba(0,0,0,0.2);
 }
 
-/* PRINT STYLES - A4 size, NO headers/footers */
+.close-modal:hover {
+    background: #5a6268;
+}
+
+/* Loading Modal */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 100;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.35);
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background: white;
+    padding: 20px 30px;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 250px;
+    max-width: 90vw;
+}
+
+.loader {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #4CAF50;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 12px auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.success-message {
+    color: #388e3c;
+    font-size: 14px;
+    margin-bottom: 10px;
+}
+
+.download-button {
+    background: #2196F3;
+    border: none;
+    color: #fff;
+    padding: 8px 20px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.modal-close-button {
+    background: #888;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 6px 18px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 12px;
+}
+
+.modal-error-message {
+    color: #b71c1c;
+    font-size: 13px;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+/* PRINT STYLES - REFERENCE APPROACH: A4 size, NO headers/footers */
 @media print {
     @page {
         size: A4;
         margin: 0;
     }
+    
     body {
         margin: 0;
         padding: 0;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
     }
+    
     body * {
         visibility: hidden;
     }
-    .voucher-page, .voucher-page * {
+    
+    #voucher-print, #voucher-print * {
         visibility: visible;
     }
-    .voucher-page {
+    
+    #voucher-print {
         position: absolute;
         top: 0;
         left: 0;
@@ -467,14 +604,92 @@ body {
         box-shadow: none;
         background: white;
     }
+    
+    .voucher-page {
+        padding: 0;
+        margin: 0;
+        border: none;
+    }
+    
     .sig-dotted-col, .sig-name-field, .input-value {
         border-bottom: 1px dotted #000 !important;
     }
-    @page {
-        margin-top: 0;
-        margin-bottom: 0;
+    
+    .modal-actions {
+        display: none;
     }
-    header, footer, #header, #footer, .print-header, .print-footer {
+    
+    /* Hide any browser-generated headers/footers */
+    header, footer, #header, #footer {
         display: none !important;
+    }
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+        gap: 15px;
+        align-items: stretch;
+    }
+    
+    .form-container {
+        max-width: 100%;
+        margin: 0 auto 15px auto;
+    }
+    
+    .saved-voucher-table {
+        margin: 0 auto 15px auto;
+        width: 100%;
+        max-width: 350px;
+    }
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .form-field {
+        min-width: 100%;
+    }
+    
+    .half-width {
+        width: 100%;
+        margin-right: 0;
+    }
+    
+    .full-width {
+        min-width: 100%;
+    }
+    
+    .label-text {
+        min-width: 85px;
+    }
+    
+    .sig-headings {
+        font-size: 10px;
+    }
+    
+    .sig-label {
+        min-width: 85px;
+    }
+    
+    .sig-heading {
+        min-width: 60px;
+    }
+    
+    .voucher-modal-content {
+        margin: 5% auto;
+        padding: 10px;
+    }
+    
+    .modal-actions {
+        flex-direction: column;
+    }
+    
+    .print-btn, .close-modal {
+        width: 100%;
     }
 }
