@@ -44,7 +44,7 @@ function hideModal() {
 }
 
 function showLoading() {
-  showModal('<div class="loader"></div><div>Processing your voucher, please wait...</div>');
+  showModal('<div class="loader"></div><div>Processing voucher...</div>');
 }
 
 function showSuccess(action = 'created') {
@@ -403,6 +403,7 @@ function generateFallbackPVNumber(voucherType) {
   return prefix + timestamp.padStart(5, '0');
 }
 
+// UPDATED: showVoucherPreview with swapped positions (ACCOUNT CODE now with INVOICE NO., INVOICE DATE below)
 function showVoucherPreview(voucherData) {
   if (!voucherData || typeof voucherData !== 'object') {
     console.error('Invalid voucher data received:', voucherData);
@@ -558,12 +559,13 @@ function printVoucherPerfect() {
             .voucher-title { font-size: 20px; font-weight: 800; color: #0b3b5f; }
             .voucher-type { font-size: 12px; font-weight: 800; background: #e9f1f9; display: inline-block; padding: 4px 24px; border-radius: 40px; margin-top: 6px; }
             .voucher-row { display: flex; flex-wrap: wrap; margin-bottom: 14px; align-items: baseline; width: 100%; }
+            .voucher-row-account-amount { margin-bottom: 28px; }
             .half-width { width: 48%; min-width: 200px; }
             .full-width { width: 100%; }
             .label-text { font-weight: 700; min-width: 120px; font-size: 11px; color: #1f3a4b; }
             .dots-line { flex: 1; border-bottom: 1px dotted #2c3e50; margin: 0 8px; height: 1.2em; }
             .input-value { font-size: 11px; font-weight: 500; color: #000; border-bottom: 1px dotted #2c3e50; padding-bottom: 2px; display: inline-block; min-width: 120px; }
-            .signature-section { margin-top: 24px; border-top: 1px dashed #b9d0e5; padding-top: 16px; }
+            .signature-section { margin-top: 28px; border-top: 1px dashed #b9d0e5; padding-top: 16px; }
             .sig-headers { display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #cbdde9; }
             .sig-header-name, .sig-header-signature, .sig-header-date { font-weight: 800; font-size: 10px; text-transform: uppercase; color: #2c5282; }
             .sig-header-name { flex: 1; text-align: left; margin-left: 115px; }
