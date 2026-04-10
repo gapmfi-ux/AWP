@@ -123,91 +123,88 @@
   <div id="pv-dropdown-portal"></div>
 </div>
 
-<!-- Voucher Preview Modal - Clean Layout with Swapped ACCOUNT CODE and INVOICE DATE -->
+<!-- Voucher Preview Modal - Compact Grid Layout for Single Page -->
 <div class="voucher-modal" id="voucher-preview-modal">
   <div class="voucher-modal-content">
     <div class="voucher-page" id="voucher-print">
       <div class="voucher-header">
         <div class="voucher-title">GAP MICROFINANCE LTD</div>
         <div class="voucher-type" id="voucherTypeHeading">PAYMENT VOUCHER</div>
-        <div style="text-align: right; margin-top: 8px; font-weight: bold; font-size: 12px;" id="preview-pvNumber"></div>
+        <div class="pv-number-top" id="preview-pvNumber"></div>
       </div>
       
-      <!-- Row 1: PAYABLE TO and DATE -->
-      <div class="two-col-row">
-        <div class="col">
-          <span class="voucher-label">PAYABLE TO:</span>
-          <span class="voucher-value" id="preview-payableTo"></span>
+      <!-- 2-Column Grid Layout - All fields in compact grid -->
+      <div class="voucher-grid">
+        <!-- Row 1: PAYABLE TO and DATE -->
+        <div class="grid-item">
+          <span class="grid-label">PAYABLE TO:</span>
+          <span class="grid-value" id="preview-payableTo"></span>
         </div>
-        <div class="col">
-          <span class="voucher-label">DATE:</span>
-          <span class="voucher-value" id="preview-date"></span>
+        <div class="grid-item">
+          <span class="grid-label">DATE:</span>
+          <span class="grid-value" id="preview-date"></span>
         </div>
-      </div>
-      
-      <!-- Row 2: ADDRESS and DEPARTMENT -->
-      <div class="two-col-row">
-        <div class="col">
-          <span class="voucher-label">ADDRESS:</span>
-          <span class="voucher-value" id="preview-address"></span>
+        
+        <!-- Row 2: ADDRESS and DEPARTMENT -->
+        <div class="grid-item">
+          <span class="grid-label">ADDRESS:</span>
+          <span class="grid-value" id="preview-address"></span>
         </div>
-        <div class="col">
-          <span class="voucher-label">DEPARTMENT:</span>
-          <span class="voucher-value" id="preview-department"></span>
+        <div class="grid-item">
+          <span class="grid-label">DEPARTMENT:</span>
+          <span class="grid-value" id="preview-department"></span>
         </div>
-      </div>
-      
-      <!-- Row 3: INVOICE NO. and INVOICE DATE (first column) -->
-      <div class="two-col-row">
-        <div class="col">
-          <span class="voucher-label">INVOICE NO.:</span>
-          <span class="voucher-value" id="preview-invoiceNo"></span>
+        
+        <!-- Row 3: INVOICE NO. and INVOICE DATE -->
+        <div class="grid-item">
+          <span class="grid-label">INVOICE NO.:</span>
+          <span class="grid-value" id="preview-invoiceNo"></span>
         </div>
-        <div class="col">
-          <span class="voucher-label">INVOICE DATE:</span>
-          <span class="voucher-value" id="preview-invoiceDate"></span>
+        <div class="grid-item">
+          <span class="grid-label">INVOICE DATE:</span>
+          <span class="grid-value" id="preview-invoiceDate"></span>
         </div>
-      </div>
-      
-      <!-- Row 4: ACCOUNT CODE (now below INVOICE DATE, swapped position) -->
-      <div class="full-row">
-        <span class="voucher-label">ACCOUNT CODE:</span>
-        <span class="voucher-value" id="preview-accountCode"></span>
-      </div>
-      
-      <!-- Row 5: AMOUNT -->
-      <div class="full-row">
-        <span class="voucher-label">AMOUNT (GHS):</span>
-        <span class="voucher-value" id="preview-amount"></span>
-      </div>
-      
-      <!-- Row 6: AMOUNT IN WORDS -->
-      <div class="full-row amount-words-row">
-        <span class="voucher-label">AMOUNT IN WORDS:</span>
-        <span class="voucher-value" id="preview-amountInWords"></span>
-      </div>
-      
-      <!-- Row 7: WITHHOLDING TAX -->
-      <div class="full-row" id="preview-withholdingTax-row" style="display: none;">
-        <span class="voucher-label">WITHHOLDING TAX:</span>
-        <span class="voucher-value" id="preview-withholdingTax"></span>
-      </div>
-      
-      <!-- Row 8: TRANSACTION DETAILS -->
-      <div class="full-row">
-        <span class="voucher-label">TRANSACTION DETAILS:</span>
-        <span class="voucher-value" id="preview-transactionDetails"></span>
-      </div>
-      
-      <!-- Row 9: BANK and CHEQUE NO (for Cheque Voucher type) -->
-      <div class="two-col-row" id="preview-cheque-fields" style="display: none;">
-        <div class="col">
-          <span class="voucher-label">BANK:</span>
-          <span class="voucher-value" id="preview-bank"></span>
+        
+        <!-- Row 4: ACCOUNT CODE (full width or left column) -->
+        <div class="grid-item">
+          <span class="grid-label">ACCOUNT CODE:</span>
+          <span class="grid-value" id="preview-accountCode"></span>
         </div>
-        <div class="col">
-          <span class="voucher-label">CHEQUE NO.:</span>
-          <span class="voucher-value" id="preview-chequeNumber"></span>
+        
+        <!-- Row 5: AMOUNT -->
+        <div class="grid-item">
+          <span class="grid-label">AMOUNT (GHS):</span>
+          <span class="grid-value" id="preview-amount"></span>
+        </div>
+        
+        <!-- Row 6: WITHHOLDING TAX (if present) -->
+        <div class="grid-item" id="preview-withholdingTax-row" style="display: none;">
+          <span class="grid-label">WITHHOLDING TAX:</span>
+          <span class="grid-value" id="preview-withholdingTax"></span>
+        </div>
+        
+        <!-- Row 7: BANK (if cheque voucher) -->
+        <div class="grid-item" id="preview-bank-field" style="display: none;">
+          <span class="grid-label">BANK:</span>
+          <span class="grid-value" id="preview-bank"></span>
+        </div>
+        
+        <!-- Row 8: CHEQUE NO (if cheque voucher) -->
+        <div class="grid-item" id="preview-cheque-field" style="display: none;">
+          <span class="grid-label">CHEQUE NO.:</span>
+          <span class="grid-value" id="preview-chequeNumber"></span>
+        </div>
+        
+        <!-- Row 9: AMOUNT IN WORDS (full width) -->
+        <div class="full-width-item amount-words-row">
+          <span class="grid-label">AMOUNT IN WORDS:</span>
+          <span class="grid-value" id="preview-amountInWords"></span>
+        </div>
+        
+        <!-- Row 10: TRANSACTION DETAILS (full width) -->
+        <div class="full-width-item">
+          <span class="grid-label">TRANSACTION DETAILS:</span>
+          <span class="grid-value" id="preview-transactionDetails"></span>
         </div>
       </div>
       
