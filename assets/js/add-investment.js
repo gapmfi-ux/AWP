@@ -1,10 +1,17 @@
 /* ============================================
    ADD INVESTMENT MODULE JAVASCRIPT
-   With Bank Day Count Persistence
+   With Bank Auto-fill from Investment Type
    ============================================ */
 
 // Storage key for bank day counts
 const BANK_DAY_COUNT_STORAGE_KEY = 'investment_bank_day_counts';
+
+// Default bank mappings for investment types
+const DEFAULT_BANKS = {
+  'Fixed Deposit': 'GCB',
+  'Treasury Bills': 'Fidelity',
+  'Bonds': 'Ecobank'
+};
 
 // ============================================
 // INITIALIZATION
@@ -16,12 +23,6 @@ function initInvestmentModule() {
   const today = new Date().toISOString().split('T')[0];
   const dateField = document.getElementById('investmentDate');
   if (dateField) dateField.value = today;
-
-  const bankSelect = document.getElementById('bankName');
-  if (bankSelect) {
-    loadBankDayCountsIntoSelect();
-    bankSelect.addEventListener('change', handleBankChange);
-  }
 
   // Add event listeners for real-time calculations
   const amountField = document.getElementById('amount');
@@ -86,34 +87,20 @@ function saveBankDayCount(bankName, dayCount) {
   console.log(`Saved day count ${dayCount} for bank: ${bankName}`);
 }
 
-function loadBankDayCountsIntoSelect() {
-  const bankSelect = document.getElementById('bankName');
-  if (!bankSelect) return;
-  
-  const counts = getBankDayCounts();
-  
-  for (let i = 0; i < bankSelect.options.length; i++) {
-    const option = bankSelect.options[i];
-    const bankName = option.value;
-    if (bankName && bankName !== 'add-new' && counts[bankName]) {
-      option.setAttribute('data-day-count', counts[bankName]);
-    }
-  }
-}
-
 function getBankDayCount(bankName) {
   const counts = getBankDayCounts();
   return counts[bankName] || 365;
 }
 
 // ============================================
-// INVESTMENT TYPE & BANK HANDLERS
+// INVESTMENT TYPE HANDLER (Auto-fills Bank)
 // ============================================
 
 function handleInvestmentTypeChange() {
   const investmentType = document.getElementById('investmentType').value;
   const codeField = document.getElementById('investmentCode');
   const addNewFields = document.getElementById('addNewInvestmentTypeFields');
+  const bankField = document.getElementById('bankName');
 
   if (investmentType === 'add-new') {
     if (addNewFields) addNewFields.style.display = 'block';
@@ -121,10 +108,29 @@ function handleInvestmentTypeChange() {
       codeField.value = '';
       codeField.readOnly = false;
     }
+    // Clear bank field for new type (user will enter manually or we'll auto-fill after they add)
+    if (bankField) {
+      bankField.value = '';
+      bankField.readOnly = false;
+      bankField.placeholder = 'Enter bank name';
+    }
   } else {
     if (addNewFields) addNewFields.style.display = 'none';
     const newTypeField = document.getElementById('newInvestmentType');
     if (newTypeField) newTypeField.value = '';
+    
+    // Auto-fill bank based on investment type
+    if (bankField && investmentType && DEFAULT_BANKS[investmentType]) {
+      bankField.value = DEFAULT_BANKS[investmentType];
+      bankField.readOnly = true;
+      bankField.style.background = '#f7fafc';
+    } else if (bankField && investmentType) {
+      // If no default bank, allow manual entry
+      bankField.value = '';
+      bankField.readOnly = false;
+      bankField.placeholder = 'Enter bank name';
+      bankField.style.background = 'white';
+    }
     
     if (investmentType) {
       codeField.value = 'Generating...';
@@ -139,27 +145,68 @@ function handleInvestmentTypeChange() {
   }
 }
 
-function handleBankChange() {
-  const bankName = document.getElementById('bankName').value;
-  const addNewBankFields = document.getElementById('addNewBankFields');
+// ============================================
+// ADD NEW INVESTMENT TYPE (with auto bank)
+// ============================================
 
-  if (bankName === 'add-new') {
-    // Show the add new bank fields
-    if (addNewBankFields) {
-      addNewBankFields.style.display = 'block';
-    }
-  } else {
-    // Hide the add new bank fields
-    if (addNewBankFields) {
-      addNewBankFields.style.display = 'none';
-    }
-    // Clear the new bank input fields
-    const newBankField = document.getElementById('newBankName');
-    if (newBankField) newBankField.value = '';
-    
-    const newBankDayCount = document.getElementById('newBankDayCount');
-    if (newBankDayCount) newBankDayCount.value = '365';
+function addNewInvestmentType() {
+  const newTypeInput = document.getElementById('newInvestmentType');
+  const newType = newTypeInput ? newTypeInput.value.trim() : '';
+  
+  if (!newType) {
+    showInvestmentMessage('Please enter a new investment type', 'error');
+    return false;
   }
+  
+  // Add to dropdown
+  const typeSelect = document.getElementById('investmentType');
+  if (typeSelect) {
+    // Check if already exists
+    for (let i = 0; i < typeSelect.options.length; i++) {
+      if (typeSelect.options[i].value === newType) {
+        showInvestmentMessage('Investment type already exists', 'warning');
+        return false;
+      }
+    }
+    
+    // Insert before "add-new" option
+    const option = document.createElement('option');
+    option.value = newType;
+    option.textContent = newType;
+    
+    const addNewOption = typeSelect.querySelector('option[value="add-new"]');
+    if (addNewOption) {
+      typeSelect.insertBefore(option, addNewOption);
+    } else {
+      typeSelect.appendChild(option);
+    }
+    
+    // Select the new type
+    typeSelect.value = newType;
+    
+    // Hide add new fields
+    const addNewFields = document.getElementById('addNewInvestmentTypeFields');
+    if (addNewFields) addNewFields.style.display = 'none';
+    
+    // Clear input
+    newTypeInput.value = '';
+    
+    // Make bank field editable for new type
+    const bankField = document.getElementById('bankName');
+    if (bankField) {
+      bankField.value = '';
+      bankField.readOnly = false;
+      bankField.placeholder = 'Enter bank name';
+      bankField.style.background = 'white';
+    }
+    
+    // Trigger change handler
+    handleInvestmentTypeChange();
+    
+    showInvestmentMessage(`Added new investment type: ${newType}`, 'success');
+    return true;
+  }
+  return false;
 }
 
 function generateInvestmentCode(investmentType) {
@@ -219,9 +266,9 @@ function calculateMaturityAmount() {
   const amountField = document.getElementById('amount');
   const interestRateField = document.getElementById('interestRate');
   const durationField = document.getElementById('duration');
-  const bankSelect = document.getElementById('bankName');
+  const bankField = document.getElementById('bankName');
   
-  if (!amountField || !interestRateField || !durationField || !bankSelect) return;
+  if (!amountField || !interestRateField || !durationField) return;
   
   const amount = parseFloat(amountField.value) || 0;
   const interestRate = parseFloat(interestRateField.value) || 0;
@@ -229,9 +276,9 @@ function calculateMaturityAmount() {
   
   // Get day count from selected bank or use default
   let dayCount = 365;
-  const selectedBank = bankSelect.value;
-  if (selectedBank && selectedBank !== 'add-new' && selectedBank !== '') {
-    dayCount = getBankDayCount(selectedBank);
+  const bankName = bankField ? bankField.value : '';
+  if (bankName && bankName !== '') {
+    dayCount = getBankDayCount(bankName);
   }
 
   const interestAmountField = document.getElementById('interestAmount');
@@ -287,29 +334,14 @@ function submitNewInvestment() {
     return;
   }
 
-  // Handle new bank addition
-  let isNewBank = false;
-  if (bankName === 'add-new') {
-    const newBankName = document.getElementById('newBankName').value;
-    const newBankDayCount = document.getElementById('newBankDayCount').value;
-    
-    if (!newBankName || newBankName.trim() === '') {
-      showInvestmentMessage('Please enter a new bank name', 'error');
-      return;
-    }
-    
-    bankName = newBankName.trim();
-    dayCount = parseInt(newBankDayCount);
-    isNewBank = true;
-  } else {
-    // Get day count for existing bank
-    dayCount = getBankDayCount(bankName);
-  }
-
-  if (!bankName || bankName === '') {
-    showInvestmentMessage('Please select a bank', 'error');
+  // Validate bank name
+  if (!bankName || bankName.trim() === '') {
+    showInvestmentMessage('Please enter a bank name', 'error');
     return;
   }
+
+  // Get day count for the bank (saves if new bank)
+  dayCount = getBankDayCount(bankName);
 
   if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
     showInvestmentMessage('Please enter a valid amount', 'error');
@@ -334,13 +366,6 @@ function submitNewInvestment() {
   if (!maturityDate) {
     showInvestmentMessage('Please enter a maturity date', 'error');
     return;
-  }
-
-  // Save the bank's day count if it's a new bank
-  if (isNewBank) {
-    saveBankDayCount(bankName, dayCount);
-    // Add the new bank to the dropdown for future use
-    addBankToDropdown(bankName, dayCount);
   }
 
   // Calculate final amounts with day count
@@ -388,35 +413,6 @@ function submitNewInvestment() {
     .addNewInvestment(investmentData);
 }
 
-// Helper function to add new bank to dropdown
-function addBankToDropdown(bankName, dayCount) {
-  const bankSelect = document.getElementById('bankName');
-  if (!bankSelect) return;
-  
-  // Check if bank already exists
-  for (let i = 0; i < bankSelect.options.length; i++) {
-    if (bankSelect.options[i].value === bankName) {
-      return; // Bank already exists
-    }
-  }
-  
-  // Create new option
-  const option = document.createElement('option');
-  option.value = bankName;
-  option.textContent = bankName;
-  option.setAttribute('data-day-count', dayCount);
-  
-  // Insert before the "add-new" option
-  const addNewOption = bankSelect.querySelector('option[value="add-new"]');
-  if (addNewOption) {
-    bankSelect.insertBefore(option, addNewOption);
-  } else {
-    bankSelect.appendChild(option);
-  }
-  
-  console.log(`Added ${bankName} to dropdown with day count ${dayCount}`);
-}
-
 // ============================================
 // RESET FORM
 // ============================================
@@ -445,24 +441,20 @@ function resetInvestmentForm() {
   if (typeField) typeField.value = '';
   
   const bankField = document.getElementById('bankName');
-  if (bankField) bankField.value = '';
+  if (bankField) {
+    bankField.value = '';
+    bankField.readOnly = false;
+    bankField.placeholder = 'Auto-fills from investment type';
+    bankField.style.background = 'white';
+  }
   
   // Hide toggle fields
   const addNewTypeFields = document.getElementById('addNewInvestmentTypeFields');
   if (addNewTypeFields) addNewTypeFields.style.display = 'none';
   
-  const addNewBankFields = document.getElementById('addNewBankFields');
-  if (addNewBankFields) addNewBankFields.style.display = 'none';
-  
   // Clear input fields
   const newTypeField = document.getElementById('newInvestmentType');
   if (newTypeField) newTypeField.value = '';
-  
-  const newBankField = document.getElementById('newBankName');
-  if (newBankField) newBankField.value = '';
-  
-  const newBankDayCount = document.getElementById('newBankDayCount');
-  if (newBankDayCount) newBankDayCount.value = '365';
 }
 
 // ============================================
@@ -484,7 +476,7 @@ function showInvestmentMessage(message, type) {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'messageModal';
-    modal.className = 'investment-message-modal';
+    modal.className = 'modal';
     document.body.appendChild(modal);
   }
   
@@ -542,10 +534,10 @@ function hideInvestmentLoadingModal() {
 // Export functions for global use
 window.initInvestmentModule = initInvestmentModule;
 window.handleInvestmentTypeChange = handleInvestmentTypeChange;
-window.handleBankChange = handleBankChange;
 window.calculateMaturityDate = calculateMaturityDate;
 window.calculateMaturityAmount = calculateMaturityAmount;
 window.submitNewInvestment = submitNewInvestment;
 window.resetInvestmentForm = resetInvestmentForm;
 window.generateInvestmentCode = generateInvestmentCode;
 window.closeInvestmentModal = closeInvestmentModal;
+window.addNewInvestmentType = addNewInvestmentType;
