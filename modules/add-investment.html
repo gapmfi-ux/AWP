@@ -39,33 +39,7 @@
 
       <div class="form-group">
         <label for="bankName">Bank Name:</label>
-        <select id="bankName" name="bankName" required onchange="handleBankChange()">
-          <option value="">Select Bank</option>
-          <option value="Fidelity">Fidelity</option>
-          <option value="CBG">CBG</option>
-          <option value="Ecobank">Ecobank</option>
-          <option value="GCB">GCB</option>
-          <option value="add-new">+ Add New Bank</option>
-        </select>
-      </div>
-    </div>
-
-    <!-- Add New Bank Fields (Hidden by default - shows when add-new is selected) -->
-    <div id="addNewBankFields" class="toggle-fields" style="display: none;">
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="newBankName">New Bank Name:</label>
-          <input type="text" id="newBankName" name="newBankName" placeholder="e.g., Bank of Ghana">
-        </div>
-        <div class="form-group">
-          <label for="newBankDayCount">Day Count:</label>
-          <select id="newBankDayCount" name="newBankDayCount">
-            <option value="365">365 Days (Actual/365)</option>
-            <option value="360">360 Days (Actual/360)</option>
-            <option value="364">364 Days (Treasury Bills)</option>
-          </select>
-          <small style="font-size: 10px; color: #718096;">Saved for future use</small>
-        </div>
+        <input type="text" id="bankName" name="bankName" placeholder="Auto-fills from investment type" readonly>
       </div>
     </div>
 
