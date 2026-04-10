@@ -1,4 +1,7 @@
-
+/* ============================================
+   PAYMENT VOUCHER MODULE JAVASCRIPT
+   Maintains original Google Apps Script logic
+   ============================================ */
 
 // Payment Voucher Module JavaScript
 let lastSubmittedVoucherData = null;
@@ -525,16 +528,12 @@ function previewVoucherFromLast() {
 }
 
 function printVoucher() {
-  // Ensure modal is visible before printing
-  const modal = document.getElementById('voucher-preview-modal');
-  if (modal) {
-    modal.style.display = 'block';
-  }
-  
-  // Wait a moment to ensure rendering, then print
+  var actions = document.querySelector('.modal-actions');
+  if (actions) actions.style.display = 'none';
+  window.print();
   setTimeout(() => {
-    window.print();
-  }, 100);
+    if (actions) actions.style.display = 'flex';
+  }, 500);
 }
 
 function convertNumberToWords(amount) {
