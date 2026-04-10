@@ -147,11 +147,12 @@ function renderPVList(elementId, pvList) {
   const el = document.getElementById(elementId);
   if (!el) return;
   if (!pvList || !pvList.length) {
-    el.innerHTML = '<div style="color:#aaa;">None</div>';
+    el.innerHTML = '<div style="color:#aaa; text-align:center; padding:8px;">None</div>';
     return;
   }
   
-  const items = pvList.slice(-5).reverse().map(item => {
+  // Show ALL vouchers (removed the .slice(-5) limit)
+  const items = pvList.map(item => {
     const match = item.pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
     let formattedPV = item.pvNumber;
     
@@ -161,12 +162,11 @@ function renderPVList(elementId, pvList) {
       formattedPV = prefix + num;
     }
     
-    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">${formattedPV}</button>`;
+    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">📄 ${formattedPV}</button>`;
   }).join('');
   
   el.innerHTML = items;
 }
-
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
   const rect = btn.getBoundingClientRect();
