@@ -1,4 +1,4 @@
-// ---------- DATA & GLOBAL ----------
+
 let vouchersDB = [];
 let editingId = null;
 
