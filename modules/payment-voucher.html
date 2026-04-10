@@ -122,7 +122,7 @@
   <div id="pv-dropdown-portal"></div>
 </div>
 
-<!-- Voucher Preview Modal - Reference Print Approach -->
+<!-- Voucher Preview Modal - Updated with swapped positions and increased spacing -->
 <div class="voucher-modal" id="voucher-preview-modal">
   <div class="voucher-modal-content">
     <div class="voucher-page" id="voucher-print">
@@ -139,14 +139,14 @@
         <!-- Row 2: ADDRESS and DEPARTMENT -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">ADDRESS:</span><span class="dots-line"></span><span class="input-value" id="preview-address"></span></div><div class="half-width"><span class="label-text">DEPARTMENT:</span><span class="dots-line"></span><span class="input-value" id="preview-department"></span></div></div>
         
-        <!-- Row 3: INVOICE NO. and INVOICE DATE -->
-        <div class="voucher-row"><div class="half-width"><span class="label-text">INVOICE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceNo"></span></div><div class="half-width"><span class="label-text">INVOICE DATE:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceDate"></span></div></div>
+        <!-- Row 3: INVOICE NO. and ACCOUNT CODE (swapped: ACCOUNT CODE moved up, INVOICE DATE moved down) -->
+        <div class="voucher-row"><div class="half-width"><span class="label-text">INVOICE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceNo"></span></div><div class="half-width"><span class="label-text">ACCOUNT CODE:</span><span class="dots-line"></span><span class="input-value" id="preview-accountCode"></span></div></div>
         
-        <!-- Row 4: ACCOUNT CODE -->
-        <div class="voucher-row"><div class="half-width"><span class="label-text">ACCOUNT CODE:</span><span class="dots-line"></span><span class="input-value" id="preview-accountCode"></span></div><div class="half-width"></div></div>
+        <!-- Row 4: INVOICE DATE (moved here, below ACCOUNT CODE) -->
+        <div class="voucher-row"><div class="half-width"><span class="label-text">INVOICE DATE:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceDate"></span></div><div class="half-width"></div></div>
         
-        <!-- Row 5: AMOUNT -->
-        <div class="voucher-row"><div class="full-width"><span class="label-text">AMOUNT (GHS):</span><span class="dots-line"></span><span class="input-value" id="preview-amount"></span></div></div>
+        <!-- Row 5: AMOUNT (with double spacing above - using special class) -->
+        <div class="voucher-row voucher-row-account-amount"><div class="full-width"><span class="label-text">AMOUNT (GHS):</span><span class="dots-line"></span><span class="input-value" id="preview-amount"></span></div></div>
         
         <!-- Row 6: AMOUNT IN WORDS -->
         <div class="voucher-row"><div class="full-width"><span class="label-text">AMOUNT IN WORDS:</span><span class="dots-line"></span><span class="input-value" id="preview-amountInWords" style="font-weight:500;"></span></div></div>
@@ -160,8 +160,8 @@
         <!-- Row 9: BANK & CHEQUE NO -->
         <div class="voucher-row" id="chequePreviewFields" style="display:none;"><div class="half-width"><span class="label-text">BANK:</span><span class="dots-line"></span><span class="input-value" id="preview-bank"></span></div><div class="half-width"><span class="label-text">CHEQUE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-chequeNumber"></span></div></div>
         
-        <!-- SIGNATURE SECTION: Headers Name, Signature, Date -->
-        <div class="signature-section">
+        <!-- SIGNATURE SECTION: with extra spacing above -->
+        <div class="signature-section voucher-row-transaction-signature">
           <div class="sig-headers">
             <div class="sig-header-name">Name</div>
             <div class="sig-header-signature">Signature</div>
