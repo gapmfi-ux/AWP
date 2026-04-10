@@ -123,100 +123,133 @@
   <div id="pv-dropdown-portal"></div>
 </div>
 
-<!-- Voucher Preview Modal - Clean Table Layout -->
+<!-- Voucher Preview Modal - Clean Layout with Swapped ACCOUNT CODE and INVOICE DATE -->
 <div class="voucher-modal" id="voucher-preview-modal">
   <div class="voucher-modal-content">
     <div class="voucher-page" id="voucher-print">
       <div class="voucher-header">
         <div class="voucher-title">GAP MICROFINANCE LTD</div>
         <div class="voucher-type" id="voucherTypeHeading">PAYMENT VOUCHER</div>
-        <div style="text-align: right; margin-top: 10px; font-weight: bold;" id="preview-pvNumber"></div>
+        <div style="text-align: right; margin-top: 8px; font-weight: bold; font-size: 12px;" id="preview-pvNumber"></div>
       </div>
       
-      <table class="voucher-table">
-        <tr>
-          <td>PAYABLE TO:</td>
-          <td id="preview-payableTo"></td>
-          <td style="width: 30px;"></td>
-          <td style="width: 100px;">DATE:</td>
-          <td style="border-bottom: 1px dotted #000;" id="preview-date"></td>
-        </tr>
-        <tr>
-          <td>ADDRESS:</td>
-          <td id="preview-address"></td>
-          <td></td>
-          <td>DEPARTMENT:</td>
-          <td style="border-bottom: 1px dotted #000;" id="preview-department"></td>
-        </tr>
-        <tr>
-          <td>INVOICE NO.:</td>
-          <td id="preview-invoiceNo"></td>
-          <td></td>
-          <td>INVOICE DATE:</td>
-          <td style="border-bottom: 1px dotted #000;" id="preview-invoiceDate"></td>
-        </tr>
-        <tr>
-          <td>ACCOUNT CODE:</td>
-          <td colspan="4" id="preview-accountCode"></td>
-        </tr>
-        <tr>
-          <td>AMOUNT (GHS):</td>
-          <td colspan="4" id="preview-amount"></td>
-        </tr>
-        <tr class="amount-words-row">
-          <td>AMOUNT IN WORDS:</td>
-          <td colspan="4" id="preview-amountInWords"></td>
-        </tr>
-        <tr id="preview-withholdingTax-row" style="display: none;">
-          <td>WITHHOLDING TAX:</td>
-          <td colspan="4" id="preview-withholdingTax"></td>
-        </tr>
-        <tr>
-          <td>TRANSACTION DETAILS:</td>
-          <td colspan="4" id="preview-transactionDetails"></td>
-        </tr>
-        <tr id="preview-cheque-fields" style="display: none;">
-          <td>BANK:</td>
-          <td id="preview-bank"></td>
-          <td></td>
-          <td>CHEQUE NO.:</td>
-          <td style="border-bottom: 1px dotted #000;" id="preview-chequeNumber"></td>
-        </tr>
-      </table>
+      <!-- Row 1: PAYABLE TO and DATE -->
+      <div class="two-col-row">
+        <div class="col">
+          <span class="voucher-label">PAYABLE TO:</span>
+          <span class="voucher-value" id="preview-payableTo"></span>
+        </div>
+        <div class="col">
+          <span class="voucher-label">DATE:</span>
+          <span class="voucher-value" id="preview-date"></span>
+        </div>
+      </div>
+      
+      <!-- Row 2: ADDRESS and DEPARTMENT -->
+      <div class="two-col-row">
+        <div class="col">
+          <span class="voucher-label">ADDRESS:</span>
+          <span class="voucher-value" id="preview-address"></span>
+        </div>
+        <div class="col">
+          <span class="voucher-label">DEPARTMENT:</span>
+          <span class="voucher-value" id="preview-department"></span>
+        </div>
+      </div>
+      
+      <!-- Row 3: INVOICE NO. and INVOICE DATE (first column) -->
+      <div class="two-col-row">
+        <div class="col">
+          <span class="voucher-label">INVOICE NO.:</span>
+          <span class="voucher-value" id="preview-invoiceNo"></span>
+        </div>
+        <div class="col">
+          <span class="voucher-label">INVOICE DATE:</span>
+          <span class="voucher-value" id="preview-invoiceDate"></span>
+        </div>
+      </div>
+      
+      <!-- Row 4: ACCOUNT CODE (now below INVOICE DATE, swapped position) -->
+      <div class="full-row">
+        <span class="voucher-label">ACCOUNT CODE:</span>
+        <span class="voucher-value" id="preview-accountCode"></span>
+      </div>
+      
+      <!-- Row 5: AMOUNT -->
+      <div class="full-row">
+        <span class="voucher-label">AMOUNT (GHS):</span>
+        <span class="voucher-value" id="preview-amount"></span>
+      </div>
+      
+      <!-- Row 6: AMOUNT IN WORDS -->
+      <div class="full-row amount-words-row">
+        <span class="voucher-label">AMOUNT IN WORDS:</span>
+        <span class="voucher-value" id="preview-amountInWords"></span>
+      </div>
+      
+      <!-- Row 7: WITHHOLDING TAX -->
+      <div class="full-row" id="preview-withholdingTax-row" style="display: none;">
+        <span class="voucher-label">WITHHOLDING TAX:</span>
+        <span class="voucher-value" id="preview-withholdingTax"></span>
+      </div>
+      
+      <!-- Row 8: TRANSACTION DETAILS -->
+      <div class="full-row">
+        <span class="voucher-label">TRANSACTION DETAILS:</span>
+        <span class="voucher-value" id="preview-transactionDetails"></span>
+      </div>
+      
+      <!-- Row 9: BANK and CHEQUE NO (for Cheque Voucher type) -->
+      <div class="two-col-row" id="preview-cheque-fields" style="display: none;">
+        <div class="col">
+          <span class="voucher-label">BANK:</span>
+          <span class="voucher-value" id="preview-bank"></span>
+        </div>
+        <div class="col">
+          <span class="voucher-label">CHEQUE NO.:</span>
+          <span class="voucher-value" id="preview-chequeNumber"></span>
+        </div>
+      </div>
       
       <!-- Signature Section -->
-      <table class="signature-table">
-        <tr>
-          <th></th>
-          <th>Name</th>
-          <th>Signature</th>
-          <th>Date</th>
-        </tr>
-        <tr>
-          <td>REQUESTED BY:</td>
-          <td class="signature-name-cell" id="preview-requestedBy"></td>
-          <td class="signature-dots-cell"></td>
-          <td class="signature-dots-cell"></td>
-        </tr>
-        <tr>
-          <td>REVIEWED BY:</td>
-          <td class="signature-name-cell" id="preview-reviewedBy"></td>
-          <td class="signature-dots-cell"></td>
-          <td class="signature-dots-cell"></td>
-        </tr>
-        <tr>
-          <td>AUTHORISED BY:</td>
-          <td class="signature-name-cell" id="preview-authorizedBy"></td>
-          <td class="signature-dots-cell"></td>
-          <td class="signature-dots-cell"></td>
-        </tr>
-        <tr>
-          <td>RECEIVED BY:</td>
-          <td class="signature-name-cell" id="preview-receivedBy"></td>
-          <td class="signature-dots-cell"></td>
-          <td class="signature-dots-cell"></td>
-        </tr>
-      </table>
+      <div class="signature-section">
+        <table class="signature-table">
+          <thead>
+            <tr>
+              <th></th>
+              <th>Name</th>
+              <th>Signature</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>REQUESTED BY:</td>
+              <td class="sig-name-cell" id="preview-requestedBy"></td>
+              <td class="sig-dots-cell"></td>
+              <td class="sig-dots-cell"></td>
+            </tr>
+            <tr>
+              <td>REVIEWED BY:</td>
+              <td class="sig-name-cell" id="preview-reviewedBy"></td>
+              <td class="sig-dots-cell"></td>
+              <td class="sig-dots-cell"></td>
+            </tr>
+            <tr>
+              <td>AUTHORISED BY:</td>
+              <td class="sig-name-cell" id="preview-authorizedBy"></td>
+              <td class="sig-dots-cell"></td>
+              <td class="sig-dots-cell"></td>
+            </tr>
+            <tr>
+              <td>RECEIVED BY:</td>
+              <td class="sig-name-cell" id="preview-receivedBy"></td>
+              <td class="sig-dots-cell"></td>
+              <td class="sig-dots-cell"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="print-btn" onclick="printVoucher()">Print Voucher</button>
