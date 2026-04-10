@@ -3,13 +3,10 @@
     <h1>Investment Reports</h1>
   </div>
 
-  <!-- Tabs and Controls Row -->
+  <!-- Tabs and Controls Row - Reordered: Full first, Purchase last -->
   <div class="report-controls-row">
     <div class="report-tabs">
-      <button class="tab-btn active" onclick="switchInvestmentReportTab('purchaseReport')">
-        <i class="fas fa-receipt"></i> Purchase
-      </button>
-      <button class="tab-btn" onclick="switchInvestmentReportTab('fullReport')">
+      <button class="tab-btn active" onclick="switchInvestmentReportTab('fullReport')">
         <i class="fas fa-chart-bar"></i> Full
       </button>
       <button class="tab-btn" onclick="switchInvestmentReportTab('interestReport')">
@@ -18,26 +15,14 @@
       <button class="tab-btn" onclick="switchInvestmentReportTab('maturedReport')">
         <i class="fas fa-check-circle"></i> Matured
       </button>
+      <button class="tab-btn" onclick="switchInvestmentReportTab('purchaseReport')">
+        <i class="fas fa-receipt"></i> Purchase
+      </button>
     </div>
 
     <div class="report-controls">
-      <!-- Purchase Report Controls -->
-      <div class="control-group" id="purchaseControls" style="display: flex;">
-        <div class="compact-date-input">
-          <label for="purchaseFromDate">From:</label>
-          <input type="date" id="purchaseFromDate" onchange="loadPurchaseReport()">
-        </div>
-        <div class="compact-date-input">
-          <label for="purchaseToDate">To:</label>
-          <input type="date" id="purchaseToDate" onchange="loadPurchaseReport()">
-        </div>
-        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('purchaseReport')">
-          <i class="fas fa-print"></i>
-        </button>
-      </div>
-
       <!-- Full Report Controls -->
-      <div class="control-group" id="fullReportControls" style="display: none;">
+      <div class="control-group" id="fullReportControls" style="display: flex;">
         <div class="compact-date-input">
           <label for="fullReportToDate">As At:</label>
           <input type="date" id="fullReportToDate" onchange="loadFullInvestmentReport()">
@@ -65,6 +50,13 @@
           <label for="interestToDate">To:</label>
           <input type="date" id="interestToDate" onchange="loadInterestReport()">
         </div>
+        <div class="compact-selector">
+          <label for="interestGroupSelect">Group:</label>
+          <select id="interestGroupSelect" onchange="loadInterestReport()">
+            <option value="byType" selected>By Type</option>
+            <option value="byBank">By Bank</option>
+          </select>
+        </div>
         <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('interestReport')">
           <i class="fas fa-print"></i>
         </button>
@@ -80,33 +72,26 @@
           <i class="fas fa-print"></i>
         </button>
       </div>
+
+      <!-- Purchase Report Controls -->
+      <div class="control-group" id="purchaseControls" style="display: none;">
+        <div class="compact-date-input">
+          <label for="purchaseFromDate">From:</label>
+          <input type="date" id="purchaseFromDate" onchange="loadPurchaseReport()">
+        </div>
+        <div class="compact-date-input">
+          <label for="purchaseToDate">To:</label>
+          <input type="date" id="purchaseToDate" onchange="loadPurchaseReport()">
+        </div>
+        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('purchaseReport')">
+          <i class="fas fa-print"></i>
+        </button>
+      </div>
     </div>
   </div>
 
-  <!-- Purchase Report Tab -->
-  <div class="tab-content active" id="purchaseReport">
-    <div class="report-table-wrapper" id="purchaseReportTable">
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Bank</th>
-            <th>Type</th>
-            <th>Amount (GHc)</th>
-            <th>Rate (%)</th>
-            <th>Days</th>
-            <th>Inv. Date</th>
-           </tr>
-        </thead>
-        <tbody id="purchaseReportBody">
-          <tr><td colspan="7" class="loading-cell">Loading...<\/td><\/tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- Full Report Tab -->
-  <div class="tab-content" id="fullReport">
+  <!-- Full Report Tab (Now First) -->
+  <div class="tab-content active" id="fullReport">
     <div id="fullReportContainer"></div>
   </div>
 
@@ -120,7 +105,7 @@
     <div class="report-table-wrapper" id="maturedReportTable">
       <table class="report-table">
         <thead>
-           <tr>
+          <tr>
             <th>Code</th>
             <th>Bank</th>
             <th>Type</th>
@@ -131,10 +116,32 @@
             <th>Maturity Date</th>
             <th>Maturity Amt</th>
             <th>Action</th>
-           </tr>
+          </tr>
         </thead>
         <tbody id="maturedReportBody">
-          <tr><td colspan="10" class="loading-cell">Loading...<\/td><\/tr>
+          <tr><td colspan="10" class="loading-cell">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Purchase Report Tab (Now Last) -->
+  <div class="tab-content" id="purchaseReport">
+    <div class="report-table-wrapper" id="purchaseReportTable">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Bank</th>
+            <th>Type</th>
+            <th>Amount (GHc)</th>
+            <th>Rate (%)</th>
+            <th>Days</th>
+            <th>Inv. Date</th>
+          </tr>
+        </thead>
+        <tbody id="purchaseReportBody">
+          <tr><td colspan="7" class="loading-cell">Loading...</td></tr>
         </tbody>
       </table>
     </div>
@@ -218,6 +225,58 @@
       <div class="modal-actions">
         <button type="button" class="modal-btn-cancel" onclick="closeRolloverModal()">Cancel</button>
         <button type="submit" class="modal-btn-save">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Redeem Modal -->
+<div class="rollover-modal" id="redeemModal" style="display: none;">
+  <div class="rollover-modal-content">
+    <div class="rollover-modal-header">
+      <h2>Redeem Investment</h2>
+      <button class="rollover-modal-close" onclick="closeRedeemModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <form id="redeemForm" onsubmit="event.preventDefault(); submitRedeemInvestment();">
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>Investment Code:</label>
+          <input type="text" id="redeemInvestmentCode" readonly>
+        </div>
+        <div class="form-group">
+          <label>Bank:</label>
+          <input type="text" id="redeemBankName" readonly>
+        </div>
+      </div>
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>Type:</label>
+          <input type="text" id="redeemInvestmentType" readonly>
+        </div>
+        <div class="form-group">
+          <label>Amount:</label>
+          <input type="text" id="redeemAmount" readonly>
+        </div>
+      </div>
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>Maturity Date:</label>
+          <input type="text" id="redeemMaturityDate" readonly>
+        </div>
+        <div class="form-group">
+          <label>Maturity Amount:</label>
+          <input type="text" id="redeemMaturityAmount" readonly>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Redeem Date:</label>
+        <input type="date" id="redeemDate" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn-cancel" onclick="closeRedeemModal()">Cancel</button>
+        <button type="submit" class="modal-btn-save">Confirm Redeem</button>
       </div>
     </form>
   </div>
@@ -498,7 +557,7 @@
     color: #4361ee;
   }
 
-  /* Grouped Report Styles - Compact */
+  /* Grouped Report Styles */
   .grouped-report {
     margin-bottom: 15px;
   }
@@ -576,7 +635,7 @@
     background: #e8f8f3 !important;
   }
 
-  /* Rollover Modal - Compact */
+  /* Rollover/Redeem Modal */
   .rollover-modal {
     position: fixed;
     top: 0;
@@ -622,7 +681,7 @@
     color: #a0aec0;
   }
 
-  #rolloverForm {
+  #rolloverForm, #redeemForm {
     padding: 15px;
   }
 
