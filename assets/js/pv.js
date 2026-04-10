@@ -386,19 +386,28 @@ function showVoucherPreview(voucherData) {
     wtRow.style.display = 'none';
   }
   
-  // Bank and Cheque fields
-  var chequeFields = document.getElementById('preview-cheque-fields');
+  // Bank and Cheque fields - separate grid items
+  var bankField = document.getElementById('preview-bank-field');
+  var chequeField = document.getElementById('preview-cheque-field');
+  var bankValue = document.getElementById('preview-bank');
+  var chequeValue = document.getElementById('preview-chequeNumber');
+  
   if (voucherData.voucherType === 'Cheque Payment Voucher') {
-    chequeFields.style.display = 'flex';
-    document.getElementById('preview-bank').innerHTML = voucherData.bank || '';
-    document.getElementById('preview-chequeNumber').innerHTML = voucherData.chequeNumber || '';
+    if (bankField) {
+      bankField.style.display = 'flex';
+      if (bankValue) bankValue.innerHTML = voucherData.bank || '';
+    }
+    if (chequeField) {
+      chequeField.style.display = 'flex';
+      if (chequeValue) chequeValue.innerHTML = voucherData.chequeNumber || '';
+    }
   } else {
-    chequeFields.style.display = 'none';
+    if (bankField) bankField.style.display = 'none';
+    if (chequeField) chequeField.style.display = 'none';
   }
   
   document.getElementById('voucher-preview-modal').style.display = 'block';
 }
-
 function closeVoucherModal() {
   document.getElementById('voucher-preview-modal').style.display = 'none';
 }
