@@ -199,10 +199,9 @@
     font-size: 11px;
     text-align: center;
     color: #1a1a2e;
-    max-height: 95px;
+    max-height: 280px;  /* Increased from 95px to show more vouchers */
     overflow-y: auto;
 }
-
 .svt-list div {
     padding: 4px 0;
     border-bottom: 1px dotted #c9d7e5;
