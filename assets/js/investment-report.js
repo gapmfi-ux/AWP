@@ -916,7 +916,8 @@ function openRolloverModal(investmentCode) {
   const rolloverDate = document.getElementById('rolloverInvestmentDate');
   
   if (rolloverType) rolloverType.value = investment.investmentType;
-  if (rolloverBank) rolloverBank.value = investment.bankName;
+  // Auto-fill bank from the selected investment (readonly)
+  if (rolloverBank) rolloverBank.value = investment.bankName || '';
   if (rolloverAmount) rolloverAmount.value = investment.maturityAmount;
   if (rolloverRate) rolloverRate.value = investment.interestRate;
   if (rolloverDuration) rolloverDuration.value = investment.duration;
