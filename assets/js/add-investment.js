@@ -1,8 +1,3 @@
-/* ============================================
-   ADD INVESTMENT MODULE JAVASCRIPT
-   With Bank Day Count Persistence
-   ============================================ */
-
 // Storage key for bank day counts
 const BANK_DAY_COUNT_STORAGE_KEY = 'investment_bank_day_counts';
 
