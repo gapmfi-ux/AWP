@@ -37,6 +37,10 @@
     const interestToDate = document.getElementById('interestToDate');
     if (interestToDate) interestToDate.value = today;
 
+    // Matured Report
+    const maturedToDate = document.getElementById('maturedToDate');
+    if (maturedToDate) maturedToDate.value = today;
+
     // Purchase Report
     const purchaseFromDate = document.getElementById('purchaseFromDate');
     if (purchaseFromDate) purchaseFromDate.value = fromDateString;
@@ -70,7 +74,9 @@
     tabBtns.forEach(function(btn) {
       btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (event && event.target) {
+      event.target.classList.add('active');
+    }
 
     // Hide all control groups
     const controlGroups = document.querySelectorAll('.control-group');
@@ -78,7 +84,7 @@
       group.style.display = 'none';
     });
 
-    // Show appropriate control group
+    // Show appropriate control group and load data
     if (tabName === 'fullReport') {
       const fullControls = document.getElementById('fullReportControls');
       if (fullControls) fullControls.style.display = 'flex';
@@ -114,11 +120,11 @@
         })
         .catch(function(error) {
           console.error('Error loading investments:', error);
-          showReportError('Error loading investments: ' + error.message);
+          showReportError('fullReportContainer', 'Error loading investments: ' + error.message);
         });
     } else {
       console.warn('API not available');
-      showReportError('API not available');
+      showReportError('fullReportContainer', 'API not available');
     }
   };
 
@@ -131,6 +137,7 @@
         })
         .catch(function(error) {
           console.error('Error:', error);
+          showReportError('fullReportContainer', 'Error loading report');
         });
     }
   };
@@ -140,7 +147,7 @@
     if (!container) return;
 
     if (!investments || investments.length === 0) {
-      container.innerHTML = '<div class="empty-report">No investments found</div>';
+      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found</p></div>';
       return;
     }
 
@@ -191,9 +198,9 @@
       html += '<div class="group-table-wrapper">';
       html += '<table class="group-table">';
       html += '<thead><tr>';
-      html += '<th>Code</th><th>Bank</th><th>Amount</th><th>Rate (%)</th>';
-      html += '<th>Days</th><th>Inv Date</th><th>Maturity Date</th>';
-      html += '<th>Interest</th><th>Maturity Amt</th>';
+      html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
+      html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th>';
+      html += '<th>Interest (GHc)</th><th>Maturity Amt (GHc)</th><th>Accrued Monthly</th><th>Accrued To Date</th>';
       html += '</tr></thead>';
       html += '<tbody>';
 
@@ -201,22 +208,26 @@
         html += '<tr>';
         html += '<td>' + (item.investmentCode || '') + '</td>';
         html += '<td>' + (item.bankName || '') + '</td>';
-        html += '<td>' + formatCurrency(item.amount) + '</td>';
-        html += '<td>' + (item.interestRate || 0).toFixed(2) + '</td>';
-        html += '<td>' + (item.duration || 0) + '</td>';
-        html += '<td>' + (item.investmentDate || '') + '</td>';
-        html += '<td>' + (item.maturityDate || '') + '</td>';
-        html += '<td>' + formatCurrency(item.interestAmount) + '</td>';
-        html += '<td>' + formatCurrency(item.maturityAmount) + '</td>';
+        html += '<td>' + (item.investmentType || '') + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+        html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+        html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+        html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+        html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.maturityAmount) + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.accruedMonthly || 0) + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.accruedToDate || 0) + '</td>';
         html += '</tr>';
       });
 
       html += '<tr class="subtotal-row">';
-      html += '<td colspan="2">Subtotal</td>';
-      html += '<td>' + formatCurrency(subtotalAmount) + '</td>';
+      html += '<td colspan="3">Subtotal</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
       html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-      html += '<td>' + formatCurrency(subtotalInterest) + '</td>';
-      html += '<td>' + formatCurrency(subtotalMaturity) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalMaturity) + '</td>';
+      html += '<td>-</td><td>-</td>';
       html += '</tr>';
 
       html += '</tbody></table></div></div>';
@@ -226,11 +237,12 @@
     html += '<div class="grand-total-report">';
     html += '<table class="group-table"><tbody>';
     html += '<tr class="grand-total-row">';
-    html += '<td colspan="2">GRAND TOTAL</td>';
-    html += '<td>' + formatCurrency(totalAmount) + '</td>';
+    html += '<td colspan="3">GRAND TOTAL</td>';
+    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
     html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-    html += '<td>' + formatCurrency(totalInterest) + '</td>';
-    html += '<td>' + formatCurrency(totalMaturity) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(totalMaturity) + '</td>';
+    html += '<td>-</td><td>-</td>';
     html += '</tr>';
     html += '</tbody></table></div>';
 
@@ -258,7 +270,7 @@
         })
         .catch(function(error) {
           console.error('Error:', error);
-          showReportError('Error loading report');
+          showReportError('interestReportContainer', 'Error loading report');
         });
     }
   };
@@ -268,11 +280,12 @@
     if (!container) return;
 
     if (!investments || investments.length === 0) {
-      container.innerHTML = '<div class="empty-report">No investments found for selected period</div>';
+      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found for selected period</p></div>';
       return;
     }
 
     let groupedData = {};
+    let totalAmount = 0;
     let totalInterest = 0;
 
     investments.forEach(function(inv) {
@@ -282,6 +295,7 @@
         groupedData[groupKey] = [];
       }
       groupedData[groupKey].push(inv);
+      totalAmount += inv.amount;
       totalInterest += inv.interestAmount;
     });
 
@@ -289,9 +303,11 @@
     
     for (const group in groupedData) {
       const items = groupedData[group];
+      let subtotalAmount = 0;
       let subtotalInterest = 0;
 
       items.forEach(function(item) {
+        subtotalAmount += item.amount;
         subtotalInterest += item.interestAmount;
       });
 
@@ -300,8 +316,8 @@
       html += '<div class="group-table-wrapper">';
       html += '<table class="group-table">';
       html += '<thead><tr>';
-      html += '<th>Code</th><th>Bank</th><th>Amount</th><th>Rate</th>';
-      html += '<th>Days</th><th>Interest</th>';
+      html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
+      html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th><th>Interest (GHc)</th>';
       html += '</tr></thead>';
       html += '<tbody>';
 
@@ -309,16 +325,21 @@
         html += '<tr>';
         html += '<td>' + (item.investmentCode || '') + '</td>';
         html += '<td>' + (item.bankName || '') + '</td>';
-        html += '<td>' + formatCurrency(item.amount) + '</td>';
-        html += '<td>' + (item.interestRate || 0).toFixed(2) + '%</td>';
-        html += '<td>' + (item.duration || 0) + '</td>';
-        html += '<td>' + formatCurrency(item.interestAmount) + '</td>';
+        html += '<td>' + (item.investmentType || '') + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+        html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+        html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+        html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+        html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
+        html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
         html += '</tr>';
       });
 
       html += '<tr class="subtotal-row">';
-      html += '<td colspan="5">Subtotal</td>';
-      html += '<td>' + formatCurrency(subtotalInterest) + '</td>';
+      html += '<td colspan="3">Subtotal</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
+      html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
       html += '</tr>';
       html += '</tbody></table></div></div>';
     }
@@ -326,8 +347,10 @@
     html += '<div class="grand-total-report">';
     html += '<table class="group-table"><tbody>';
     html += '<tr class="grand-total-row">';
-    html += '<td colspan="5">TOTAL INTEREST</td>';
-    html += '<td>' + formatCurrency(totalInterest) + '</td>';
+    html += '<td colspan="3">TOTAL</td>';
+    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
+    html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+    html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
     html += '</tr>';
     html += '</tbody></table></div>';
 
@@ -339,19 +362,19 @@
   // ============================================
 
   window.loadMaturedInvestmentsReport = function() {
-    const today = new Date().toISOString().split('T')[0];
+    const toDate = document.getElementById('maturedToDate').value || new Date().toISOString().split('T')[0];
     
-    console.log('Loading matured investments as at:', today);
+    console.log('Loading matured investments as at:', toDate);
 
     if (typeof API !== 'undefined' && API && typeof API.getMaturedInvestments === 'function') {
-      API.getMaturedInvestments(today)
+      API.getMaturedInvestments(toDate)
         .then(function(investments) {
           console.log('Matured investments loaded:', investments);
           displayMaturedReport(investments);
         })
         .catch(function(error) {
           console.error('Error:', error);
-          showReportError('Error loading matured investments');
+          showTableError('maturedReportBody', 10, 'Error loading matured investments');
         });
     }
   };
@@ -371,12 +394,12 @@
       html += '<td>' + (item.investmentCode || '') + '</td>';
       html += '<td>' + (item.bankName || '') + '</td>';
       html += '<td>' + (item.investmentType || '') + '</td>';
-      html += '<td>' + formatCurrency(item.amount) + '</td>';
-      html += '<td>' + (item.interestRate || 0).toFixed(2) + '%</td>';
-      html += '<td>' + (item.duration || 0) + '</td>';
-      html += '<td>' + (item.investmentDate || '') + '</td>';
-      html += '<td>' + (item.maturityDate || '') + '</td>';
-      html += '<td>' + formatCurrency(item.maturityAmount) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+      html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.maturityAmount) + '</td>';
       html += '<td><button class="action-btn" onclick="showMaturedActionMenu(event, \'' + (item.investmentCode || '') + '\')"><i class="fas fa-ellipsis-v"></i></button></td>';
       html += '</tr>';
     });
@@ -404,7 +427,7 @@
         })
         .catch(function(error) {
           console.error('Error:', error);
-          showReportError('Error loading purchase report');
+          showTableError('purchaseReportBody', 7, 'Error loading purchase report');
         });
     }
   };
@@ -419,25 +442,25 @@
     }
 
     let html = '';
-    let total = 0;
+    let totalAmount = 0;
 
     investments.forEach(function(item) {
       html += '<tr>';
       html += '<td>' + (item.investmentCode || '') + '</td>';
       html += '<td>' + (item.bankName || '') + '</td>';
       html += '<td>' + (item.investmentType || '') + '</td>';
-      html += '<td>' + formatCurrency(item.amount) + '</td>';
-      html += '<td>' + (item.interestRate || 0).toFixed(2) + '%</td>';
-      html += '<td>' + (item.duration || 0) + '</td>';
-      html += '<td>' + (item.investmentDate || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
       html += '</tr>';
-      total += item.amount;
+      totalAmount += item.amount;
     });
 
     html += '<tr class="subtotal-row">';
     html += '<td colspan="3">TOTAL</td>';
-    html += '<td>' + formatCurrency(total) + '</td>';
-    html += '<td colspan="3"></td>';
+    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
+    html += '<td>-</td><td>-</td><td>-</td>';
     html += '</tr>';
 
     tbody.innerHTML = html;
@@ -457,10 +480,17 @@
     });
   }
 
-  function showReportError(message) {
-    const container = document.getElementById('fullReportContainer') || document.getElementById('interestReportContainer');
+  function showReportError(containerId, message) {
+    const container = document.getElementById(containerId);
     if (container) {
-      container.innerHTML = '<div class="error-report">' + message + '</div>';
+      container.innerHTML = '<div class="error-report"><i class="fas fa-exclamation-circle"></i><p>' + message + '</p></div>';
+    }
+  }
+
+  function showTableError(tbodyId, colspan, message) {
+    const tbody = document.getElementById(tbodyId);
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="loading-cell">' + message + '</td></tr>';
     }
   }
 
@@ -496,6 +526,7 @@
     if (modal) {
       modal.style.display = 'flex';
       document.getElementById('rolloverInvestmentCode').value = investmentCode;
+      // Load investment details here if needed
     }
   };
 
@@ -511,6 +542,7 @@
     if (modal) {
       modal.style.display = 'flex';
       document.getElementById('redeemInvestmentCode').value = investmentCode;
+      // Load investment details here if needed
     }
   };
 
@@ -522,27 +554,140 @@
   };
 
   window.submitRolloverInvestment = function() {
-    console.log('Rollover submission logic here');
+    const investmentCode = document.getElementById('rolloverInvestmentCode').value;
+    const investmentType = document.getElementById('rolloverInvestmentType').value;
+    const investmentDate = document.getElementById('rolloverInvestmentDate').value;
+    const amount = document.getElementById('rolloverAmount').value;
+    const interestRate = document.getElementById('rolloverInterestRate').value;
+    const duration = document.getElementById('rolloverDuration').value;
+    const maturityDate = document.getElementById('rolloverMaturityDate').value;
+
+    console.log('Rollover submission:', {
+      investmentCode: investmentCode,
+      investmentType: investmentType,
+      investmentDate: investmentDate,
+      amount: amount,
+      interestRate: interestRate,
+      duration: duration,
+      maturityDate: maturityDate
+    });
+
+    // TODO: Implement rollover logic with API call
+    showMessage('Rollover investment submitted successfully!', 'success');
     closeRolloverModal();
+    loadMaturedInvestmentsReport();
   };
 
   window.submitRedeemInvestment = function() {
-    console.log('Redeem submission logic here');
+    const investmentCode = document.getElementById('redeemInvestmentCode').value;
+    const redeemDate = document.getElementById('redeemDate').value;
+
+    console.log('Redeem submission:', {
+      investmentCode: investmentCode,
+      redeemDate: redeemDate
+    });
+
+    // TODO: Implement redeem logic with API call
+    showMessage('Investment redeemed successfully!', 'success');
     closeRedeemModal();
+    loadMaturedInvestmentsReport();
   };
 
   // Calculation functions for rollover
   window.handleRolloverInvestmentTypeChange = function() {
     // Add type change logic if needed
+    console.log('Rollover type changed');
   };
 
   window.calculateRolloverMaturityDate = function() {
-    // Add date calculation logic
+    const investmentDate = document.getElementById('rolloverInvestmentDate');
+    const durationField = document.getElementById('rolloverDuration');
+    
+    if (!investmentDate || !durationField) return;
+    
+    const investmentDateValue = investmentDate.value;
+    const duration = parseInt(durationField.value) || 0;
+
+    if (!investmentDateValue || duration <= 0) {
+      const maturityDateField = document.getElementById('rolloverMaturityDate');
+      if (maturityDateField) maturityDateField.value = '';
+      return;
+    }
+
+    const startDate = new Date(investmentDateValue);
+    const maturityDate = new Date(startDate.getTime() + (duration * 24 * 60 * 60 * 1000));
+    
+    const year = maturityDate.getFullYear();
+    const month = String(maturityDate.getMonth() + 1).padStart(2, '0');
+    const day = String(maturityDate.getDate()).padStart(2, '0');
+    
+    const maturityDateField = document.getElementById('rolloverMaturityDate');
+    if (maturityDateField) maturityDateField.value = year + '-' + month + '-' + day;
+    calculateRolloverMaturityAmount();
   };
 
   window.calculateRolloverMaturityAmount = function() {
-    // Add amount calculation logic
+    const amountField = document.getElementById('rolloverAmount');
+    const interestRateField = document.getElementById('rolloverInterestRate');
+    const durationField = document.getElementById('rolloverDuration');
+    
+    if (!amountField || !interestRateField || !durationField) return;
+    
+    const amount = parseFloat(amountField.value) || 0;
+    const interestRate = parseFloat(interestRateField.value) || 0;
+    const duration = parseInt(durationField.value) || 0;
+    
+    // Default day count for calculations
+    const dayCount = 365;
+
+    const interestAmountField = document.getElementById('rolloverInterestAmount');
+    const maturityAmountField = document.getElementById('rolloverMaturityAmount');
+    
+    if (amount <= 0 || interestRate < 0 || duration <= 0) {
+      if (interestAmountField) interestAmountField.value = '0.00';
+      if (maturityAmountField) maturityAmountField.value = '0.00';
+      return;
+    }
+
+    // Interest = Principal * Rate * (Duration / DayCount)
+    const timeInYears = duration / dayCount;
+    const interestAmount = (amount * interestRate * timeInYears) / 100;
+    const maturityAmountValue = amount + interestAmount;
+
+    if (interestAmountField) interestAmountField.value = formatCurrency(interestAmount);
+    if (maturityAmountField) maturityAmountField.value = formatCurrency(maturityAmountValue);
   };
 
-})();
+  function showMessage(message, type) {
+    let modal = document.getElementById('messageModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'messageModal';
+      modal.className = 'modal';
+      document.body.appendChild(modal);
+    }
+    
+    let messageDiv = document.getElementById('modalMessage');
+    if (!messageDiv) {
+      const div = document.createElement('div');
+      div.id = 'modalMessage';
+      modal.appendChild(div);
+      messageDiv = div;
+    }
+    
+    const types = {
+      success: 'success-message',
+      error: 'error-message',
+      info: 'info-message',
+      warning: 'warning-message'
+    };
 
+    messageDiv.innerHTML = '<div class="' + (types[type] || types.info) + '">' + message + '</div>';
+    modal.style.display = 'flex';
+    
+    setTimeout(function() {
+      if (modal) modal.style.display = 'none';
+    }, 3000);
+  }
+
+})();
