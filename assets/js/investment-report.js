@@ -1,7 +1,3 @@
-/* ============================================
-   ADD INVESTMENT MODULE JAVASCRIPT
-   With Auto-loaded Banks from Google Sheet
-   ============================================ */
 
 (function() {
   // Use IIFE to avoid global variable conflicts
