@@ -33,6 +33,9 @@
     // Load banks from API
     loadBanksFromSheet();
 
+    // Load investment types
+    loadInvestmentTypes();
+
     // Add event listeners for real-time calculations
     const amountField = document.getElementById('amount');
     const interestRateField = document.getElementById('interestRate');
@@ -103,7 +106,7 @@
     const bankSelect = document.getElementById('bankName');
     if (!bankSelect) return;
     
-    // Clear existing options
+    // Clear existing options except the first placeholder
     while (bankSelect.options.length > 0) {
       bankSelect.remove(0);
     }
@@ -138,6 +141,67 @@
     bankSelect.appendChild(addNewOption);
     
     console.log('Populated ' + (banks ? banks.length : 0) + ' banks into dropdown');
+  }
+
+  // ============================================
+  // LOAD INVESTMENT TYPES
+  // ============================================
+
+  function loadInvestmentTypes() {
+    console.log('Loading investment types from API...');
+    
+    if (typeof API !== 'undefined' && API && typeof API.getUniqueInvestmentTypes === 'function') {
+      API.getUniqueInvestmentTypes()
+        .then(function(types) {
+          console.log('Investment types loaded:', types);
+          populateInvestmentTypeDropdown(types);
+        })
+        .catch(function(error) {
+          console.error('Error loading investment types:', error);
+          const defaultTypes = ['Fixed Deposit', 'Treasury Bills', 'Bonds'];
+          populateInvestmentTypeDropdown(defaultTypes);
+        });
+    } else {
+      console.warn('API not available, using default investment types');
+      const defaultTypes = ['Fixed Deposit', 'Treasury Bills', 'Bonds'];
+      populateInvestmentTypeDropdown(defaultTypes);
+    }
+  }
+
+  function populateInvestmentTypeDropdown(types) {
+    const typeSelect = document.getElementById('investmentType');
+    if (!typeSelect) return;
+    
+    // Clear existing options
+    while (typeSelect.options.length > 0) {
+      typeSelect.remove(0);
+    }
+    
+    // Add placeholder
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = 'Select Type';
+    typeSelect.appendChild(placeholderOption);
+    
+    // Add type options
+    if (types && types.length > 0) {
+      types.forEach(function(type) {
+        if (type && type.trim() !== '') {
+          const option = document.createElement('option');
+          option.value = type;
+          option.textContent = type;
+          typeSelect.appendChild(option);
+        }
+      });
+    }
+    
+    // Add "Add New Type" option
+    const addNewOption = document.createElement('option');
+    addNewOption.value = 'add-new';
+    addNewOption.textContent = '+ Add New Type';
+    typeSelect.appendChild(addNewOption);
+    
+    console.log('Populated ' + (types ? types.length : 0) + ' investment types');
   }
 
   // ============================================
@@ -488,8 +552,9 @@
             showInvestmentMessage('✓ Investment added successfully!', 'success');
             setTimeout(function() {
               resetInvestmentForm();
-              // Refresh bank list after adding new investment
+              // Refresh bank list and investment types after adding new investment
               loadBanksFromSheet();
+              loadInvestmentTypes();
             }, 1500);
           } else {
             showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error');
