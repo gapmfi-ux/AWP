@@ -154,9 +154,32 @@
       </button>
     </div>
     <form id="rolloverForm" onsubmit="event.preventDefault(); submitRolloverInvestment();">
+      <!-- Current Investment Details (Read-only) -->
       <div class="form-row-two">
         <div class="form-group">
-          <label for="rolloverInvestmentType">Type:</label>
+          <label>Current Bank:</label>
+          <input type="text" id="rolloverBankName" readonly>
+        </div>
+        <div class="form-group">
+          <label>Current Type:</label>
+          <input type="text" id="rolloverInvestmentType" readonly>
+        </div>
+      </div>
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>Current Amount (GHc):</label>
+          <input type="text" id="rolloverCurrentAmount" readonly>
+        </div>
+        <div class="form-group">
+          <label>Current Maturity (GHc):</label>
+          <input type="text" id="rolloverMaturityAmount" readonly>
+        </div>
+      </div>
+      <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
+      <!-- New Rollover Details -->
+      <div class="form-row-two">
+        <div class="form-group">
+          <label for="rolloverInvestmentType">New Type:</label>
           <select id="rolloverInvestmentType" onchange="handleRolloverInvestmentTypeChange()" required>
             <option value="">Select</option>
             <option value="Fixed Deposit">Fixed Deposit</option>
@@ -165,7 +188,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="rolloverInvestmentDate">Inv. Date:</label>
+          <label for="rolloverInvestmentDate">New Inv. Date:</label>
           <input type="date" id="rolloverInvestmentDate" required onchange="calculateRolloverMaturityDate()">
         </div>
       </div>
@@ -175,7 +198,7 @@
           <input type="text" id="rolloverInvestmentCode" readonly placeholder="Auto">
         </div>
         <div class="form-group">
-          <label for="rolloverBankName">Bank:</label>
+          <label for="rolloverBankName">New Bank:</label>
           <select id="rolloverBankName" required>
             <option value="">Select</option>
             <option value="Fidelity">Fidelity</option>
@@ -187,11 +210,11 @@
       </div>
       <div class="form-row-two">
         <div class="form-group">
-          <label for="rolloverAmount">Amount (GHc):</label>
+          <label for="rolloverAmount">New Amount (GHc):</label>
           <input type="number" id="rolloverAmount" step="0.01" placeholder="0.00" required oninput="calculateRolloverMaturityAmount()">
         </div>
         <div class="form-group">
-          <label for="rolloverInterestRate">Rate (%):</label>
+          <label for="rolloverInterestRate">New Rate (%):</label>
           <input type="number" id="rolloverInterestRate" step="0.01" placeholder="0.00" required oninput="calculateRolloverMaturityAmount()">
         </div>
       </div>
@@ -201,17 +224,17 @@
           <input type="number" id="rolloverDuration" step="1" placeholder="0" required oninput="calculateRolloverMaturityDate()">
         </div>
         <div class="form-group">
-          <label for="rolloverMaturityDate">Maturity:</label>
+          <label for="rolloverMaturityDate">New Maturity:</label>
           <input type="date" id="rolloverMaturityDate" required onchange="calculateRolloverMaturityAmount()">
         </div>
       </div>
       <div class="form-row-two">
         <div class="form-group">
-          <label>Interest:</label>
+          <label>New Interest:</label>
           <input type="text" id="rolloverInterestAmount" readonly>
         </div>
         <div class="form-group">
-          <label>Maturity:</label>
+          <label>New Maturity Amount:</label>
           <input type="text" id="rolloverMaturityAmount" readonly>
         </div>
       </div>
@@ -233,6 +256,7 @@
       </button>
     </div>
     <form id="redeemForm" onsubmit="event.preventDefault(); submitRedeemInvestment();">
+      <!-- Investment Details (Read-only) -->
       <div class="form-row-two">
         <div class="form-group">
           <label>Investment Code:</label>
@@ -249,7 +273,7 @@
           <input type="text" id="redeemInvestmentType" readonly>
         </div>
         <div class="form-group">
-          <label>Amount:</label>
+          <label>Amount (GHc):</label>
           <input type="text" id="redeemAmount" readonly>
         </div>
       </div>
@@ -259,10 +283,12 @@
           <input type="text" id="redeemMaturityDate" readonly>
         </div>
         <div class="form-group">
-          <label>Maturity Amount:</label>
+          <label>Maturity Amount (GHc):</label>
           <input type="text" id="redeemMaturityAmount" readonly>
         </div>
       </div>
+      <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
+      <!-- Redeem Date -->
       <div class="form-group">
         <label>Redeem Date:</label>
         <input type="date" id="redeemDate" required>
