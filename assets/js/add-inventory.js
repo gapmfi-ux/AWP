@@ -45,7 +45,7 @@ function handleNewCategoryChange() {
 }
 
 function generateCategoryCode() {
-  console.log('Generating inventory category code');
+  console.log('Generating inventory category code using google.script.run');
   
   google.script.run
     .withSuccessHandler(function(response) {
@@ -67,10 +67,11 @@ function generateCategoryCode() {
 }
 
 function loadExistingCategories() {
-  console.log('Loading existing categories');
+  console.log('Loading existing categories using google.script.run');
   
   google.script.run
     .withSuccessHandler(function(response) {
+      console.log('Categories response:', response);
       const select = document.getElementById('newCategory');
       if (!select) return;
       
@@ -159,8 +160,9 @@ function submitNewInventory() {
     dateOfPurchase: dateOfPurchase
   };
 
-  console.log('Submitting form data:', formData);
+  console.log('Submitting form data with google.script.run:', formData);
 
+  // Use google.script.run directly, NOT the API wrapper
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Success response:', response);
@@ -176,7 +178,7 @@ function submitNewInventory() {
       }
     })
     .withFailureHandler(function(error) {
-      console.error('Error:', error);
+      console.error('Error submitting inventory:', error);
       hideInventoryLoadingModal();
       showInventoryMessage('Error adding inventory: ' + (error.message || error), 'error');
     })
@@ -280,7 +282,7 @@ function showInventoryLoadingModal(message) {
   modal.innerHTML = `
     <div class="loading-modal-content">
       <div class="loading-spinner"></div>
-      <p>${message}</p>
+      <p>${escapeHtml(message)}</p>
     </div>
   `;
   modal.style.display = 'flex';
