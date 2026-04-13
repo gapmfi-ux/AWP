@@ -55,12 +55,14 @@ class ApiService {
           
           this.log(`Response for ${action}:`, response);
           
-          if (response && response.success !== false) {
+          if (response && response.success !== false && !response.error) {
             const cacheKey = `${action}_${JSON.stringify(data)}`;
             this.cache.set(cacheKey, response);
             resolve(response);
+          } else if (response && response.error) {
+            reject(new Error(response.error));
           } else {
-            reject(new Error((response && response.error) || 'API request failed'));
+            reject(new Error('API request failed'));
           }
         };
         
@@ -174,7 +176,6 @@ class ApiService {
     return this.request('updateAssetStatus', { assetName, newStatus }, options);
   }
   
-  
   async updateAllAccumulatedDepreciation(asOfDate, options = {}) {
     this.log('updateAllAccumulatedDepreciation called for date:', asOfDate);
     return this.request('updateAllAccumulatedDepreciation', { asOfDate }, options);
@@ -215,6 +216,11 @@ class ApiService {
   
   async getAllInvestments(options = {}) {
     return this.request('getAllInvestments', {}, options);
+  }
+
+  async getInvestmentByCode(investmentCode, options = {}) {
+    this.log('getInvestmentByCode called for:', investmentCode);
+    return this.request('getInvestmentByCode', { investmentCode }, options);
   }
   
   // ============================================
@@ -278,7 +284,7 @@ window.callGAS = async function(action, data = {}) {
     'getDetailedRegister': () => API.getDetailedRegister(),
     'updateAssetStatus': () => API.updateAssetStatus(data.assetName, data.newStatus),
     'updateAllAccumulatedDepreciation': () => API.updateAllAccumulatedDepreciation(data.asOfDate),
-    'getFixedAssetsSummaryReport': () => API.getFixedAssetsSummaryReport(data.toDate),  // ADD THIS LINE
+    'getFixedAssetsSummaryReport': () => API.getFixedAssetsSummaryReport(data.toDate),
     'generateInvestmentCode': () => API.generateInvestmentCode(data.investmentType),
     'addNewInvestment': () => API.addNewInvestment(data),
     'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(data.fromDate, data.toDate),
@@ -286,6 +292,7 @@ window.callGAS = async function(action, data = {}) {
     'getUniqueInvestmentTypes': () => API.getUniqueInvestmentTypes(),
     'getUniqueBanks': () => API.getUniqueBanks(),
     'getAllInvestments': () => API.getAllInvestments(),
+    'getInvestmentByCode': () => API.getInvestmentByCode(data.investmentCode),
     'test': () => API.request('test', {})
   };
   
