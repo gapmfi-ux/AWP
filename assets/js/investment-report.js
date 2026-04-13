@@ -151,25 +151,6 @@
     }
   };
 
-  window.handleInterestReportTypeChange = function() {
-    const reportType = document.getElementById('interestReportTypeSelect').value;
-    const fromDate = document.getElementById('interestFromDate').value;
-    const toDate = document.getElementById('interestToDate').value;
-    
-    showInterestReportLoading();
-    
-    if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
-      API.getAllInvestments()
-        .then(function(investments) {
-          displayInterestReport(investments, fromDate, toDate, reportType);
-        })
-        .catch(function(error) {
-          console.error('Error:', error);
-          showReportError('interestReportContainer', 'Error loading report');
-        });
-    }
-  };
-
   function displayFullReport(investments, groupBy, reportToDate) {
     const container = document.getElementById('fullReportContainer');
     if (!container) return;
@@ -228,7 +209,7 @@
         inv.investmentDate,
         inv.investmentDate,
         reportToDate,
-        365,
+        inv.investmentType,
         inv.maturityDate
       );
       const currentValue = inv.amount + accruedVals.toDate;
@@ -256,7 +237,7 @@
           item.investmentDate,
           item.investmentDate,
           reportToDate,
-          365,
+          item.investmentType,
           item.maturityDate
         );
         const currentValue = item.amount + accruedVals.toDate;
@@ -281,7 +262,7 @@
           item.investmentDate,
           item.investmentDate,
           reportToDate,
-          365,
+          item.investmentType,
           item.maturityDate
         );
         const currentValue = item.amount + accruedVals.toDate;
@@ -360,6 +341,25 @@
     }
   };
 
+  window.handleInterestReportTypeChange = function() {
+    const reportType = document.getElementById('interestReportTypeSelect').value;
+    const fromDate = document.getElementById('interestFromDate').value;
+    const toDate = document.getElementById('interestToDate').value;
+    
+    showInterestReportLoading();
+    
+    if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
+      API.getAllInvestments()
+        .then(function(investments) {
+          displayInterestReport(investments, fromDate, toDate, reportType);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+          showReportError('interestReportContainer', 'Error loading report');
+        });
+    }
+  };
+
   function displayInterestReport(investments, fromDate, toDate, groupBy) {
     const container = document.getElementById('interestReportContainer');
     if (!container) return;
@@ -421,7 +421,7 @@
         inv.investmentDate,
         fromDate,
         toDate,
-        365,
+        inv.investmentType,
         inv.maturityDate
       );
       
@@ -450,7 +450,7 @@
           item.investmentDate,
           fromDate,
           toDate,
-          365,
+          item.investmentType,
           item.maturityDate
         );
         
@@ -477,7 +477,7 @@
           item.investmentDate,
           fromDate,
           toDate,
-          365,
+          item.investmentType,
           item.maturityDate
         );
         
@@ -682,35 +682,45 @@
   // ACCRUED INTEREST CALCULATION
   // ============================================
 
-  function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, dayCount, maturityDate) {
+  function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, investmentType, maturityDate) {
     try {
       const investStart = new Date(investmentDate);
       const periodStart = new Date(fromDate);
       const periodEnd = new Date(toDate);
       const maturityDateObj = new Date(maturityDate);
       
-      // Daily interest rate
+      // Day count based on investment type
+      let dayCount = 365; // default
+      if (investmentType === 'Treasury Bills') {
+        dayCount = 364;
+      } else if (investmentType === 'Bonds') {
+        dayCount = 360;
+      } else if (investmentType === 'Fixed Deposit') {
+        dayCount = 365;
+      }
+      
+      // Daily interest rate based on investment type's day count
       const dailyRate = (annualRate / 100) / dayCount;
       
-      // Calculate accrued to-date: from investment date to report toDate, but NOT beyond maturity date
-      let accruedToDateEndDate = periodEnd;
-      if (periodEnd > maturityDateObj) {
-        accruedToDateEndDate = maturityDateObj;
+      // Calculate accrued to-date: from investment date to maturity date (capped at maturity)
+      let accruedToDateEndDate = maturityDateObj;
+      if (periodEnd < maturityDateObj) {
+        accruedToDateEndDate = periodEnd;
       }
       
       const timeToDiff = accruedToDateEndDate - investStart;
-      const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24));
-      const accruedToDate = amount * dailyRate * Math.max(daysToDiff, 0);
+      const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+      const accruedToDate = amount * dailyRate * daysToDiff;
       
-      // Calculate accrued monthly: from report fromDate to report toDate, but NOT beyond maturity date
-      let accruedMonthlyEndDate = periodEnd;
-      if (periodEnd > maturityDateObj) {
-        accruedMonthlyEndDate = maturityDateObj;
+      // Calculate accrued monthly: from report fromDate to maturity date (capped at maturity)
+      let accruedMonthlyEndDate = maturityDateObj;
+      if (periodEnd < maturityDateObj) {
+        accruedMonthlyEndDate = periodEnd;
       }
       
       const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
-      const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24));
-      const accruedMonthly = amount * dailyRate * Math.max(daysMonthlyDiff, 0);
+      const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+      const accruedMonthly = amount * dailyRate * daysMonthlyDiff;
       
       return {
         monthly: accruedMonthly,
@@ -926,15 +936,24 @@
     const amountField = document.getElementById('rolloverAmount');
     const interestRateField = document.getElementById('rolloverInterestRate');
     const durationField = document.getElementById('rolloverDuration');
+    const investmentTypeField = document.getElementById('rolloverInvestmentType');
     
     if (!amountField || !interestRateField || !durationField) return;
     
     const amount = parseFloat(amountField.value) || 0;
     const interestRate = parseFloat(interestRateField.value) || 0;
     const duration = parseInt(durationField.value) || 0;
+    const investmentType = investmentTypeField ? investmentTypeField.value : 'Fixed Deposit';
     
-    // Default day count for calculations
-    const dayCount = 365;
+    // Day count based on investment type
+    let dayCount = 365; // default
+    if (investmentType === 'Treasury Bills') {
+      dayCount = 364;
+    } else if (investmentType === 'Bonds') {
+      dayCount = 360;
+    } else if (investmentType === 'Fixed Deposit') {
+      dayCount = 365;
+    }
 
     const interestAmountField = document.getElementById('rolloverInterestAmount');
     const maturityAmountField = document.getElementById('rolloverMaturityAmount');
