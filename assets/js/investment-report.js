@@ -1,4 +1,3 @@
-
 (function() {
   // Use IIFE to avoid global variable conflicts
   
@@ -20,13 +19,13 @@
     }
     isModuleInitialized = true;
     
-    console.log('Initializing Add Investment Module');
+    console.log('Initializing Investment Module');
     
     const today = new Date().toISOString().split('T')[0];
     const dateField = document.getElementById('investmentDate');
     if (dateField) dateField.value = today;
 
-    // Load banks from Google Sheet
+    // Load banks from API
     loadBanksFromSheet();
 
     // Add event listeners for real-time calculations
@@ -68,28 +67,28 @@
   };
 
   // ============================================
-  // LOAD BANKS FROM GOOGLE SHEET
+  // LOAD BANKS FROM API
   // ============================================
 
   function loadBanksFromSheet() {
-    console.log('Loading banks from Google Sheet...');
+    console.log('Loading banks from API...');
     
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run
-        .withSuccessHandler(function(banks) {
-          console.log('Banks loaded:', banks);
+    // Check if API is available
+    if (typeof API !== 'undefined' && API && typeof API.getUniqueBanks === 'function') {
+      API.getUniqueBanks()
+        .then(function(banks) {
+          console.log('Banks loaded successfully:', banks);
           populateBankDropdown(banks);
         })
-        .withFailureHandler(function(error) {
-          console.error('Error loading banks:', error);
-          // Fallback to default banks if sheet fails
+        .catch(function(error) {
+          console.error('Error loading banks from API:', error);
+          // Fallback to default banks if API fails
           const defaultBanks = ['Fidelity', 'CBG', 'Ecobank', 'GCB'];
           populateBankDropdown(defaultBanks);
-        })
-        .getUniqueBanks();
+        });
     } else {
-      // Fallback for testing without Google Apps Script
-      console.log('Google Apps Script not available, using default banks');
+      // Fallback for testing without API
+      console.warn('API not available, using default banks');
       const defaultBanks = ['Fidelity', 'CBG', 'Ecobank', 'GCB'];
       populateBankDropdown(defaultBanks);
     }
@@ -133,7 +132,7 @@
     addNewOption.textContent = '+ Add New Bank';
     bankSelect.appendChild(addNewOption);
     
-    console.log('Populated ' + banks.length + ' banks into dropdown');
+    console.log('Populated ' + (banks ? banks.length : 0) + ' banks into dropdown');
   }
 
   // ============================================
@@ -261,26 +260,27 @@
   function generateInvestmentCode(investmentType) {
     console.log('Generating investment code for:', investmentType);
     
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run
-        .withSuccessHandler(function(response) {
+    // Use API to generate investment code
+    if (typeof API !== 'undefined' && API && typeof API.generateInvestmentCode === 'function') {
+      API.generateInvestmentCode(investmentType)
+        .then(function(response) {
           const field = document.getElementById('investmentCode');
           if (field && response) {
             field.value = response;
             console.log('Investment code generated:', response);
           }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
           console.error('Error generating investment code:', error);
           const field = document.getElementById('investmentCode');
           if (field) {
             field.value = '';
             showInvestmentMessage('Error generating investment code: ' + (error.message || error), 'error');
           }
-        })
-        .generateInvestmentCode(investmentType);
+        });
     } else {
       // Fallback for testing
+      console.warn('API not available, generating code locally');
       const field = document.getElementById('investmentCode');
       if (field) {
         const prefix = investmentType.substring(0, 4).toUpperCase();
@@ -473,9 +473,10 @@
 
     console.log('Submitting investment data:', investmentData);
 
-    if (typeof google !== 'undefined' && google.script && google.script.run) {
-      google.script.run
-        .withSuccessHandler(function(response) {
+    // Use API to add investment
+    if (typeof API !== 'undefined' && API && typeof API.addNewInvestment === 'function') {
+      API.addNewInvestment(investmentData)
+        .then(function(response) {
           console.log('Success response:', response);
           hideInvestmentLoadingModal();
           if (response && response.success) {
@@ -489,12 +490,11 @@
             showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error');
           }
         })
-        .withFailureHandler(function(error) {
+        .catch(function(error) {
           console.error('Error details:', error);
           hideInvestmentLoadingModal();
           showInvestmentMessage('Error adding investment: ' + (error.message || error), 'error');
-        })
-        .addNewInvestment(investmentData);
+        });
     } else {
       // Fallback for testing
       hideInvestmentLoadingModal();
