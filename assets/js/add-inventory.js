@@ -1,6 +1,6 @@
 /* ============================================
    ADD INVENTORY MODULE JAVASCRIPT
-   Using google.script.run (same pattern as add-asset)
+   Using API wrapper (JSONP)
    ============================================ */
 
 // ============================================
@@ -45,10 +45,16 @@ function handleNewCategoryChange() {
 }
 
 function generateCategoryCode() {
-  console.log('Generating inventory category code using google.script.run');
+  console.log('Generating inventory category code via API');
   
-  google.script.run
-    .withSuccessHandler(function(response) {
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    showInventoryMessage('API not available', 'error');
+    return;
+  }
+  
+  API.generateInventoryCategoryCode()
+    .then(function(response) {
       console.log('Category code response:', response);
       const field = document.getElementById('categoryCode');
       if (field && response) {
@@ -59,18 +65,22 @@ function generateCategoryCode() {
         showInventoryMessage('Error generating category code', 'error');
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       console.error('Error generating category code:', error);
       showInventoryMessage('Error generating category code: ' + (error.message || error), 'error');
-    })
-    .generateInventoryCategoryCode();
+    });
 }
 
 function loadExistingCategories() {
-  console.log('Loading existing categories using google.script.run');
+  console.log('Loading existing categories via API');
   
-  google.script.run
-    .withSuccessHandler(function(response) {
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    return;
+  }
+  
+  API.getInventoryCategories()
+    .then(function(response) {
       console.log('Categories response:', response);
       const select = document.getElementById('newCategory');
       if (!select) return;
@@ -92,11 +102,10 @@ function loadExistingCategories() {
         console.error('Unexpected response format:', response);
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       console.error('Error loading categories:', error);
       showInventoryMessage('Error loading categories: ' + (error.message || error), 'error');
-    })
-    .getInventoryCategories();
+    });
 }
 
 // ============================================
@@ -111,7 +120,7 @@ function calculateUnitPrice() {
 }
 
 // ============================================
-// SUBMIT NEW INVENTORY - USING google.script.run
+// SUBMIT NEW INVENTORY - USING API WRAPPER
 // ============================================
 
 function submitNewInventory() {
@@ -160,11 +169,17 @@ function submitNewInventory() {
     dateOfPurchase: dateOfPurchase
   };
 
-  console.log('Submitting form data with google.script.run:', formData);
+  console.log('Submitting form data via API:', formData);
 
-  // Use google.script.run directly, NOT the API wrapper
-  google.script.run
-    .withSuccessHandler(function(response) {
+  if (typeof API === 'undefined' || !API) {
+    hideInventoryLoadingModal();
+    showInventoryMessage('API not available', 'error');
+    return;
+  }
+
+  // Use API wrapper
+  API.addNewInventory(formData)
+    .then(function(response) {
       console.log('Success response:', response);
       hideInventoryLoadingModal();
       
@@ -177,12 +192,11 @@ function submitNewInventory() {
         showInventoryMessage('Error adding inventory: ' + (response?.error || 'Unknown error'), 'error');
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       console.error('Error submitting inventory:', error);
       hideInventoryLoadingModal();
       showInventoryMessage('Error adding inventory: ' + (error.message || error), 'error');
-    })
-    .addNewInventory(formData);
+    });
 }
 
 // ============================================
