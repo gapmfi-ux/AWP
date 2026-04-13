@@ -1,3 +1,4 @@
+
 (function() {
   // Use IIFE to avoid global variable conflicts
   
@@ -27,13 +28,7 @@
     oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
     const fromDateString = oneMonthAgo.toISOString().split('T')[0];
 
-    // Purchase Report (active by default)
-    const purchaseFromDate = document.getElementById('purchaseFromDate');
-    if (purchaseFromDate) purchaseFromDate.value = fromDateString;
-    const purchaseToDate = document.getElementById('purchaseToDate');
-    if (purchaseToDate) purchaseToDate.value = today;
-
-    // Full Report
+    // Full Report (new default)
     const fullReportToDate = document.getElementById('fullReportToDate');
     if (fullReportToDate) fullReportToDate.value = today;
 
@@ -43,12 +38,18 @@
     const interestToDate = document.getElementById('interestToDate');
     if (interestToDate) interestToDate.value = today;
 
+    // Purchase Report
+    const purchaseFromDate = document.getElementById('purchaseFromDate');
+    if (purchaseFromDate) purchaseFromDate.value = fromDateString;
+    const purchaseToDate = document.getElementById('purchaseToDate');
+    if (purchaseToDate) purchaseToDate.value = today;
+
     // Matured Report
     const maturedToDate = document.getElementById('maturedToDate');
     if (maturedToDate) maturedToDate.value = today;
 
     // Load initial reports
-    loadPurchaseReport();
+    loadFullInvestmentReport();
     loadMaturedInvestmentsReport();
   };
 
@@ -85,11 +86,7 @@
     });
 
     // Show appropriate control group and load data
-    if (tabName === 'purchaseReport') {
-      const purchaseControls = document.getElementById('purchaseControls');
-      if (purchaseControls) purchaseControls.style.display = 'flex';
-      loadPurchaseReport();
-    } else if (tabName === 'fullReport') {
+    if (tabName === 'fullReport') {
       const fullControls = document.getElementById('fullReportControls');
       if (fullControls) fullControls.style.display = 'flex';
       loadFullInvestmentReport();
@@ -97,6 +94,10 @@
       const interestControls = document.getElementById('interestControls');
       if (interestControls) interestControls.style.display = 'flex';
       loadInterestReport();
+    } else if (tabName === 'purchaseReport') {
+      const purchaseControls = document.getElementById('purchaseControls');
+      if (purchaseControls) purchaseControls.style.display = 'flex';
+      loadPurchaseReport();
     } else if (tabName === 'maturedReport') {
       const maturedControls = document.getElementById('maturedControls');
       if (maturedControls) maturedControls.style.display = 'flex';
@@ -105,77 +106,22 @@
   };
 
   // ============================================
-  // LOAD PURCHASE REPORT
-  // ============================================
-
-  window.loadPurchaseReport = function() {
-    const fromDate = document.getElementById('purchaseFromDate').value;
-    const toDate = document.getElementById('purchaseToDate').value;
-    
-    if (!fromDate || !toDate) return;
-
-    console.log('Loading purchase report:', fromDate, 'to', toDate);
-
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentsByDateRange === 'function') {
-      API.getInvestmentsByDateRange(fromDate, toDate)
-        .then(function(investments) {
-          console.log('Purchase data loaded:', investments);
-          displayPurchaseReport(investments);
-        })
-        .catch(function(error) {
-          console.error('Error:', error);
-          showTableError('purchaseReportBody', 7, 'Error loading purchase report');
-        });
-    }
-  };
-
-  function displayPurchaseReport(investments) {
-    const tbody = document.getElementById('purchaseReportBody');
-    if (!tbody) return;
-
-    if (!investments || investments.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No investments found</td></tr>';
-      return;
-    }
-
-    let html = '';
-    let totalAmount = 0;
-
-    investments.forEach(function(item) {
-      html += '<tr>';
-      html += '<td>' + (item.investmentCode || '') + '</td>';
-      html += '<td>' + (item.bankName || '') + '</td>';
-      html += '<td>' + (item.investmentType || '') + '</td>';
-      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
-      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
-      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
-      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
-      html += '</tr>';
-      totalAmount += item.amount;
-    });
-
-    html += '<tr class="subtotal-row">';
-    html += '<td colspan="3">TOTAL</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
-    html += '<td>-</td><td>-</td><td>-</td>';
-    html += '</tr>';
-
-    tbody.innerHTML = html;
-  }
-
-  // ============================================
   // LOAD FULL INVESTMENT REPORT
   // ============================================
 
   window.loadFullInvestmentReport = function() {
     console.log('Loading full investment report...');
     
+    const toDate = document.getElementById('fullReportToDate').value;
+    if (!toDate) return;
+    
+    showFullReportLoading();
+    
     if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
       API.getAllInvestments()
         .then(function(investments) {
           console.log('All investments loaded:', investments);
           const reportType = document.getElementById('reportTypeSelect').value || 'byType';
-          const toDate = document.getElementById('fullReportToDate').value;
           displayFullReport(investments, reportType, toDate);
         })
         .catch(function(error) {
@@ -190,10 +136,13 @@
 
   window.handleReportTypeChange = function() {
     const reportType = document.getElementById('reportTypeSelect').value;
+    const toDate = document.getElementById('fullReportToDate').value;
+    
+    showFullReportLoading();
+    
     if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
       API.getAllInvestments()
         .then(function(investments) {
-          const toDate = document.getElementById('fullReportToDate').value;
           displayFullReport(investments, reportType, toDate);
         })
         .catch(function(error) {
@@ -212,6 +161,21 @@
       return;
     }
 
+    // Filter active investments: investment date <= toDate and maturity date > toDate
+    const toDateTime = new Date(reportToDate);
+    toDateTime.setHours(23, 59, 59, 999);
+
+    const activeInvestments = investments.filter(function(inv) {
+      const investDate = new Date(inv.investmentDate);
+      const maturityDate = new Date(inv.maturityDate);
+      return investDate <= toDateTime && maturityDate > toDateTime;
+    });
+
+    if (activeInvestments.length === 0) {
+      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments as at ' + reportToDate + '</p></div>';
+      return;
+    }
+
     let groupedData = {};
     let totalAmount = 0;
     let totalInterest = 0;
@@ -219,7 +183,7 @@
     let totalCurrent = 0;
 
     // Group investments
-    investments.forEach(function(inv) {
+    activeInvestments.forEach(function(inv) {
       let groupKey;
       
       if (groupBy === 'byBank') {
@@ -267,7 +231,7 @@
       html += '<thead><tr>';
       html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
       html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th>';
-      html += '<th>Interest (GHc)</th><th>Current Value (GHc)</th><th>Maturity Amt (GHc)</th><th>Action</th>';
+      html += '<th>Interest (GHc)</th><th>Maturity Amt (GHc)</th><th>Current Value (GHc)</th><th>Action</th>';
       html += '</tr></thead>';
       html += '<tbody>';
 
@@ -283,8 +247,8 @@
         html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
         html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
         html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(currentValue) + '</td>';
         html += '<td class="text-right">' + formatCurrency(item.maturityAmount) + '</td>';
+        html += '<td class="text-right">' + formatCurrency(currentValue) + '</td>';
         html += '<td><button class="action-btn" onclick="showFullReportActionMenu(event, \'' + (item.investmentCode || '') + '\')"><i class="fas fa-ellipsis-v"></i></button></td>';
         html += '</tr>';
       });
@@ -294,8 +258,8 @@
       html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
       html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
       html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
       html += '<td class="text-right">' + formatCurrency(subtotalMaturity) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
       html += '<td>-</td>';
       html += '</tr>';
 
@@ -310,8 +274,8 @@
     html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
     html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
     html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
     html += '<td class="text-right">' + formatCurrency(totalMaturity) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
     html += '<td>-</td>';
     html += '</tr>';
     html += '</tbody></table></div>';
@@ -331,10 +295,12 @@
 
     console.log('Loading interest report:', fromDate, 'to', toDate);
 
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentsByDateRange === 'function') {
-      API.getInvestmentsByDateRange(fromDate, toDate)
+    showInterestReportLoading();
+
+    if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
+      API.getAllInvestments()
         .then(function(investments) {
-          console.log('Investments loaded:', investments);
+          console.log('All investments loaded for interest report:', investments);
           displayInterestReport(investments, fromDate, toDate);
         })
         .catch(function(error) {
@@ -353,6 +319,25 @@
       return;
     }
 
+    // Filter active investments within the date range
+    // Active means: investment date <= toDate and maturity date > fromDate (overlaps with period)
+    const fromDateTime = new Date(fromDate);
+    fromDateTime.setHours(0, 0, 0, 0);
+    const toDateTime = new Date(toDate);
+    toDateTime.setHours(23, 59, 59, 999);
+
+    const activeInvestments = investments.filter(function(inv) {
+      const investDate = new Date(inv.investmentDate);
+      const maturityDate = new Date(inv.maturityDate);
+      // Investment must be started on or before toDate AND mature after fromDate
+      return investDate <= toDateTime && maturityDate > fromDateTime;
+    });
+
+    if (activeInvestments.length === 0) {
+      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments in the selected period</p></div>';
+      return;
+    }
+
     let groupedData = {};
     let totalAmount = 0;
     let totalInterest = 0;
@@ -360,7 +345,7 @@
     let totalAccruedToDate = 0;
     let totalCurrent = 0;
 
-    investments.forEach(function(inv) {
+    activeInvestments.forEach(function(inv) {
       let groupKey = inv.investmentType;
       
       if (!groupedData[groupKey]) {
@@ -482,6 +467,65 @@
   }
 
   // ============================================
+  // LOAD PURCHASE REPORT
+  // ============================================
+
+  window.loadPurchaseReport = function() {
+    const fromDate = document.getElementById('purchaseFromDate').value;
+    const toDate = document.getElementById('purchaseToDate').value;
+    
+    if (!fromDate || !toDate) return;
+
+    console.log('Loading purchase report:', fromDate, 'to', toDate);
+
+    if (typeof API !== 'undefined' && API && typeof API.getInvestmentsByDateRange === 'function') {
+      API.getInvestmentsByDateRange(fromDate, toDate)
+        .then(function(investments) {
+          console.log('Purchase data loaded:', investments);
+          displayPurchaseReport(investments);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+          showTableError('purchaseReportBody', 7, 'Error loading purchase report');
+        });
+    }
+  };
+
+  function displayPurchaseReport(investments) {
+    const tbody = document.getElementById('purchaseReportBody');
+    if (!tbody) return;
+
+    if (!investments || investments.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No investments found</td></tr>';
+      return;
+    }
+
+    let html = '';
+    let totalAmount = 0;
+
+    investments.forEach(function(item) {
+      html += '<tr>';
+      html += '<td>' + (item.investmentCode || '') + '</td>';
+      html += '<td>' + (item.bankName || '') + '</td>';
+      html += '<td>' + (item.investmentType || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+      html += '</tr>';
+      totalAmount += item.amount;
+    });
+
+    html += '<tr class="subtotal-row">';
+    html += '<td colspan="3">TOTAL</td>';
+    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
+    html += '<td>-</td><td>-</td><td>-</td>';
+    html += '</tr>';
+
+    tbody.innerHTML = html;
+  }
+
+  // ============================================
   // LOAD MATURED INVESTMENTS
   // ============================================
 
@@ -556,6 +600,20 @@
     const tbody = document.getElementById(tbodyId);
     if (tbody) {
       tbody.innerHTML = '<tr><td colspan="' + colspan + '" class="loading-cell">' + message + '</td></tr>';
+    }
+  }
+
+  function showFullReportLoading() {
+    const container = document.getElementById('fullReportContainer');
+    if (container) {
+      container.innerHTML = '<div class="loading-report"><div class="loading-spinner-inline"></div><p>Loading full report...</p></div>';
+    }
+  }
+
+  function showInterestReportLoading() {
+    const container = document.getElementById('interestReportContainer');
+    if (container) {
+      container.innerHTML = '<div class="loading-report"><div class="loading-spinner-inline"></div><p>Loading interest report...</p></div>';
     }
   }
 
@@ -691,9 +749,9 @@
         .then(function(investment) {
           if (investment) {
             document.getElementById('rolloverBankName').value = investment.bankName || '';
-            document.getElementById('rolloverInvestmentType').value = investment.investmentType || '';
+            document.getElementById('rolloverCurrentType').value = investment.investmentType || '';
             document.getElementById('rolloverCurrentAmount').value = formatCurrency(investment.amount) || '0.00';
-            document.getElementById('rolloverMaturityAmount').value = formatCurrency(investment.maturityAmount) || '0.00';
+            document.getElementById('rolloverCurrentMaturityAmount').value = formatCurrency(investment.maturityAmount) || '0.00';
             console.log('Rollover modal populated:', investment);
           }
         })
