@@ -1,4 +1,3 @@
-
 (function() {
   // Use IIFE to avoid global variable conflicts
   
@@ -152,6 +151,25 @@
     }
   };
 
+  window.handleInterestReportTypeChange = function() {
+    const reportType = document.getElementById('interestReportTypeSelect').value;
+    const fromDate = document.getElementById('interestFromDate').value;
+    const toDate = document.getElementById('interestToDate').value;
+    
+    showInterestReportLoading();
+    
+    if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
+      API.getAllInvestments()
+        .then(function(investments) {
+          displayInterestReport(investments, fromDate, toDate, reportType);
+        })
+        .catch(function(error) {
+          console.error('Error:', error);
+          showReportError('interestReportContainer', 'Error loading report');
+        });
+    }
+  };
+
   function displayFullReport(investments, groupBy, reportToDate) {
     const container = document.getElementById('fullReportContainer');
     if (!container) return;
@@ -202,7 +220,18 @@
       totalAmount += inv.amount;
       totalInterest += inv.interestAmount;
       totalMaturity += inv.maturityAmount;
-      const currentValue = inv.amount + (inv.accruedToDate || 0);
+      
+      // Calculate accrued to-date: from investment date to report toDate, but NOT beyond maturity date
+      const accruedVals = calculateAccruedInterest(
+        inv.amount,
+        inv.interestRate,
+        inv.investmentDate,
+        inv.investmentDate,
+        reportToDate,
+        365,
+        inv.maturityDate
+      );
+      const currentValue = inv.amount + accruedVals.toDate;
       totalCurrent += currentValue;
     });
 
@@ -220,7 +249,17 @@
         subtotalAmount += item.amount;
         subtotalInterest += item.interestAmount;
         subtotalMaturity += item.maturityAmount;
-        const currentValue = item.amount + (item.accruedToDate || 0);
+        
+        const accruedVals = calculateAccruedInterest(
+          item.amount,
+          item.interestRate,
+          item.investmentDate,
+          item.investmentDate,
+          reportToDate,
+          365,
+          item.maturityDate
+        );
+        const currentValue = item.amount + accruedVals.toDate;
         subtotalCurrent += currentValue;
       });
 
@@ -236,7 +275,17 @@
       html += '<tbody>';
 
       items.forEach(function(item) {
-        const currentValue = item.amount + (item.accruedToDate || 0);
+        const accruedVals = calculateAccruedInterest(
+          item.amount,
+          item.interestRate,
+          item.investmentDate,
+          item.investmentDate,
+          reportToDate,
+          365,
+          item.maturityDate
+        );
+        const currentValue = item.amount + accruedVals.toDate;
+        
         html += '<tr>';
         html += '<td>' + (item.investmentCode || '') + '</td>';
         html += '<td>' + (item.bankName || '') + '</td>';
@@ -301,7 +350,8 @@
       API.getAllInvestments()
         .then(function(investments) {
           console.log('All investments loaded for interest report:', investments);
-          displayInterestReport(investments, fromDate, toDate);
+          const reportType = document.getElementById('interestReportTypeSelect').value || 'byType';
+          displayInterestReport(investments, fromDate, toDate, reportType);
         })
         .catch(function(error) {
           console.error('Error:', error);
@@ -310,7 +360,7 @@
     }
   };
 
-  function displayInterestReport(investments, fromDate, toDate) {
+  function displayInterestReport(investments, fromDate, toDate, groupBy) {
     const container = document.getElementById('interestReportContainer');
     if (!container) return;
 
@@ -346,7 +396,15 @@
     let totalCurrent = 0;
 
     activeInvestments.forEach(function(inv) {
-      let groupKey = inv.investmentType;
+      let groupKey;
+      
+      if (groupBy === 'byBank') {
+        groupKey = inv.bankName;
+      } else if (groupBy === 'byDuration') {
+        groupKey = inv.duration + ' days';
+      } else {
+        groupKey = inv.investmentType;
+      }
       
       if (!groupedData[groupKey]) {
         groupedData[groupKey] = [];
@@ -356,14 +414,15 @@
       totalAmount += inv.amount;
       totalInterest += inv.interestAmount;
       
-      // Calculate accrued values based on report date range
+      // Calculate accrued values based on report date range, NOT beyond maturity date
       const accruedVals = calculateAccruedInterest(
         inv.amount,
         inv.interestRate,
         inv.investmentDate,
         fromDate,
         toDate,
-        365 // Default day count
+        365,
+        inv.maturityDate
       );
       
       totalAccruedMonthly += accruedVals.monthly;
@@ -391,7 +450,8 @@
           item.investmentDate,
           fromDate,
           toDate,
-          365
+          365,
+          item.maturityDate
         );
         
         subtotalAccruedMonthly += accruedVals.monthly;
@@ -417,7 +477,8 @@
           item.investmentDate,
           fromDate,
           toDate,
-          365
+          365,
+          item.maturityDate
         );
         
         const currentVal = item.amount + accruedVals.toDate;
@@ -621,22 +682,33 @@
   // ACCRUED INTEREST CALCULATION
   // ============================================
 
-  function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, dayCount) {
+  function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, dayCount, maturityDate) {
     try {
       const investStart = new Date(investmentDate);
       const periodStart = new Date(fromDate);
       const periodEnd = new Date(toDate);
+      const maturityDateObj = new Date(maturityDate);
       
       // Daily interest rate
       const dailyRate = (annualRate / 100) / dayCount;
       
-      // Calculate accrued to-date: from investment date to report toDate
-      const timeToDiff = periodEnd - investStart;
+      // Calculate accrued to-date: from investment date to report toDate, but NOT beyond maturity date
+      let accruedToDateEndDate = periodEnd;
+      if (periodEnd > maturityDateObj) {
+        accruedToDateEndDate = maturityDateObj;
+      }
+      
+      const timeToDiff = accruedToDateEndDate - investStart;
       const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24));
       const accruedToDate = amount * dailyRate * Math.max(daysToDiff, 0);
       
-      // Calculate accrued monthly: from report fromDate to report toDate
-      const timeMonthlyDiff = periodEnd - periodStart;
+      // Calculate accrued monthly: from report fromDate to report toDate, but NOT beyond maturity date
+      let accruedMonthlyEndDate = periodEnd;
+      if (periodEnd > maturityDateObj) {
+        accruedMonthlyEndDate = maturityDateObj;
+      }
+      
+      const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
       const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24));
       const accruedMonthly = amount * dailyRate * Math.max(daysMonthlyDiff, 0);
       
