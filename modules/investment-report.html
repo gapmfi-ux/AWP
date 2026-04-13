@@ -3,7 +3,7 @@
     <h1>Investment Reports</h1>
   </div>
 
-  <!-- Tabs and Controls Row - Reordered: Full first, Purchase last -->
+  <!-- Tabs and Controls Row -->
   <div class="report-controls-row">
     <div class="report-tabs">
       <button class="tab-btn active" onclick="switchInvestmentReportTab('fullReport')">
@@ -35,7 +35,7 @@
             <option value="byDuration">By Duration</option>
           </select>
         </div>
-        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('fullReport')">
+        <button type="button" class="print-btn-small" onclick="window.print()">
           <i class="fas fa-print"></i>
         </button>
       </div>
@@ -57,7 +57,7 @@
             <option value="byBank">By Bank</option>
           </select>
         </div>
-        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('interestReport')">
+        <button type="button" class="print-btn-small" onclick="window.print()">
           <i class="fas fa-print"></i>
         </button>
       </div>
@@ -68,7 +68,7 @@
           <i class="fas fa-info-circle"></i>
           <span>Matured investments</span>
         </div>
-        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('maturedReport')">
+        <button type="button" class="print-btn-small" onclick="window.print()">
           <i class="fas fa-print"></i>
         </button>
       </div>
@@ -83,14 +83,14 @@
           <label for="purchaseToDate">To:</label>
           <input type="date" id="purchaseToDate" onchange="loadPurchaseReport()">
         </div>
-        <button type="button" class="print-btn-small" onclick="printUtils.printInvestmentReport('purchaseReport')">
+        <button type="button" class="print-btn-small" onclick="window.print()">
           <i class="fas fa-print"></i>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Full Report Tab (Now First) -->
+  <!-- Full Report Tab -->
   <div class="tab-content active" id="fullReport">
     <div id="fullReportContainer"></div>
   </div>
@@ -125,7 +125,7 @@
     </div>
   </div>
 
-  <!-- Purchase Report Tab (Now Last) -->
+  <!-- Purchase Report Tab -->
   <div class="tab-content" id="purchaseReport">
     <div class="report-table-wrapper" id="purchaseReportTable">
       <table class="report-table">
@@ -151,7 +151,7 @@
   <div class="action-dropdown-portal" id="investmentActionPortal" style="display: none;"></div>
 </div>
 
-<!-- Rollover Modal - Compact -->
+<!-- Rollover Modal -->
 <div class="rollover-modal" id="rolloverModal" style="display: none;">
   <div class="rollover-modal-content">
     <div class="rollover-modal-header">
@@ -223,6 +223,7 @@
     </form>
   </div>
 </div>
+
 <!-- Redeem Modal -->
 <div class="rollover-modal" id="redeemModal" style="display: none;">
   <div class="rollover-modal-content">
@@ -374,6 +375,7 @@
     color: #2d3748;
     text-transform: uppercase;
     margin: 0;
+    white-space: nowrap;
   }
 
   .compact-date-input input {
@@ -381,6 +383,7 @@
     border: none;
     font-size: 11px;
     background: transparent;
+    outline: none;
   }
 
   .compact-selector {
@@ -393,11 +396,16 @@
     padding: 4px 8px;
   }
 
+  .compact-selector:hover {
+    border-color: #4361ee;
+  }
+
   .compact-selector label {
     font-size: 10px;
     font-weight: 600;
     color: #2d3748;
     text-transform: uppercase;
+    white-space: nowrap;
   }
 
   .compact-selector select {
@@ -406,6 +414,7 @@
     font-size: 11px;
     background: transparent;
     cursor: pointer;
+    outline: none;
   }
 
   .print-btn-small {
@@ -492,11 +501,27 @@
     border-right: none;
   }
 
+  .report-table tbody tr:hover {
+    background: #f7fafc;
+  }
+
   .loading-cell {
     text-align: center;
     color: #a0aec0;
     font-style: italic;
     padding: 30px !important;
+  }
+
+  .empty-report,
+  .error-report {
+    padding: 30px;
+    text-align: center;
+    color: #a0aec0;
+    font-style: italic;
+  }
+
+  .error-report {
+    color: #ef476f;
   }
 
   .action-btn {
@@ -511,6 +536,7 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+    transition: all 0.2s;
   }
 
   .action-btn:hover {
@@ -543,6 +569,7 @@
     background: none;
     width: 100%;
     text-align: left;
+    transition: all 0.2s;
   }
 
   .dropdown-item:hover {
@@ -591,12 +618,20 @@
     text-transform: uppercase;
   }
 
+  .group-table th:last-child {
+    border-right: none;
+  }
+
   .group-table td {
     padding: 5px;
     border-bottom: 1px solid #e2e8f0;
     border-right: 1px solid #e2e8f0;
     text-align: center;
     font-size: 9px;
+  }
+
+  .group-table td:last-child {
+    border-right: none;
   }
 
   .subtotal-row {
@@ -628,7 +663,7 @@
     background: #e8f8f3 !important;
   }
 
-  /* Rollover/Redeem Modal */
+  /* Modal Styles */
   .rollover-modal {
     position: fixed;
     top: 0;
@@ -652,6 +687,17 @@
     animation: slideIn 0.2s ease;
   }
 
+  @keyframes slideIn {
+    from {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
   .rollover-modal-header {
     display: flex;
     justify-content: space-between;
@@ -664,6 +710,7 @@
     margin: 0;
     font-size: 16px;
     font-weight: 600;
+    color: #2d3748;
   }
 
   .rollover-modal-close {
@@ -672,6 +719,11 @@
     font-size: 18px;
     cursor: pointer;
     color: #a0aec0;
+    transition: all 0.2s;
+  }
+
+  .rollover-modal-close:hover {
+    color: #2d3748;
   }
 
   #rolloverForm, #redeemForm {
@@ -687,10 +739,11 @@
 
   .form-group {
     margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
   }
 
   .form-group label {
-    display: block;
     margin-bottom: 3px;
     font-weight: 600;
     font-size: 9px;
@@ -705,6 +758,21 @@
     border: 1px solid #cbd5e0;
     border-radius: 4px;
     font-size: 11px;
+    font-family: inherit;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+  }
+
+  .form-group input[readonly] {
+    background: #f7fafc;
+    cursor: not-allowed;
+    color: #4361ee;
+    font-weight: 500;
   }
 
   .modal-actions {
@@ -723,17 +791,21 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
+    border: none;
+    transition: all 0.2s;
   }
 
   .modal-btn-cancel {
     background: #e2e8f0;
-    border: none;
     color: #2d3748;
+  }
+
+  .modal-btn-cancel:hover {
+    background: #cbd5e0;
   }
 
   .modal-btn-save {
     background: linear-gradient(135deg, #4361ee, #7209b7);
-    border: none;
     color: white;
   }
 
@@ -754,10 +826,16 @@
     .investment-report-container {
       padding: 0;
       margin: 0;
+      box-shadow: none;
     }
     
     .report-table th,
     .report-table td {
+      border: 1px solid #ddd;
+    }
+
+    .group-table th,
+    .group-table td {
       border: 1px solid #ddd;
     }
   }
@@ -778,6 +856,7 @@
 
     .report-tabs {
       gap: 3px;
+      width: 100%;
     }
 
     .tab-btn {
@@ -799,16 +878,40 @@
     .compact-date-input,
     .compact-selector {
       width: 100%;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .compact-date-input input,
+    .compact-selector select {
+      width: 100%;
+      margin-top: 3px;
     }
 
     .print-btn-small {
       width: 100%;
       justify-content: center;
+      padding: 6px;
     }
 
     .form-row-two {
       grid-template-columns: 1fr;
       gap: 8px;
+    }
+
+    .rollover-modal-content {
+      width: 90%;
+      max-height: 90vh;
+    }
+
+    .report-table {
+      font-size: 9px;
+    }
+
+    .report-table th,
+    .report-table td {
+      padding: 4px 3px !important;
+      font-size: 9px;
     }
   }
 </style>
