@@ -49,13 +49,14 @@ function generateCategoryCode() {
   
   google.script.run
     .withSuccessHandler(function(response) {
+      console.log('Category code response:', response);
       const field = document.getElementById('categoryCode');
-      if (field && response && !response.error) {
+      if (field && response) {
         field.value = response;
         console.log('Category code generated:', response);
-      } else if (response && response.error) {
-        console.error('Error generating code:', response.error);
-        showInventoryMessage('Error generating category code: ' + response.error, 'error');
+      } else {
+        console.error('No response for category code');
+        showInventoryMessage('Error generating category code', 'error');
       }
     })
     .withFailureHandler(function(error) {
@@ -78,7 +79,7 @@ function loadExistingCategories() {
         select.remove(2);
       }
       
-      if (response && !response.error && Array.isArray(response)) {
+      if (response && Array.isArray(response)) {
         response.forEach(function(cat) {
           const option = document.createElement('option');
           option.value = cat.code;
@@ -86,12 +87,13 @@ function loadExistingCategories() {
           select.appendChild(option);
         });
         console.log('Loaded ' + response.length + ' categories');
-      } else if (response && response.error) {
-        console.error('Error loading categories:', response.error);
+      } else {
+        console.error('Unexpected response format:', response);
       }
     })
     .withFailureHandler(function(error) {
       console.error('Error loading categories:', error);
+      showInventoryMessage('Error loading categories: ' + (error.message || error), 'error');
     })
     .getInventoryCategories();
 }
@@ -164,7 +166,7 @@ function submitNewInventory() {
       console.log('Success response:', response);
       hideInventoryLoadingModal();
       
-      if (response && !response.error) {
+      if (response && response.success) {
         showInventoryMessage('✓ Inventory added successfully!', 'success');
         setTimeout(function() {
           resetInventoryForm();
@@ -178,7 +180,7 @@ function submitNewInventory() {
       hideInventoryLoadingModal();
       showInventoryMessage('Error adding inventory: ' + (error.message || error), 'error');
     })
-    .addNewInventory({ formData: JSON.stringify(formData) });
+    .addNewInventory(formData);
 }
 
 // ============================================
@@ -229,7 +231,7 @@ function showInventoryMessage(message, type) {
   if (!modal) {
     modal = document.createElement('div');
     modal.id = 'messageModal';
-    modal.className = 'inventory-message-modal';
+    modal.className = 'modal';
     document.body.appendChild(modal);
   }
   
