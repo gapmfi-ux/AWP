@@ -30,7 +30,7 @@
     const dateField = document.getElementById('investmentDate');
     if (dateField) dateField.value = today;
 
-    // Load banks from Google Sheet using API
+    // Load banks from API
     loadBanksFromSheet();
 
     // Add event listeners for real-time calculations
@@ -72,11 +72,11 @@
   };
 
   // ============================================
-  // LOAD BANKS FROM GOOGLE SHEET
+  // LOAD BANKS FROM API
   // ============================================
 
   function loadBanksFromSheet() {
-    console.log('Loading banks from Google Sheet via API...');
+    console.log('Loading banks from API...');
     
     // Check if API is available
     if (typeof API !== 'undefined' && API && typeof API.getUniqueBanks === 'function') {
