@@ -41,19 +41,27 @@
       </div>
 
       <!-- Interest Report Controls -->
-      <div class="control-group" id="interestControls" style="display: none;">
-        <div class="compact-date-input">
-          <label for="interestFromDate">From:</label>
-          <input type="date" id="interestFromDate" onchange="loadInterestReport()">
-        </div>
-        <div class="compact-date-input">
-          <label for="interestToDate">To:</label>
-          <input type="date" id="interestToDate" onchange="loadInterestReport()">
-        </div>
-        <button type="button" class="print-btn-small" onclick="window.print()">
-          <i class="fas fa-print"></i>
-        </button>
-      </div>
+<div class="control-group" id="interestControls" style="display: none;">
+  <div class="compact-date-input">
+    <label for="interestFromDate">From:</label>
+    <input type="date" id="interestFromDate" onchange="loadInterestReport()">
+  </div>
+  <div class="compact-date-input">
+    <label for="interestToDate">To:</label>
+    <input type="date" id="interestToDate" onchange="loadInterestReport()">
+  </div>
+  <div class="compact-selector">
+    <label for="interestReportTypeSelect">Group:</label>
+    <select id="interestReportTypeSelect" onchange="handleInterestReportTypeChange()">
+      <option value="byType" selected>By Type</option>
+      <option value="byBank">By Bank</option>
+      <option value="byDuration">By Duration</option>
+    </select>
+  </div>
+  <button type="button" class="print-btn-small" onclick="window.print()">
+    <i class="fas fa-print"></i>
+  </button>
+</div>
 
       <!-- Matured Report Controls -->
       <div class="control-group" id="maturedControls" style="display: none;">
