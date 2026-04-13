@@ -678,10 +678,6 @@
     }
   }
 
-  // ============================================
-  // ACCRUED INTEREST CALCULATION
-  // ============================================
-
  // ============================================
 // ACCRUED INTEREST CALCULATION
 // ============================================
@@ -696,8 +692,8 @@ function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, 
     // Set time to start of day for proper date comparison
     investStart.setHours(0, 0, 0, 0);
     periodStart.setHours(0, 0, 0, 0);
-    periodEnd.setHours(23, 59, 59, 999);
-    maturityDateObj.setHours(23, 59, 59, 999);
+    periodEnd.setHours(0, 0, 0, 0);
+    maturityDateObj.setHours(0, 0, 0, 0);
     
     // Day count based on investment type
     let dayCount = 365; // default
@@ -712,21 +708,27 @@ function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, 
     // Daily interest rate based on investment type's day count
     const dailyRate = (annualRate / 100) / dayCount;
     
-    // Calculate accrued to-date: from investment date to maturity date (CAPPED AT MATURITY)
-    // Do not go beyond maturity date
-    let accruedToDateEndDate = periodEnd > maturityDateObj ? maturityDateObj : periodEnd;
+    // Calculate accrued to-date: from investment date to toDate, but NOT beyond maturity date
+    let accruedToDateEndDate = periodEnd;
+    if (periodEnd > maturityDateObj) {
+      accruedToDateEndDate = maturityDateObj;
+    }
     
+    // Calculate days: from investStart to accruedToDateEndDate (inclusive)
     const timeToDiff = accruedToDateEndDate - investStart;
-    const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-    const accruedToDate = amount * dailyRate * Math.max(daysToDiff, 0);
+    const daysToDiff = Math.ceil(timeToDiff / (1000 * 60 * 60 * 24)); // Use ceil for accurate day count
+    const accruedToDate = amount * dailyRate * daysToDiff;
     
-    // Calculate accrued monthly: from report fromDate to maturity date (CAPPED AT MATURITY)
-    // Do not go beyond maturity date
-    let accruedMonthlyEndDate = periodEnd > maturityDateObj ? maturityDateObj : periodEnd;
+    // Calculate accrued monthly: from periodStart to accruedMonthlyEndDate, but NOT beyond maturity date
+    let accruedMonthlyEndDate = periodEnd;
+    if (periodEnd > maturityDateObj) {
+      accruedMonthlyEndDate = maturityDateObj;
+    }
     
+    // Calculate days: from periodStart to accruedMonthlyEndDate (inclusive)
     const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
-    const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-    const accruedMonthly = amount * dailyRate * Math.max(daysMonthlyDiff, 0);
+    const daysMonthlyDiff = Math.ceil(timeMonthlyDiff / (1000 * 60 * 60 * 24)); // Use ceil for accurate day count
+    const accruedMonthly = amount * dailyRate * daysMonthlyDiff;
     
     return {
       monthly: accruedMonthly,
