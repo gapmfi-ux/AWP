@@ -3,7 +3,7 @@
     <h1>Investment Reports</h1>
   </div>
 
-  <!-- Tabs and Controls Row -->
+  <!-- Tabs and Controls Row - Reordered: Full first, Purchase last -->
   <div class="report-controls-row">
     <div class="report-tabs">
       <button class="tab-btn active" onclick="switchInvestmentReportTab('fullReport')">
@@ -64,9 +64,9 @@
 
       <!-- Matured Report Controls -->
       <div class="control-group" id="maturedControls" style="display: none;">
-        <div class="control-info">
-          <i class="fas fa-info-circle"></i>
-          <span>Matured investments</span>
+        <div class="compact-date-input">
+          <label for="maturedToDate">As At:</label>
+          <input type="date" id="maturedToDate" onchange="loadMaturedInvestmentsReport()">
         </div>
         <button type="button" class="print-btn-small" onclick="window.print()">
           <i class="fas fa-print"></i>
@@ -90,7 +90,7 @@
     </div>
   </div>
 
-  <!-- Full Report Tab -->
+  <!-- Full Report Tab (Now First) -->
   <div class="tab-content active" id="fullReport">
     <div id="fullReportContainer"></div>
   </div>
@@ -109,12 +109,12 @@
             <th>Code</th>
             <th>Bank</th>
             <th>Type</th>
-            <th>Amount</th>
-            <th>Rate</th>
-            <th>Days</th>
+            <th>Amount (GHc)</th>
+            <th>Rate (%)</th>
+            <th>Duration (Days)</th>
             <th>Inv. Date</th>
             <th>Maturity Date</th>
-            <th>Maturity Amt</th>
+            <th>Maturity Amt (GHc)</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -125,7 +125,7 @@
     </div>
   </div>
 
-  <!-- Purchase Report Tab -->
+  <!-- Purchase Report Tab (Now Last) -->
   <div class="tab-content" id="purchaseReport">
     <div class="report-table-wrapper" id="purchaseReportTable">
       <table class="report-table">
@@ -136,7 +136,7 @@
             <th>Type</th>
             <th>Amount (GHc)</th>
             <th>Rate (%)</th>
-            <th>Days</th>
+            <th>Duration (Days)</th>
             <th>Inv. Date</th>
           </tr>
         </thead>
@@ -151,7 +151,7 @@
   <div class="action-dropdown-portal" id="investmentActionPortal" style="display: none;"></div>
 </div>
 
-<!-- Rollover Modal -->
+<!-- Rollover Modal - Compact -->
 <div class="rollover-modal" id="rolloverModal" style="display: none;">
   <div class="rollover-modal-content">
     <div class="rollover-modal-header">
@@ -432,17 +432,6 @@
     transform: scale(1.05);
   }
 
-  .control-info {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 10px;
-    background: #e3f2fd;
-    border-radius: 5px;
-    color: #1565c0;
-    font-size: 11px;
-  }
-
   .tab-content {
     display: none;
     animation: fadeIn 0.2s;
@@ -514,10 +503,16 @@
 
   .empty-report,
   .error-report {
-    padding: 30px;
+    padding: 40px 20px;
     text-align: center;
     color: #a0aec0;
-    font-style: italic;
+  }
+
+  .empty-report i,
+  .error-report i {
+    font-size: 32px;
+    margin-bottom: 10px;
+    display: block;
   }
 
   .error-report {
@@ -634,6 +629,15 @@
     border-right: none;
   }
 
+  .group-table td.text-right {
+    text-align: right;
+    padding-right: 8px;
+  }
+
+  .group-table tbody tr:hover {
+    background: #f7fafc;
+  }
+
   .subtotal-row {
     background: #f0f4ff;
     border-top: 1px solid #4361ee;
@@ -663,7 +667,7 @@
     background: #e8f8f3 !important;
   }
 
-  /* Modal Styles */
+  /* Rollover/Redeem Modal */
   .rollover-modal {
     position: fixed;
     top: 0;
@@ -838,6 +842,10 @@
     .group-table td {
       border: 1px solid #ddd;
     }
+
+    body {
+      background: white;
+    }
   }
 
   @media (max-width: 768px) {
@@ -912,6 +920,12 @@
     .report-table td {
       padding: 4px 3px !important;
       font-size: 9px;
+    }
+
+    .group-table th,
+    .group-table td {
+      padding: 3px 2px !important;
+      font-size: 8px;
     }
   }
 </style>
