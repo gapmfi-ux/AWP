@@ -682,58 +682,63 @@
   // ACCRUED INTEREST CALCULATION
   // ============================================
 
-  function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, investmentType, maturityDate) {
-    try {
-      const investStart = new Date(investmentDate);
-      const periodStart = new Date(fromDate);
-      const periodEnd = new Date(toDate);
-      const maturityDateObj = new Date(maturityDate);
-      
-      // Day count based on investment type
-      let dayCount = 365; // default
-      if (investmentType === 'Treasury Bills') {
-        dayCount = 364;
-      } else if (investmentType === 'Bonds') {
-        dayCount = 360;
-      } else if (investmentType === 'Fixed Deposit') {
-        dayCount = 365;
-      }
-      
-      // Daily interest rate based on investment type's day count
-      const dailyRate = (annualRate / 100) / dayCount;
-      
-      // Calculate accrued to-date: from investment date to maturity date (capped at maturity)
-      let accruedToDateEndDate = maturityDateObj;
-      if (periodEnd < maturityDateObj) {
-        accruedToDateEndDate = periodEnd;
-      }
-      
-      const timeToDiff = accruedToDateEndDate - investStart;
-      const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-      const accruedToDate = amount * dailyRate * daysToDiff;
-      
-      // Calculate accrued monthly: from report fromDate to maturity date (capped at maturity)
-      let accruedMonthlyEndDate = maturityDateObj;
-      if (periodEnd < maturityDateObj) {
-        accruedMonthlyEndDate = periodEnd;
-      }
-      
-      const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
-      const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
-      const accruedMonthly = amount * dailyRate * daysMonthlyDiff;
-      
-      return {
-        monthly: accruedMonthly,
-        toDate: accruedToDate,
-        daysToDiff: Math.max(daysToDiff, 0),
-        daysMonthlyDiff: Math.max(daysMonthlyDiff, 0)
-      };
-    } catch (e) {
-      console.error('Error calculating accrued interest:', e);
-      return { monthly: 0, toDate: 0, daysToDiff: 0, daysMonthlyDiff: 0 };
-    }
-  }
+ // ============================================
+// ACCRUED INTEREST CALCULATION
+// ============================================
 
+function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, toDate, investmentType, maturityDate) {
+  try {
+    const investStart = new Date(investmentDate);
+    const periodStart = new Date(fromDate);
+    const periodEnd = new Date(toDate);
+    const maturityDateObj = new Date(maturityDate);
+    
+    // Set time to start of day for proper date comparison
+    investStart.setHours(0, 0, 0, 0);
+    periodStart.setHours(0, 0, 0, 0);
+    periodEnd.setHours(23, 59, 59, 999);
+    maturityDateObj.setHours(23, 59, 59, 999);
+    
+    // Day count based on investment type
+    let dayCount = 365; // default
+    if (investmentType === 'Treasury Bills') {
+      dayCount = 364;
+    } else if (investmentType === 'Bonds') {
+      dayCount = 360;
+    } else if (investmentType === 'Fixed Deposit') {
+      dayCount = 365;
+    }
+    
+    // Daily interest rate based on investment type's day count
+    const dailyRate = (annualRate / 100) / dayCount;
+    
+    // Calculate accrued to-date: from investment date to maturity date (CAPPED AT MATURITY)
+    // Do not go beyond maturity date
+    let accruedToDateEndDate = periodEnd > maturityDateObj ? maturityDateObj : periodEnd;
+    
+    const timeToDiff = accruedToDateEndDate - investStart;
+    const daysToDiff = Math.floor(timeToDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+    const accruedToDate = amount * dailyRate * Math.max(daysToDiff, 0);
+    
+    // Calculate accrued monthly: from report fromDate to maturity date (CAPPED AT MATURITY)
+    // Do not go beyond maturity date
+    let accruedMonthlyEndDate = periodEnd > maturityDateObj ? maturityDateObj : periodEnd;
+    
+    const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
+    const daysMonthlyDiff = Math.floor(timeMonthlyDiff / (1000 * 60 * 60 * 24)) + 1; // +1 to include both start and end dates
+    const accruedMonthly = amount * dailyRate * Math.max(daysMonthlyDiff, 0);
+    
+    return {
+      monthly: accruedMonthly,
+      toDate: accruedToDate,
+      daysToDiff: Math.max(daysToDiff, 0),
+      daysMonthlyDiff: Math.max(daysMonthlyDiff, 0)
+    };
+  } catch (e) {
+    console.error('Error calculating accrued interest:', e);
+    return { monthly: 0, toDate: 0, daysToDiff: 0, daysMonthlyDiff: 0 };
+  }
+}
   // ============================================
   // ACTION MENUS
   // ============================================
@@ -793,32 +798,48 @@
   // MODAL FUNCTIONS
   // ============================================
 
-  window.openRolloverModal = function(investmentCode) {
-    const modal = document.getElementById('rolloverModal');
-    if (modal) {
-      modal.style.display = 'flex';
-      document.getElementById('rolloverInvestmentCode').value = investmentCode;
-      populateInvestmentDetailsForRollover(investmentCode);
+ window.openRolloverModal = function(investmentCode) {
+  const modal = document.getElementById('rolloverModal');
+  if (modal) {
+    console.log('Opening rollover modal for code:', investmentCode);
+    // Set the investment code first
+    const codeField = document.getElementById('rolloverInvestmentCode');
+    if (codeField) {
+      codeField.value = investmentCode;
     }
-  };
+    modal.style.display = 'flex';
+    // Then populate the details
+    setTimeout(function() {
+      populateInvestmentDetailsForRollover(investmentCode);
+    }, 100);
+  }
+};
 
-  window.closeRolloverModal = function() {
+   window.closeRolloverModal = function() {
     const modal = document.getElementById('rolloverModal');
     if (modal) {
       modal.style.display = 'none';
     }
   };
 
-  window.openRedeemModal = function(investmentCode) {
-    const modal = document.getElementById('redeemModal');
-    if (modal) {
-      modal.style.display = 'flex';
-      document.getElementById('redeemInvestmentCode').value = investmentCode;
-      populateInvestmentDetailsForRedeem(investmentCode);
+window.openRedeemModal = function(investmentCode) {
+  const modal = document.getElementById('redeemModal');
+  if (modal) {
+    console.log('Opening redeem modal for code:', investmentCode);
+    // Set the investment code first
+    const codeField = document.getElementById('redeemInvestmentCode');
+    if (codeField) {
+      codeField.value = investmentCode;
     }
-  };
+    modal.style.display = 'flex';
+    // Then populate the details
+    setTimeout(function() {
+      populateInvestmentDetailsForRedeem(investmentCode);
+    }, 100);
+  }
+};
 
-  window.closeRedeemModal = function() {
+   window.closeRedeemModal = function() {
     const modal = document.getElementById('redeemModal');
     if (modal) {
       modal.style.display = 'none';
@@ -826,42 +847,78 @@
   };
 
   function populateInvestmentDetailsForRollover(investmentCode) {
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
-      API.getInvestmentByCode(investmentCode)
-        .then(function(investment) {
-          if (investment) {
-            document.getElementById('rolloverBankName').value = investment.bankName || '';
-            document.getElementById('rolloverCurrentType').value = investment.investmentType || '';
-            document.getElementById('rolloverCurrentAmount').value = formatCurrency(investment.amount) || '0.00';
-            document.getElementById('rolloverCurrentMaturityAmount').value = formatCurrency(investment.maturityAmount) || '0.00';
-            console.log('Rollover modal populated:', investment);
-          }
-        })
-        .catch(function(error) {
-          console.error('Error fetching investment details:', error);
-        });
-    }
+  console.log('Fetching investment details for rollover:', investmentCode);
+  
+  if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
+    API.getInvestmentByCode(investmentCode)
+      .then(function(investment) {
+        console.log('Investment details received:', investment);
+        if (investment) {
+          // Populate current investment details
+          const rolloverBankName = document.getElementById('rolloverBankName');
+          const rolloverCurrentType = document.getElementById('rolloverCurrentType');
+          const rolloverCurrentAmount = document.getElementById('rolloverCurrentAmount');
+          const rolloverCurrentMaturityAmount = document.getElementById('rolloverCurrentMaturityAmount');
+          
+          if (rolloverBankName) rolloverBankName.value = investment.bankName || '';
+          if (rolloverCurrentType) rolloverCurrentType.value = investment.investmentType || '';
+          if (rolloverCurrentAmount) rolloverCurrentAmount.value = formatCurrency(investment.amount) || '0.00';
+          if (rolloverCurrentMaturityAmount) rolloverCurrentMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
+          
+          console.log('Rollover modal populated successfully');
+        } else {
+          console.warn('Investment not found');
+          showMessage('Investment details not found', 'error');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error fetching investment details for rollover:', error);
+        showMessage('Error loading investment details: ' + error.message, 'error');
+      });
+  } else {
+    console.warn('API.getInvestmentByCode not available');
+    showMessage('API not available', 'error');
   }
+}
 
-  function populateInvestmentDetailsForRedeem(investmentCode) {
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
-      API.getInvestmentByCode(investmentCode)
-        .then(function(investment) {
-          if (investment) {
-            document.getElementById('redeemBankName').value = investment.bankName || '';
-            document.getElementById('redeemInvestmentType').value = investment.investmentType || '';
-            document.getElementById('redeemAmount').value = formatCurrency(investment.amount) || '0.00';
-            document.getElementById('redeemMaturityDate').value = investment.maturityDate || '';
-            document.getElementById('redeemMaturityAmount').value = formatCurrency(investment.maturityAmount) || '0.00';
-            console.log('Redeem modal populated:', investment);
-          }
-        })
-        .catch(function(error) {
-          console.error('Error fetching investment details:', error);
-        });
-    }
+function populateInvestmentDetailsForRedeem(investmentCode) {
+  console.log('Fetching investment details for redeem:', investmentCode);
+  
+  if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
+    API.getInvestmentByCode(investmentCode)
+      .then(function(investment) {
+        console.log('Investment details received:', investment);
+        if (investment) {
+          // Populate investment details
+          const redeemInvestmentCode = document.getElementById('redeemInvestmentCode');
+          const redeemBankName = document.getElementById('redeemBankName');
+          const redeemInvestmentType = document.getElementById('redeemInvestmentType');
+          const redeemAmount = document.getElementById('redeemAmount');
+          const redeemMaturityDate = document.getElementById('redeemMaturityDate');
+          const redeemMaturityAmount = document.getElementById('redeemMaturityAmount');
+          
+          if (redeemInvestmentCode) redeemInvestmentCode.value = investment.investmentCode || '';
+          if (redeemBankName) redeemBankName.value = investment.bankName || '';
+          if (redeemInvestmentType) redeemInvestmentType.value = investment.investmentType || '';
+          if (redeemAmount) redeemAmount.value = formatCurrency(investment.amount) || '0.00';
+          if (redeemMaturityDate) redeemMaturityDate.value = investment.maturityDate || '';
+          if (redeemMaturityAmount) redeemMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
+          
+          console.log('Redeem modal populated successfully');
+        } else {
+          console.warn('Investment not found');
+          showMessage('Investment details not found', 'error');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error fetching investment details for redeem:', error);
+        showMessage('Error loading investment details: ' + error.message, 'error');
+      });
+  } else {
+    console.warn('API.getInvestmentByCode not available');
+    showMessage('API not available', 'error');
   }
-
+}
   window.submitRolloverInvestment = function() {
     const investmentCode = document.getElementById('rolloverInvestmentCode').value;
     const investmentType = document.getElementById('rolloverInvestmentType').value;
