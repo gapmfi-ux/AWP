@@ -54,30 +54,32 @@ function displayNextInventoryCode(mainCode) {
     return;
   }
   
-  // Create a dummy request to call getNextInventoryCode through API
-  // We'll use the request method directly
-  API.request('getNextInventoryCode', { mainCode: mainCode })
+  // Call API to get the next inventory code
+  API.getNextInventoryCode(mainCode)
     .then(function(response) {
       console.log('Next inventory code response:', response);
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
       if (response && codeDisplay) {
         const nextCode = String(response).trim();
+        console.log('Next code to display:', nextCode);
         codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
         console.log('Updated code display to:', nextCode);
       } else {
-        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        console.log('No response or codeDisplay not found');
+        if (codeDisplay) {
+          codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        }
       }
     })
     .catch(function(error) {
       console.error('Error fetching next inventory code:', error);
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       if (codeDisplay) {
-        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        codeDisplay.innerHTML = '<span class="code-placeholder">Error</span>';
       }
     });
 }
-
 function generateCategoryCode() {
   console.log('Generating inventory category code via API');
   
