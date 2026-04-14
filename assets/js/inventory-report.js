@@ -816,3 +816,5 @@ window.openUsageModal = openUsageModal;
 window.closeUsageModal = closeUsageModal;
 window.submitUsageRecord = submitUsageRecord;
 window.removeInventoryItem = removeInventoryItem;
+window.showSuccessModalUsage = showSuccessModalUsage;
+window.closeSuccessModalUsage = closeSuccessModalUsage;
