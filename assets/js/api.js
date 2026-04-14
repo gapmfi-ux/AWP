@@ -55,14 +55,12 @@ class ApiService {
           
           this.log(`Response for ${action}:`, response);
           
-          if (response && response.success !== false && !response.error) {
+          if (response && response.success !== false) {
             const cacheKey = `${action}_${JSON.stringify(data)}`;
             this.cache.set(cacheKey, response);
             resolve(response);
-          } else if (response && response.error) {
-            reject(new Error(response.error));
           } else {
-            reject(new Error('API request failed'));
+            reject(new Error((response && response.error) || 'API request failed'));
           }
         };
         
@@ -127,6 +125,11 @@ class ApiService {
   async generateInventoryCategoryCode(options = {}) {
     return this.request('generateInventoryCategoryCode', {}, options);
   }
+
+  async getNextInventoryCode(mainCode, options = {}) {
+    this.log('getNextInventoryCode called for:', mainCode);
+    return this.request('getNextInventoryCode', { mainCode }, options);
+  }
   
   async getInventoryCategories(options = {}) {
     return this.request('getInventoryCategories', {}, options);
@@ -155,10 +158,7 @@ class ApiService {
   async removeInventory(inventoryCode, options = {}) {
     return this.request('removeInventory', { inventoryCode }, options);
   }
-async getNextInventoryCode(mainCode, options = {}) {
-  this.log('getNextInventoryCode called for:', mainCode);
-  return this.request('getNextInventoryCode', { mainCode: mainCode }, options);
-}
+
   // ============================================
   // FIXED ASSETS API
   // ============================================
@@ -220,11 +220,6 @@ async getNextInventoryCode(mainCode, options = {}) {
   async getAllInvestments(options = {}) {
     return this.request('getAllInvestments', {}, options);
   }
-
-  async getInvestmentByCode(investmentCode, options = {}) {
-    this.log('getInvestmentByCode called for:', investmentCode);
-    return this.request('getInvestmentByCode', { investmentCode }, options);
-  }
   
   // ============================================
   // TEST CONNECTION
@@ -275,6 +270,7 @@ window.callGAS = async function(action, data = {}) {
     'getVoucherByNumber': () => API.getVoucherByNumber(data.pvNumber, data.voucherType),
     'updateVoucher': () => API.updateVoucher(data),
     'generateInventoryCategoryCode': () => API.generateInventoryCategoryCode(),
+    'getNextInventoryCode': () => API.getNextInventoryCode(data.mainCode),
     'getInventoryCategories': () => API.getInventoryCategories(),
     'addNewInventory': () => API.addNewInventory(data),
     'getPurchaseReportData': () => API.getPurchaseReportData(data.fromDate, data.toDate),
@@ -282,7 +278,6 @@ window.callGAS = async function(action, data = {}) {
     'getInventoryListData': () => API.getInventoryListData(),
     'recordInventoryUsage': () => API.recordInventoryUsage(data),
     'removeInventory': () => API.removeInventory(data.inventoryCode),
-    'getNextInventoryCode': () => API.getNextInventoryCode(data.mainCode),
     'generateAssetCode': () => API.generateAssetCode(data.assetType),
     'addNewAsset': () => API.addNewAsset(data),
     'getDetailedRegister': () => API.getDetailedRegister(),
@@ -296,7 +291,6 @@ window.callGAS = async function(action, data = {}) {
     'getUniqueInvestmentTypes': () => API.getUniqueInvestmentTypes(),
     'getUniqueBanks': () => API.getUniqueBanks(),
     'getAllInvestments': () => API.getAllInvestments(),
-    'getInvestmentByCode': () => API.getInvestmentByCode(data.investmentCode),
     'test': () => API.request('test', {})
   };
   
