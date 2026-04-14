@@ -50,8 +50,8 @@ const printUtils = {
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
           padding: 15mm;
-          font-size: 11px;
-          line-height: 1.4;
+          font-size: 10px;
+          line-height: 1.3;
           color: #2d3748;
           background: white;
         }
@@ -59,64 +59,91 @@ const printUtils = {
         /* Report Header */
         .print-report-header {
           text-align: center;
-          margin-bottom: 20px;
+          margin-bottom: 15px;
           border-bottom: 2px solid #4361ee;
-          padding-bottom: 15px;
+          padding-bottom: 10px;
         }
         
         .print-report-header h1 {
-          font-size: 20px;
+          font-size: 18px;
           color: #2d3748;
-          margin-bottom: 8px;
+          margin-bottom: 5px;
           font-weight: 600;
           letter-spacing: 1px;
         }
         
         .print-report-header .date-info {
-          font-size: 10px;
+          font-size: 9px;
           color: #718096;
-          margin-top: 8px;
-          padding-top: 5px;
+          margin-top: 5px;
+          padding-top: 3px;
           border-top: 1px dashed #e2e8f0;
         }
         
         /* Table Styles */
-        .print-table {
+        table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 15px;
-          font-size: 10px;
+          margin-top: 10px;
+          font-size: 9px;
         }
         
-        .print-table th {
+        th {
           background: #f7fafc;
-          padding: 10px 8px;
+          padding: 6px 4px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-weight: 700;
-          font-size: 10px;
+          font-size: 9px;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.3px;
           color: #2d3748;
         }
         
-        .print-table td {
-          padding: 8px;
+        td {
+          padding: 5px 4px;
           border: 1px solid #e2e8f0;
           text-align: center;
-          font-size: 10px;
+          font-size: 9px;
           color: #4a5568;
         }
         
-        .print-table tbody tr:hover td {
-          background: #f9fafb;
-        }
-        
-        .print-table tbody tr:nth-child(even) {
+        tbody tr:nth-child(even) {
           background: #fafbfc;
         }
         
-        /* Total Row Styles */
+        tbody tr:hover {
+          background: #f0f4ff;
+        }
+        
+        /* Group Header */
+        .group-header {
+          background: #f0f4ff;
+          font-weight: 600;
+        }
+        
+        .group-header td {
+          background: #f0f4ff !important;
+          color: #4361ee !important;
+          text-align: left;
+          font-weight: 600;
+          border: 1px solid #4361ee;
+          padding: 8px 6px;
+        }
+        
+        /* Group Subtotal */
+        .group-subtotal {
+          background: #f9fafc;
+          font-weight: 600;
+        }
+        
+        .group-subtotal td {
+          background: #f9fafc !important;
+          border: 1px solid #cbd5e0;
+          font-weight: 600;
+        }
+        
+        /* Row Styles */
         .total-row {
           background: #e8f8f3 !important;
           font-weight: 700;
@@ -135,7 +162,6 @@ const printUtils = {
           color: #06d6a0 !important;
         }
         
-        /* Subtotal Row for Grouped Reports */
         .subtotal-row {
           background: #f0f4ff !important;
           font-weight: 600;
@@ -145,6 +171,7 @@ const printUtils = {
           background: #f0f4ff !important;
           color: #4361ee !important;
           border: 1px solid #4361ee;
+          font-weight: 600;
         }
         
         .grand-total-row {
@@ -156,53 +183,90 @@ const printUtils = {
           background: #e8f8f3 !important;
           color: #118d57 !important;
           border: 1px solid #06d6a0;
+          font-weight: 700;
+        }
+        
+        /* Amount Cell */
+        .amount-cell {
+          text-align: right;
+          font-weight: 500;
         }
         
         /* Grouped Report Styles */
         .grouped-report {
-          margin-bottom: 20px;
+          margin-bottom: 10px;
           page-break-inside: avoid;
         }
         
         .group-title {
-          font-size: 13px;
+          font-size: 11px;
           font-weight: 700;
           background: linear-gradient(135deg, #4361ee, #7209b7);
           color: white;
-          padding: 10px 15px;
-          margin: 15px 0 0 0;
-          border-radius: 6px 6px 0 0;
+          padding: 6px 10px;
+          margin: 10px 0 0 0;
+          border-radius: 4px 4px 0 0;
         }
         
         .group-table-wrapper {
           border: 1px solid #e2e8f0;
           border-top: none;
-          border-radius: 0 0 6px 6px;
+          border-radius: 0 0 4px 4px;
           overflow-x: auto;
+          margin-bottom: 5px;
         }
         
-        /* Print-specific adjustments */
-        @media print {
-          body {
-            padding: 10mm;
-          }
-          
-          .print-table th,
-          .print-table td {
-            border: 1px solid #ddd;
-          }
-          
-          .grouped-report {
-            break-inside: avoid;
-            page-break-inside: avoid;
-          }
-          
-          .no-print {
-            display: none;
-          }
+        .grand-total-report {
+          margin-top: 10px;
+          page-break-inside: avoid;
         }
         
-        /* Utility Classes */
+        /* Highlight rows for summary register */
+        .highlight-row {
+          background: #f0f4ff !important;
+          font-weight: 600;
+        }
+        
+        .highlight-row td {
+          background: #f0f4ff !important;
+          border: 1px solid #4361ee;
+          font-weight: 600;
+        }
+        
+        .special-highlight {
+          background: #e8f8f3 !important;
+          font-weight: 700;
+        }
+        
+        .special-highlight td {
+          background: #e8f8f3 !important;
+          color: #118d57 !important;
+          border: 1px solid #06d6a0;
+        }
+        
+        .green-row td {
+          background: #d0f0e6 !important;
+          color: #06d6a0 !important;
+          border: 1px solid #06d6a0;
+        }
+        
+        .date-col {
+          min-width: 80px;
+        }
+        
+        .details-col {
+          text-align: left;
+          font-weight: 500;
+          min-width: 120px;
+        }
+        
+        .total-col {
+          background: #f7fafc;
+          font-weight: 700;
+          border: 1px solid #cbd5e0;
+        }
+        
+        /* Text alignment utilities */
         .text-right {
           text-align: right;
         }
@@ -217,6 +281,34 @@ const printUtils = {
         
         .font-bold {
           font-weight: 700;
+        }
+        
+        /* Print-specific adjustments */
+        @media print {
+          body {
+            padding: 10mm;
+            font-size: 9px;
+          }
+          
+          table {
+            border-collapse: collapse;
+          }
+          
+          th, td {
+            border: 1px solid #999;
+          }
+          
+          .grouped-report {
+            page-break-inside: avoid;
+          }
+          
+          thead {
+            display: table-header-group;
+          }
+          
+          tfoot {
+            display: table-footer-group;
+          }
         }
       </style>
     `;
@@ -440,10 +532,9 @@ const printUtils = {
       this.printTable('detailedRegisterTable', title, dateInfo);
     } else if (tabName === 'summaryRegister') {
       const title = 'SUMMARY ASSET REGISTER';
-      const fromDate = document.getElementById('summaryFromDate')?.value || '';
       const toDate = document.getElementById('summaryToDate')?.value || '';
-      const dateInfo = (fromDate && toDate) ? `Period: ${fromDate} to ${toDate}` : '';
-      this.printTable('summaryRegisterTable', title, dateInfo);
+      const dateInfo = toDate ? `As at: ${toDate}` : '';
+      this.printContainerReport('summaryDetailsContainer', title, dateInfo);
     }
   },
 
@@ -514,6 +605,7 @@ const printUtils = {
       z-index: 9999;
       font-weight: 600;
       max-width: 400px;
+      border-left: 4px solid ${color};
     `;
     alertDiv.textContent = message;
     document.body.appendChild(alertDiv);
@@ -560,8 +652,14 @@ const printUtils = {
             animation: spin 1s linear infinite;
             margin: 0 auto 15px;
           "></div>
-          <p style="margin: 0; color: #2d3748;">${message}</p>
+          <p style="margin: 0; color: #2d3748; font-size: 14px;">${this.escapeHtml(message)}</p>
         </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
       </div>
     `;
   },
