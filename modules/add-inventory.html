@@ -20,16 +20,31 @@
       </div>
     </div>
 
+    <!-- Generated Code Display -->
+    <div class="form-row-two">
+      <div class="form-group">
+        <label>Generated Inventory Code:</label>
+        <div class="code-display" id="generatedCodeDisplay">
+          <span class="code-placeholder">Select category to generate code</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>&nbsp;</label>
+        <div style="height: 40px;"></div>
+      </div>
+    </div>
+
     <!-- Add New Category Fields (Hidden by default) -->
     <div id="addNewCategoryFields" style="display: none;">
       <div class="form-row">
         <div class="form-group">
           <label for="categoryName">Category Name:</label>
-          <input type="text" id="categoryName" placeholder="e.g., Office Supplies">
+          <input type="text" id="categoryName" placeholder="e.g., Blue Pen">
         </div>
         <div class="form-group">
-          <label for="categoryCode">Category Code:</label>
-          <input type="text" id="categoryCode" readonly placeholder="Auto-generated">
+          <label for="categoryCode">Main Code:</label>
+          <input type="text" id="categoryCode" readonly placeholder="Auto-generated (INVEN01)">
         </div>
       </div>
       <div class="form-group">
@@ -156,6 +171,29 @@
     margin-bottom: 15px;
   }
 
+  /* Code Display Styles */
+  .code-display {
+    padding: 10px 12px;
+    border: 2px dashed #4361ee;
+    border-radius: 8px;
+    background: #f0f4ff;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #4361ee;
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+  }
+
+  .code-placeholder {
+    color: #a0aec0;
+    font-weight: 400;
+    font-size: 13px;
+    letter-spacing: normal;
+  }
+
   #addNewCategoryFields {
     background: #f7fafc;
     padding: 15px;
@@ -228,6 +266,8 @@
     color: #2d3748;
     line-height: 1.5;
     min-height: 50px;
+    white-space: pre-wrap;
+    word-wrap: break-word;
   }
 
   .modal-close-btn {
@@ -341,6 +381,10 @@
     .modal-content {
       max-width: 90%;
       padding: 25px;
+    }
+
+    .code-display {
+      font-size: 14px;
     }
   }
 </style>
