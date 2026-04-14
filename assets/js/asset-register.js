@@ -453,18 +453,17 @@ function recalculateSummaryRegister() {
 }
 
 function renderSummaryRegisterFromReport(report) {
-  // Make sure the container exists
-  let container = document.getElementById('summaryDetailsContainer');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'summaryDetailsContainer';
-    const summaryTableDiv = document.getElementById('summaryRegisterTable');
-    if (summaryTableDiv) {
-      summaryTableDiv.appendChild(container);
-    }
-  }
-  
   const tbody = document.getElementById('summaryDetailsBody');
+  if (!tbody) {
+    console.error('summaryDetailsBody not found');
+    return;
+  }
+
+  if (!report.summaryByType || Object.keys(report.summaryByType).length === 0) {
+    showAssetRegisterEmptyState('summaryDetailsBody', 'No assets found for the selected period', 9);
+    return;
+  }
+
   const summaryByType = report.summaryByType;
   const total = report.totalSummary;
   
@@ -541,8 +540,22 @@ function renderSummaryRegisterFromReport(report) {
   </tr>`;
 
   tbody.innerHTML = html;
+  
+  // Create the container for printing if it doesn't exist
+  let printContainer = document.getElementById('summaryDetailsContainer');
+  if (!printContainer) {
+    printContainer = document.createElement('div');
+    printContainer.id = 'summaryDetailsContainer';
+    tbody.closest('.report-table-wrapper').insertAdjacentElement('afterend', printContainer);
+  }
+  
+  // Clone the entire table for the print container
+  const summaryTable = document.getElementById('summaryRegisterTable');
+  if (summaryTable) {
+    const tableClone = summaryTable.cloneNode(true);
+    printContainer.innerHTML = tableClone.outerHTML;
+  }
 }
-
 function getMonthYearDisplay(date) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return months[date.getMonth()] + '-' + date.getFullYear();
