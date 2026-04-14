@@ -1,27 +1,38 @@
 <div class="inventory-report-container">
   <div class="report-header">
-    <h1>Inventory Reports</h1>
+    <h1>Inventory Management</h1>
   </div>
 
   <!-- Tabs and Controls Row -->
   <div class="report-controls-row">
     <!-- Tabs on the left -->
     <div class="report-tabs">
-      <button class="tab-btn active" onclick="switchInventoryTab('purchaseReport')">
+      <button class="tab-btn active" onclick="switchInventoryTab('inventoryList')">
+        <i class="fas fa-list"></i> Inventory List
+      </button>
+      <button class="tab-btn" onclick="switchInventoryTab('purchaseReport')">
         <i class="fas fa-shopping-cart"></i> Purchase
       </button>
       <button class="tab-btn" onclick="switchInventoryTab('usageReport')">
         <i class="fas fa-box-open"></i> Usage
       </button>
-      <button class="tab-btn" onclick="switchInventoryTab('inventoryList')">
-        <i class="fas fa-list"></i> Inventory List
-      </button>
     </div>
 
     <!-- Controls on the right -->
     <div class="report-controls">
+      <!-- Inventory List Controls -->
+      <div class="control-group" id="inventoryControls" style="display: flex;">
+        <div class="compact-date-input">
+          <label for="inventoryToDate">As At:</label>
+          <input type="date" id="inventoryToDate" onchange="loadInventoryList()">
+        </div>
+        <button class="print-report-btn" onclick="printUtils.printInventoryReport('inventoryList')">
+          <i class="fas fa-print"></i> Print
+        </button>
+      </div>
+
       <!-- Purchase Report Controls -->
-      <div class="control-group" id="purchaseControls" style="display: flex;">
+      <div class="control-group" id="purchaseControls" style="display: none;">
         <div class="compact-date-input">
           <label for="purchaseFromDate">From:</label>
           <input type="date" id="purchaseFromDate" onchange="loadPurchaseReport()">
@@ -49,43 +60,56 @@
           <i class="fas fa-print"></i> Print
         </button>
       </div>
+    </div>
+  </div>
 
-      <!-- Inventory List Controls -->
-      <div class="control-group" id="inventoryControls" style="display: none;">
-        <div class="compact-date-input">
-          <label for="inventoryToDate">As At:</label>
-          <input type="date" id="inventoryToDate" onchange="loadInventoryList()">
-        </div>
-        <button class="print-report-btn" onclick="printUtils.printInventoryReport('inventoryList')">
-          <i class="fas fa-print"></i> Print
-        </button>
-      </div>
+  <!-- Inventory List Tab (First/Active) -->
+  <div class="tab-content active" id="inventoryList">
+    <div class="report-table-wrapper" id="inventoryListTable">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Qty</th>
+            <th>Unit Cost</th>
+            <th>Total Cost</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="inventoryListTableBody">
+          <tr>
+            <td colspan="7" class="loading-cell">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
   <!-- Purchase Report Tab -->
-<div class="tab-content active" id="purchaseReport">
-  <div class="report-table-wrapper" id="purchaseReportTable">
-    <table class="report-table">
-      <thead>
-         <tr>
-          <th>Code</th>
-          <th>Category</th>
-          <th>Description</th>
-          <th>Total Cost</th>
-          <th>Qty</th>
-          <th>Unit Cost</th>
-          <th>Date</th>
-        </tr>
-      </thead>
-      <tbody id="purchaseTableBody">
-        <tr>
-          <td colspan="7" class="loading-cell">Loading...</td>
-        </tr>
-      </tbody>
-    </table>
+  <div class="tab-content" id="purchaseReport">
+    <div class="report-table-wrapper" id="purchaseReportTable">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Category</th>
+            <th>Description</th>
+            <th>Total Cost</th>
+            <th>Qty</th>
+            <th>Unit Cost</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody id="purchaseTableBody">
+          <tr>
+            <td colspan="7" class="loading-cell">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
   <!-- Usage Report Tab -->
   <div class="tab-content" id="usageReport">
@@ -107,32 +131,6 @@
             <td colspan="7" class="loading-cell">Loading...</td>
           </tr>
         </tbody>
-        <tfoot id="usageTableFoot" style="display: none;"></tfoot>
-      </table>
-    </div>
-  </div>
-
-  <!-- Inventory List Tab -->
-  <div class="tab-content" id="inventoryList">
-    <div class="report-table-wrapper" id="inventoryListTable">
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th>Code</th>
-            <th>Category</th>
-            <th>Description</th>
-            <th>Qty</th>
-            <th>Unit Cost</th>
-            <th>Total Cost</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="inventoryListTableBody">
-          <tr>
-            <td colspan="7" class="loading-cell">Loading...</td>
-          </tr>
-        </tbody>
-        <tfoot id="inventoryListTableFoot" style="display: none;"></tfoot>
       </table>
     </div>
   </div>
