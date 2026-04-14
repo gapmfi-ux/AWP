@@ -222,11 +222,11 @@ function renderAssetRows(assets) {
         <td>${escapeHtml(asset.code || '')}</td>
         <td>${escapeHtml(asset.location || '')}</td>
         <td>${asset.purchaseDate || ''}</td>
-        <td>${formatCurrency(asset.cost)}</td>
-        <td>${formatCurrency(asset.annualCharge)}</td>
-        <td>${formatCurrency(monthlyDep)}</td>
-        <td>${formatCurrency(asset.accumulatedDepreciation)}</td>
-        <td>${formatCurrency(asset.netBookValue)}</td>
+        <td class="amount-cell">${formatCurrency(asset.cost)}</td>
+        <td class="amount-cell">${formatCurrency(asset.annualCharge)}</td>
+        <td class="amount-cell">${formatCurrency(monthlyDep)}</td>
+        <td class="amount-cell">${formatCurrency(asset.accumulatedDepreciation)}</td>
+        <td class="amount-cell">${formatCurrency(asset.netBookValue)}</td>
         <td>
           <button class="action-btn" onclick="openAssetActionDropdown(event, '${escapeHtml(asset.name)}')">
             <i class="fas fa-ellipsis-v"></i> Action
@@ -383,7 +383,7 @@ function renderDetailedRegisterTable(data) {
 }
 
 // ============================================
-// SUMMARY REGISTER (unchanged)
+// SUMMARY REGISTER
 // ============================================
 
 function loadSummaryRegister() {
@@ -539,30 +539,54 @@ function renderSummaryRegisterFromReport(report) {
     <td class="total-col">${formatCurrency(total.chargeForMonth)}</td>
   </tr>`;
 
+  // Update the table body display
   tbody.innerHTML = html;
   
-  // Create the container for printing if it doesn't exist
-  let printContainer = document.getElementById('summaryDetailsContainer');
+  // Create the print table
+  const printTable = document.createElement('table');
+  printTable.id = 'summaryDetailsTable';
+  printTable.innerHTML = `
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Date</th>
+        <th>Computers & Accessories</th>
+        <th>Furniture and Fixtures</th>
+        <th>Fittings</th>
+        <th>Office Equipment</th>
+        <th>Motor Vehicle</th>
+        <th>Software</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>${html}</tbody>
+  `;
+  
+  // Store the print table in a hidden container
+  let printContainer = document.getElementById('summaryTablePrintContainer');
   if (!printContainer) {
     printContainer = document.createElement('div');
-    printContainer.id = 'summaryDetailsContainer';
-    tbody.closest('.report-table-wrapper').insertAdjacentElement('afterend', printContainer);
+    printContainer.id = 'summaryTablePrintContainer';
+    printContainer.style.display = 'none';
+    document.body.appendChild(printContainer);
   }
+  printContainer.innerHTML = '';
+  printContainer.appendChild(printTable);
   
-  // Clone the entire table for the print container
-  const summaryTable = document.getElementById('summaryRegisterTable');
-  if (summaryTable) {
-    const tableClone = summaryTable.cloneNode(true);
-    printContainer.innerHTML = tableClone.outerHTML;
+  // Also replace any existing print table
+  let existingPrintTable = document.getElementById('summaryDetailsTable');
+  if (existingPrintTable && existingPrintTable !== printTable) {
+    existingPrintTable.replaceWith(printTable);
   }
 }
+
 function getMonthYearDisplay(date) {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return months[date.getMonth()] + '-' + date.getFullYear();
 }
 
 // ============================================
-// ACTION DROPDOWN (unchanged)
+// ACTION DROPDOWN
 // ============================================
 
 function openAssetActionDropdown(event, assetName) {
@@ -643,7 +667,7 @@ function disposeAsset(assetName) {
 }
 
 // ============================================
-// UTILITY FUNCTIONS (unchanged)
+// UTILITY FUNCTIONS
 // ============================================
 
 function formatDateForDisplay(date) {
@@ -752,7 +776,12 @@ function showAssetRegisterLoadingSpinner(elementId) {
   const colSpan = elementId === 'detailedRegisterBody' ? 11 : 9;
   tbody.innerHTML = `
     <tr>
-      <td colspan="${colSpan}" class="loading-cell">Loading...</td>
+      <td colspan="${colSpan}" class="loading-cell">
+        <div class="table-loader">
+          <div class="spinner-small"></div>
+          <span>Loading...</span>
+        </div>
+      </td>
     </tr>
   `;
 }
@@ -762,6 +791,7 @@ window.printAssetDetailed = function() {
   if (typeof printUtils !== 'undefined' && printUtils.printAssetRegister) {
     printUtils.printAssetRegister('detailedRegister');
   } else {
+    console.error('printUtils not available');
     window.print();
   }
 };
@@ -770,6 +800,7 @@ window.printAssetSummary = function() {
   if (typeof printUtils !== 'undefined' && printUtils.printAssetRegister) {
     printUtils.printAssetRegister('summaryRegister');
   } else {
+    console.error('printUtils not available');
     window.print();
   }
 };
