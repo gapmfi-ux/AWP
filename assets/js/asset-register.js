@@ -453,14 +453,18 @@ function recalculateSummaryRegister() {
 }
 
 function renderSummaryRegisterFromReport(report) {
-  const tbody = document.getElementById('summaryDetailsBody');
-  if (!tbody) return;
-
-  if (!report.summaryByType || Object.keys(report.summaryByType).length === 0) {
-    showAssetRegisterEmptyState('summaryDetailsBody', 'No assets found for the selected period', 9);
-    return;
+  // Make sure the container exists
+  let container = document.getElementById('summaryDetailsContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'summaryDetailsContainer';
+    const summaryTableDiv = document.getElementById('summaryRegisterTable');
+    if (summaryTableDiv) {
+      summaryTableDiv.appendChild(container);
+    }
   }
-
+  
+  const tbody = document.getElementById('summaryDetailsBody');
   const summaryByType = report.summaryByType;
   const total = report.totalSummary;
   
