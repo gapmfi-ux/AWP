@@ -30,12 +30,12 @@ function handleNewCategoryChange() {
     addNewFields.style.display = 'block';
     generateCategoryCode();
   } else if (select.value) {
-    // Selected existing category - show the next inventory code
+    // Selected existing category - fetch the next inventory code
     addNewFields.style.display = 'none';
     displayNextInventoryCode(select.value);
   } else {
     addNewFields.style.display = 'none';
-    codeDisplay.innerHTML = '<span class="code-placeholder">Select category</span>';
+    codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
     document.getElementById('categoryName').value = '';
     document.getElementById('categoryCode').value = '';
     document.getElementById('categoryDescription').value = '';
@@ -43,14 +43,39 @@ function handleNewCategoryChange() {
 }
 
 function displayNextInventoryCode(mainCode) {
-  console.log('Displaying next inventory code for main code:', mainCode);
+  console.log('Fetching next inventory code for main code:', mainCode);
   
-  const nextInventoryCode = mainCode + '001';
-  const codeDisplay = document.getElementById('generatedCodeDisplay');
-  if (codeDisplay) {
-    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextInventoryCode + '</span>';
-    console.log('Updated code display to:', nextInventoryCode);
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    const codeDisplay = document.getElementById('generatedCodeDisplay');
+    if (codeDisplay) {
+      codeDisplay.innerHTML = '<span class="code-placeholder">Error loading code</span>';
+    }
+    return;
   }
+  
+  // Create a dummy request to call getNextInventoryCode through API
+  // We'll use the request method directly
+  API.request('getNextInventoryCode', { mainCode: mainCode })
+    .then(function(response) {
+      console.log('Next inventory code response:', response);
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      
+      if (response && codeDisplay) {
+        const nextCode = String(response).trim();
+        codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+        console.log('Updated code display to:', nextCode);
+      } else {
+        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+      }
+    })
+    .catch(function(error) {
+      console.error('Error fetching next inventory code:', error);
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      if (codeDisplay) {
+        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+      }
+    });
 }
 
 function generateCategoryCode() {
@@ -79,7 +104,7 @@ function generateCategoryCode() {
         
         field.value = mainCode;
         
-        // Display the generated code with 001 suffix
+        // Display the generated code with 001 suffix (new code, so always 001)
         const inventoryCode = mainCode + '001';
         if (codeDisplay) {
           codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
