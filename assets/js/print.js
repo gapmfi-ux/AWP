@@ -26,44 +26,254 @@ const printUtils = {
     });
   },
 
+  // Escape HTML to prevent XSS
+  escapeHtml: function(str) {
+    if (!str) return '';
+    return str
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  },
+
+  // Get print styles
+  getPrintStyles: function() {
+    return `
+      <style>
+        * {
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        
+        body {
+          font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+          padding: 15mm;
+          font-size: 11px;
+          line-height: 1.4;
+          color: #2d3748;
+          background: white;
+        }
+        
+        /* Report Header */
+        .print-report-header {
+          text-align: center;
+          margin-bottom: 20px;
+          border-bottom: 2px solid #4361ee;
+          padding-bottom: 15px;
+        }
+        
+        .print-report-header h1 {
+          font-size: 20px;
+          color: #2d3748;
+          margin-bottom: 8px;
+          font-weight: 600;
+          letter-spacing: 1px;
+        }
+        
+        .print-report-header .date-info {
+          font-size: 10px;
+          color: #718096;
+          margin-top: 8px;
+          padding-top: 5px;
+          border-top: 1px dashed #e2e8f0;
+        }
+        
+        /* Table Styles */
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-top: 15px;
+          font-size: 10px;
+        }
+        
+        .print-table th {
+          background: #f7fafc;
+          padding: 10px 8px;
+          border: 1px solid #cbd5e0;
+          text-align: center;
+          font-weight: 700;
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: #2d3748;
+        }
+        
+        .print-table td {
+          padding: 8px;
+          border: 1px solid #e2e8f0;
+          text-align: center;
+          font-size: 10px;
+          color: #4a5568;
+        }
+        
+        .print-table tbody tr:hover td {
+          background: #f9fafb;
+        }
+        
+        .print-table tbody tr:nth-child(even) {
+          background: #fafbfc;
+        }
+        
+        /* Total Row Styles */
+        .total-row {
+          background: #e8f8f3 !important;
+          font-weight: 700;
+        }
+        
+        .total-row td {
+          background: #e8f8f3 !important;
+          color: #118d57 !important;
+          font-weight: 700;
+          border: 1px solid #06d6a0;
+        }
+        
+        .total-cell {
+          background: #d0f0e6 !important;
+          font-weight: 700;
+          color: #06d6a0 !important;
+        }
+        
+        /* Subtotal Row for Grouped Reports */
+        .subtotal-row {
+          background: #f0f4ff !important;
+          font-weight: 600;
+        }
+        
+        .subtotal-row td {
+          background: #f0f4ff !important;
+          color: #4361ee !important;
+          border: 1px solid #4361ee;
+        }
+        
+        .grand-total-row {
+          background: #e8f8f3 !important;
+          font-weight: 700;
+        }
+        
+        .grand-total-row td {
+          background: #e8f8f3 !important;
+          color: #118d57 !important;
+          border: 1px solid #06d6a0;
+        }
+        
+        /* Grouped Report Styles */
+        .grouped-report {
+          margin-bottom: 20px;
+          page-break-inside: avoid;
+        }
+        
+        .group-title {
+          font-size: 13px;
+          font-weight: 700;
+          background: linear-gradient(135deg, #4361ee, #7209b7);
+          color: white;
+          padding: 10px 15px;
+          margin: 15px 0 0 0;
+          border-radius: 6px 6px 0 0;
+        }
+        
+        .group-table-wrapper {
+          border: 1px solid #e2e8f0;
+          border-top: none;
+          border-radius: 0 0 6px 6px;
+          overflow-x: auto;
+        }
+        
+        /* Print-specific adjustments */
+        @media print {
+          body {
+            padding: 10mm;
+          }
+          
+          .print-table th,
+          .print-table td {
+            border: 1px solid #ddd;
+          }
+          
+          .grouped-report {
+            break-inside: avoid;
+            page-break-inside: avoid;
+          }
+          
+          .no-print {
+            display: none;
+          }
+        }
+        
+        /* Utility Classes */
+        .text-right {
+          text-align: right;
+        }
+        
+        .text-left {
+          text-align: left;
+        }
+        
+        .text-center {
+          text-align: center;
+        }
+        
+        .font-bold {
+          font-weight: 700;
+        }
+      </style>
+    `;
+  },
+
   // Print any table with title and date info
   printTable: function(tableId, title, dateInfo = '', options = {}) {
+    console.log('printTable called with:', { tableId, title, dateInfo });
+    
     const tableWrapper = document.getElementById(tableId);
     if (!tableWrapper) {
       console.error('Table wrapper not found:', tableId);
-      alert('Report data not found. Please refresh and try again.');
+      alert('Report data not found. Please ensure data is loaded.');
       return;
     }
 
     const originalTable = tableWrapper.querySelector('table');
     if (!originalTable) {
       console.error('Table not found in wrapper:', tableId);
-      alert('Table not found. Please refresh and try again.');
+      alert('Table not found. Please ensure data is loaded.');
       return;
     }
+
+    console.log('Found table:', originalTable);
 
     // Clone the table
     const tableClone = originalTable.cloneNode(true);
     
     // Remove action buttons column if present (last column with Action button)
-    const actionColumn = tableClone.querySelector('th:last-child');
-    if (actionColumn && (actionColumn.textContent.includes('Action') || actionColumn.textContent.includes('action'))) {
-      // Remove last column from header
-      const headerRow = tableClone.querySelector('thead tr');
-      if (headerRow && headerRow.lastElementChild) {
-        headerRow.removeChild(headerRow.lastElementChild);
+    const headerCells = tableClone.querySelectorAll('thead th');
+    let actionColumnIndex = -1;
+    
+    headerCells.forEach((th, index) => {
+      if (th.textContent.toLowerCase().includes('action')) {
+        actionColumnIndex = index;
       }
-      // Remove last column from each row in tbody
+    });
+
+    if (actionColumnIndex >= 0) {
+      // Remove header
+      const headerRow = tableClone.querySelector('thead tr');
+      if (headerRow && headerRow.cells[actionColumnIndex]) {
+        headerRow.deleteCell(actionColumnIndex);
+      }
+      
+      // Remove from all body rows
       tableClone.querySelectorAll('tbody tr').forEach(row => {
-        if (row.lastElementChild && !row.classList.contains('total-row')) {
-          row.removeChild(row.lastElementChild);
+        if (row.cells[actionColumnIndex]) {
+          row.deleteCell(actionColumnIndex);
         }
       });
-      // Remove last column from tfoot if exists
+      
+      // Remove from footer rows
       if (tableClone.querySelector('tfoot')) {
         tableClone.querySelectorAll('tfoot tr').forEach(row => {
-          if (row.lastElementChild) {
-            row.removeChild(row.lastElementChild);
+          if (row.cells[actionColumnIndex]) {
+            row.deleteCell(actionColumnIndex);
           }
         });
       }
@@ -78,174 +288,8 @@ const printUtils = {
       <head>
         <title>${this.escapeHtml(title)}</title>
         <meta charset="UTF-8">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            padding: 15mm;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #2d3748;
-            background: white;
-          }
-          
-          /* Report Header */
-          .print-report-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4361ee;
-            padding-bottom: 15px;
-          }
-          
-          .print-report-header h1 {
-            font-size: 20px;
-            color: #2d3748;
-            margin-bottom: 8px;
-            font-weight: 600;
-            letter-spacing: 1px;
-          }
-          
-          .print-report-header .date-info {
-            font-size: 10px;
-            color: #718096;
-            margin-top: 8px;
-            padding-top: 5px;
-            border-top: 1px dashed #e2e8f0;
-          }
-          
-          /* Table Styles */
-          .print-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-            font-size: 10px;
-          }
-          
-          .print-table th {
-            background: #f7fafc;
-            padding: 10px 8px;
-            border: 1px solid #cbd5e0;
-            text-align: center;
-            font-weight: 700;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: #2d3748;
-          }
-          
-          .print-table td {
-            padding: 8px;
-            border: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 10px;
-            color: #4a5568;
-          }
-          
-          .print-table tr:hover td {
-            background: #f9fafb;
-          }
-          
-          /* Total Row Styles */
-          .total-row {
-            background: #e8f8f3 !important;
-            font-weight: 700;
-          }
-          
-          .total-row td {
-            background: #e8f8f3 !important;
-            color: #118d57 !important;
-            font-weight: 700;
-          }
-          
-          .total-cell {
-            background: #d0f0e6 !important;
-            font-weight: 700;
-            color: #06d6a0 !important;
-          }
-          
-          /* Subtotal Row for Grouped Reports */
-          .subtotal-row {
-            background: #f0f4ff !important;
-            font-weight: 600;
-          }
-          
-          .subtotal-row td {
-            background: #f0f4ff !important;
-            color: #4361ee !important;
-          }
-          
-          .grand-total-row {
-            background: #e8f8f3 !important;
-            font-weight: 700;
-          }
-          
-          .grand-total-row td {
-            background: #e8f8f3 !important;
-            color: #118d57 !important;
-          }
-          
-          /* Grouped Report Styles */
-          .grouped-report {
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-          }
-          
-          .group-title {
-            font-size: 13px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #4361ee, #7209b7);
-            color: white;
-            padding: 10px 15px;
-            margin: 15px 0 0 0;
-            border-radius: 6px 6px 0 0;
-          }
-          
-          .group-table-wrapper {
-            border: 1px solid #e2e8f0;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            overflow-x: auto;
-          }
-          
-          /* Print-specific adjustments */
-          @media print {
-            body {
-              padding: 10mm;
-            }
-            
-            .print-table th,
-            .print-table td {
-              border: 1px solid #ddd;
-            }
-            
-            .grouped-report {
-              break-inside: avoid;
-              page-break-inside: avoid;
-            }
-          }
-          
-          /* Utility Classes */
-          .text-right {
-            text-align: right;
-          }
-          
-          .text-left {
-            text-align: left;
-          }
-          
-          .text-center {
-            text-align: center;
-          }
-          
-          .font-bold {
-            font-weight: 700;
-          }
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${this.getPrintStyles()}
       </head>
       <body>
         <div class="print-report-header">
@@ -256,47 +300,46 @@ const printUtils = {
           </div>
         </div>
         
-        ${this.convertTableToHtml(tableClone, 'print-table')}
+        <div class="print-table-container">
+          ${tableClone.outerHTML}
+        </div>
       </body>
       </html>
     `;
 
+    console.log('Opening print window with content length:', printContent.length);
+
     // Open print window
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=900,height=600');
+    if (!printWindow) {
+      alert('Please disable your browser popup blocker to print.');
+      return;
+    }
+
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
     
     // Wait for content to load then print
     setTimeout(() => {
-      printWindow.print();
-      setTimeout(() => {
-        printWindow.close();
-      }, 1000);
-    }, 500);
-  },
-
-  // Convert table to HTML with proper classes
-  convertTableToHtml: function(table, className) {
-    const clone = table.cloneNode(true);
-    clone.className = className;
-    
-    // Fix number formatting in cells
-    clone.querySelectorAll('td').forEach(cell => {
-      const text = cell.textContent;
-      // Check if it looks like a number with commas
-      if (text && /^[\d,]+\.\d{2}$/.test(text)) {
-        // Keep as is - already formatted
+      try {
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 500);
+      } catch(e) {
+        console.error('Print error:', e);
       }
-    });
-    
-    return clone.outerHTML;
+    }, 300);
   },
 
   // Print container report (for grouped reports)
   printContainerReport: function(containerId, title, dateInfo) {
+    console.log('printContainerReport called with:', { containerId, title, dateInfo });
+    
     const container = document.getElementById(containerId);
     if (!container) {
+      console.error('Container not found:', containerId);
       alert('Report data not found');
       return;
     }
@@ -310,119 +353,8 @@ const printUtils = {
       <head>
         <title>${this.escapeHtml(title)}</title>
         <meta charset="UTF-8">
-        <style>
-          * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-          }
-          
-          body {
-            font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-            padding: 15mm;
-            font-size: 11px;
-            line-height: 1.4;
-            color: #2d3748;
-            background: white;
-          }
-          
-          .print-report-header {
-            text-align: center;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #4361ee;
-            padding-bottom: 15px;
-          }
-          
-          .print-report-header h1 {
-            font-size: 20px;
-            color: #2d3748;
-            margin-bottom: 8px;
-            font-weight: 600;
-          }
-          
-          .print-report-header .date-info {
-            font-size: 10px;
-            color: #718096;
-            margin-top: 8px;
-            padding-top: 5px;
-            border-top: 1px dashed #e2e8f0;
-          }
-          
-          .grouped-report {
-            margin-bottom: 20px;
-            page-break-inside: avoid;
-          }
-          
-          .group-title {
-            font-size: 13px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #4361ee, #7209b7);
-            color: white;
-            padding: 10px 15px;
-            margin: 15px 0 0 0;
-            border-radius: 6px 6px 0 0;
-          }
-          
-          .group-table-wrapper {
-            border: 1px solid #e2e8f0;
-            border-top: none;
-            border-radius: 0 0 6px 6px;
-            overflow-x: auto;
-          }
-          
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-          }
-          
-          th {
-            background: #f7fafc;
-            padding: 8px 6px;
-            border: 1px solid #cbd5e0;
-            text-align: center;
-            font-weight: 700;
-            font-size: 9px;
-            text-transform: uppercase;
-          }
-          
-          td {
-            padding: 6px;
-            border: 1px solid #e2e8f0;
-            text-align: center;
-            font-size: 9px;
-          }
-          
-          .subtotal-row {
-            background: #f0f4ff !important;
-            font-weight: 600;
-          }
-          
-          .subtotal-row td {
-            background: #f0f4ff !important;
-            color: #4361ee !important;
-          }
-          
-          .grand-total-row {
-            background: #e8f8f3 !important;
-            font-weight: 700;
-          }
-          
-          .grand-total-row td {
-            background: #e8f8f3 !important;
-            color: #118d57 !important;
-          }
-          
-          @media print {
-            body {
-              padding: 10mm;
-            }
-            .grouped-report {
-              break-inside: avoid;
-              page-break-inside: avoid;
-            }
-          }
-        </style>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${this.getPrintStyles()}
       </head>
       <body>
         <div class="print-report-header">
@@ -438,32 +370,32 @@ const printUtils = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open('', '_blank', 'width=900,height=600');
+    if (!printWindow) {
+      alert('Please disable your browser popup blocker to print.');
+      return;
+    }
+
     printWindow.document.write(printContent);
     printWindow.document.close();
     printWindow.focus();
     
     setTimeout(() => {
-      printWindow.print();
-      setTimeout(() => {
-        printWindow.close();
-      }, 1000);
-    }, 500);
-  },
-
-  // Escape HTML to prevent XSS
-  escapeHtml: function(str) {
-    if (!str) return '';
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      try {
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 500);
+      } catch(e) {
+        console.error('Print error:', e);
+      }
+    }, 300);
   },
 
   // Print inventory report
   printInventoryReport: function(tabId) {
+    console.log('printInventoryReport called for tab:', tabId);
+    
     let title = '';
     let dateInfo = '';
     let tableId = '';
@@ -493,11 +425,14 @@ const printUtils = {
       }
     }
 
+    console.log('Printing with tableId:', tableId);
     this.printTable(tableId, title, dateInfo);
   },
 
   // Print asset register
   printAssetRegister: function(tabName) {
+    console.log('printAssetRegister called for tab:', tabName);
+    
     if (tabName === 'detailedRegister') {
       const title = 'DETAILED ASSET REGISTER';
       const asAtDate = document.getElementById('detailedToDate')?.value || '';
@@ -514,6 +449,8 @@ const printUtils = {
 
   // Print investment report
   printInvestmentReport: function(tabName) {
+    console.log('printInvestmentReport called for tab:', tabName);
+    
     let title = '';
     let tableId = '';
     let dateInfo = '';
@@ -526,6 +463,7 @@ const printUtils = {
       if (fromDate && toDate) {
         dateInfo = `Period: ${fromDate} to ${toDate}`;
       }
+      console.log('Calling printTable with:', { tableId, title, dateInfo });
       this.printTable(tableId, title, dateInfo);
     } else if (tabName === 'fullReport') {
       title = 'INVESTMENT FULL REPORT';
@@ -549,6 +487,89 @@ const printUtils = {
       dateInfo = `As at: ${toDate}`;
       this.printTable(tableId, title, dateInfo);
     }
+  },
+
+  // Generic print message function
+  showMessage: function(message, type) {
+    const types = {
+      success: '#06d6a0',
+      error: '#ef476f',
+      info: '#4361ee',
+      warning: '#f59e0b'
+    };
+
+    const color = types[type] || types.info;
+    
+    // Create simple alert
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      color: ${color};
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 9999;
+      font-weight: 600;
+      max-width: 400px;
+    `;
+    alertDiv.textContent = message;
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+      alertDiv.remove();
+    }, 3000);
+  },
+
+  // Generic loading function
+  showLoading: function(message) {
+    let modal = document.getElementById('printLoadingModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'printLoadingModal';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9998;
+      ">
+        <div style="
+          background: white;
+          padding: 30px;
+          border-radius: 12px;
+          text-align: center;
+        ">
+          <div style="
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #4361ee;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+          "></div>
+          <p style="margin: 0; color: #2d3748;">${message}</p>
+        </div>
+      </div>
+    `;
+  },
+
+  // Hide loading
+  hideLoading: function() {
+    const modal = document.getElementById('printLoadingModal');
+    if (modal) modal.remove();
   }
 };
 
