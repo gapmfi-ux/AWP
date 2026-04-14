@@ -778,5 +778,75 @@ const printUtils = {
   }
 };
 
+  // Print investment grouped report - WITH LANDSCAPE OPTION
+  printInvestmentGroupedReport: function(containerId, title, dateInfo) {
+    console.log('printInvestmentGroupedReport called with:', { containerId, title, dateInfo });
+    
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('Container not found:', containerId);
+      alert('Report container not found. Please generate the report first.');
+      return;
+    }
+
+    // Get all the HTML from the container
+    const containerHTML = container.innerHTML;
+    if (!containerHTML || containerHTML.trim() === '') {
+      console.error('Container is empty:', containerId);
+      alert('Report is empty. Please generate the report first.');
+      return;
+    }
+
+    const dateTime = this.getPrintDateTime();
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${this.escapeHtml(title)}</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${this.getPrintStyles()}
+      </head>
+      <body>
+        <div class="print-report-header">
+          <h1>${this.escapeHtml(title)}</h1>
+          <div class="date-info">
+            ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
+            <div>Printed: ${dateTime.full}</div>
+          </div>
+        </div>
+        
+        ${containerHTML}
+      </body>
+      </html>
+    `;
+
+    console.log('Opening print window with content length:', printContent.length);
+
+    const printWindow = window.open('', '_blank', 'width=1200,height=700');
+    if (!printWindow) {
+      alert('Please disable your browser popup blocker to print.');
+      return;
+    }
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      try {
+        // Give user time to change orientation before printing
+        alert('Adjust page orientation (Portrait/Landscape) in Print Settings if needed before clicking OK');
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 500);
+      } catch(e) {
+        console.error('Print error:', e);
+      }
+    }, 300);
+  },
+
 // Make printUtils available globally
 window.printUtils = printUtils;
