@@ -57,7 +57,7 @@ const printUtils = {
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
           padding: 10mm;
-          font-size: 8.96px;
+          font-size: 8px;
           line-height: 1.2;
           color: #2d3748;
           background: white;
@@ -72,7 +72,7 @@ const printUtils = {
         }
         
         .print-report-header h1 {
-          font-size: 17.92px;
+          font-size: 16px;
           color: #2d3748;
           margin: 0;
           font-weight: 600;
@@ -80,7 +80,7 @@ const printUtils = {
         }
         
         .print-report-header .date-info {
-          font-size: 8.96px;
+          font-size: 8px;
           color: #718096;
           margin-top: 4px;
           padding-top: 2px;
@@ -96,7 +96,7 @@ const printUtils = {
           width: 100%;
           border-collapse: collapse;
           margin-top: 8px;
-          font-size: 8.96px;
+          font-size: 8px;
         }
         
         th {
@@ -105,7 +105,7 @@ const printUtils = {
           border: 1px solid #cbd5e0;
           text-align: center;
           font-weight: 700;
-          font-size: 8.96px;
+          font-size: 8px;
           text-transform: uppercase;
           letter-spacing: 0.2px;
           color: #2d3748;
@@ -115,7 +115,7 @@ const printUtils = {
           padding: 3px 2px;
           border: 1px solid #e2e8f0;
           text-align: center;
-          font-size: 8.96px;
+          font-size: 8px;
           color: #4a5568;
         }
         
@@ -125,7 +125,7 @@ const printUtils = {
         
         /* Group Title */
         .group-title {
-          font-size: 11.2px;
+          font-size: 10px;
           font-weight: 700;
           background: linear-gradient(135deg, #4361ee, #7209b7);
           color: white;
@@ -235,7 +235,7 @@ const printUtils = {
             padding: 8mm;
             width: 100%;
             height: 100%;
-            font-size: 8.96px;
+            font-size: 8px;
             background: white !important;
           }
           
