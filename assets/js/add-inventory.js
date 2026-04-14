@@ -184,7 +184,14 @@ function submitNewInventory() {
       hideInventoryLoadingModal();
       
       if (response && response.success) {
-        showInventoryMessage('✓ Inventory added successfully!', 'success');
+        let message = '✓ Inventory added successfully!\n';
+        message += 'Code: ' + response.fullCode;
+        
+        if (response.wasMerged) {
+          message += '\n\n(Same price detected - merged with existing 001)';
+        }
+        
+        showInventoryMessage(message, 'success');
         setTimeout(function() {
           resetInventoryForm();
         }, 1500);
