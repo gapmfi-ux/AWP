@@ -37,7 +37,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get print styles
+  // Get print styles - NO TIMESTAMP, LANDSCAPE/PORTRAIT SUPPORT
   getPrintStyles: function() {
     return `
       <style>
@@ -173,6 +173,7 @@ const printUtils = {
           text-align: right;
         }
         
+        /* LANDSCAPE AND PORTRAIT SUPPORT */
         @page {
           margin: 0.5in;
           size: A4;
@@ -188,6 +189,7 @@ const printUtils = {
             margin: 0;
             padding: 0.5in;
             width: 100%;
+            height: 100%;
           }
           
           body {
@@ -196,6 +198,7 @@ const printUtils = {
           
           table {
             page-break-inside: avoid;
+            width: 100%;
           }
           
           th, td {
@@ -271,7 +274,6 @@ const printUtils = {
     }
 
     const tableClone = originalTable.cloneNode(true);
-    const dateTime = this.getPrintDateTime();
     
     const printContent = `
       <!DOCTYPE html>
@@ -285,10 +287,7 @@ const printUtils = {
       <body>
         <div class="print-report-header">
           <h1>${this.escapeHtml(title)}</h1>
-          <div class="date-info">
-            ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div>Printed: ${dateTime.full}</div>
-          </div>
+          ${dateInfo ? `<div class="date-info"><div>${this.escapeHtml(dateInfo)}</div></div>` : ''}
         </div>
         
         ${tableClone.outerHTML}
@@ -296,7 +295,7 @@ const printUtils = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=1000,height=700');
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
       alert('Please disable popup blocker to print.');
       return;
@@ -332,8 +331,6 @@ const printUtils = {
       return;
     }
 
-    const dateTime = this.getPrintDateTime();
-    
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -346,10 +343,7 @@ const printUtils = {
       <body>
         <div class="print-report-header">
           <h1>${this.escapeHtml(title)}</h1>
-          <div class="date-info">
-            ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div>Printed: ${dateTime.full}</div>
-          </div>
+          ${dateInfo ? `<div class="date-info"><div>${this.escapeHtml(dateInfo)}</div></div>` : ''}
         </div>
         
         ${containerHTML}
@@ -357,7 +351,7 @@ const printUtils = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=1200,height=700');
+    const printWindow = window.open('', '_blank', 'width=1200,height=800');
     if (!printWindow) {
       alert('Please disable popup blocker to print.');
       return;
@@ -420,8 +414,143 @@ const printUtils = {
       const title = 'SUMMARY ASSET REGISTER';
       const toDate = document.getElementById('summaryToDate')?.value || '';
       const dateInfo = toDate ? `As at: ${toDate}` : '';
-      this.printInvestmentTable('summaryDetailsTable', title, dateInfo);
+      
+      // For summary register, print the table directly (not wrapped)
+      const summaryTable = document.getElementById('summaryDetailsTable');
+      if (!summaryTable) {
+        console.error('summaryDetailsTable not found');
+        alert('Summary table not found. Please generate the report first.');
+        return;
+      }
+      
+      const tableClone = summaryTable.cloneNode(true);
+      
+      const printContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>${this.escapeHtml(title)}</title>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          ${this.getPrintStyles()}
+        </head>
+        <body>
+          <div class="print-report-header">
+            <h1>${this.escapeHtml(title)}</h1>
+            ${dateInfo ? `<div class="date-info"><div>${this.escapeHtml(dateInfo)}</div></div>` : ''}
+          </div>
+          
+          ${tableClone.outerHTML}
+        </body>
+        </html>
+      `;
+
+      const printWindow = window.open('', '_blank', 'width=1400,height=800');
+      if (!printWindow) {
+        alert('Please disable popup blocker to print.');
+        return;
+      }
+
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      printWindow.focus();
+      
+      setTimeout(() => {
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 500);
+      }, 300);
     }
+  },
+
+  // Generic print message function
+  showMessage: function(message, type) {
+    const types = {
+      success: '#06d6a0',
+      error: '#ef476f',
+      info: '#4361ee',
+      warning: '#f59e0b'
+    };
+
+    const color = types[type] || types.info;
+    
+    const alertDiv = document.createElement('div');
+    alertDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: white;
+      color: ${color};
+      padding: 15px 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 9999;
+      font-weight: 600;
+      max-width: 400px;
+      border-left: 4px solid ${color};
+    `;
+    alertDiv.textContent = message;
+    document.body.appendChild(alertDiv);
+
+    setTimeout(() => {
+      alertDiv.remove();
+    }, 3000);
+  },
+
+  // Generic loading function
+  showLoading: function(message) {
+    let modal = document.getElementById('printLoadingModal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'printLoadingModal';
+      document.body.appendChild(modal);
+    }
+
+    modal.innerHTML = `
+      <div style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9998;
+      ">
+        <div style="
+          background: white;
+          padding: 30px;
+          border-radius: 12px;
+          text-align: center;
+        ">
+          <div style="
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #4361ee;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+          "></div>
+          <p style="margin: 0; color: #2d3748; font-size: 14px;">${this.escapeHtml(message)}</p>
+        </div>
+        <style>
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        </style>
+      </div>
+    `;
+  },
+
+  // Hide loading
+  hideLoading: function() {
+    const modal = document.getElementById('printLoadingModal');
+    if (modal) modal.remove();
   }
 };
 
