@@ -1,3 +1,11 @@
+/* ============================================
+   ADD INVENTORY MODULE JAVASCRIPT
+   Using API wrapper (JSONP)
+   ============================================ */
+
+// ============================================
+// INITIALIZATION
+// ============================================
 
 function initInventoryModule() {
   console.log('Initializing Add Inventory Module');
@@ -57,14 +65,28 @@ function displayNextInventoryCode(mainCode) {
   // Call API to get the next inventory code
   API.getNextInventoryCode(mainCode)
     .then(function(response) {
-      console.log('Next inventory code response:', response);
+      console.log('Full response:', response);
+      console.log('Response type:', typeof response);
+      
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
       if (response && codeDisplay) {
-        const nextCode = String(response).trim();
+        // Handle if response is wrapped in an object
+        let nextCode = response;
+        if (typeof response === 'object' && response.result) {
+          nextCode = response.result;
+        }
+        
+        nextCode = String(nextCode).trim();
         console.log('Next code to display:', nextCode);
-        codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
-        console.log('Updated code display to:', nextCode);
+        
+        if (nextCode && nextCode !== 'undefined' && nextCode !== '') {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+          console.log('✓ Updated code display to:', nextCode);
+        } else {
+          console.log('Invalid code response:', nextCode);
+          codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        }
       } else {
         console.log('No response or codeDisplay not found');
         if (codeDisplay) {
@@ -76,10 +98,11 @@ function displayNextInventoryCode(mainCode) {
       console.error('Error fetching next inventory code:', error);
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       if (codeDisplay) {
-        codeDisplay.innerHTML = '<span class="code-placeholder">Error</span>';
+        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
       }
     });
 }
+
 function generateCategoryCode() {
   console.log('Generating inventory category code via API');
   
@@ -124,16 +147,6 @@ function generateCategoryCode() {
     });
 }
 
-function displayNextInventoryCode(mainCode) {
-  console.log('Displaying next inventory code for main code:', mainCode);
-  
-  const nextInventoryCode = mainCode + '001';
-  const codeDisplay = document.getElementById('generatedCodeDisplay');
-  if (codeDisplay) {
-    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextInventoryCode + '</span>';
-    console.log('Updated code display to:', nextInventoryCode);
-  }
-}
 function loadExistingCategories() {
   console.log('Loading existing categories via API');
   
@@ -286,7 +299,7 @@ function resetInventoryForm() {
   document.getElementById('categoryName').value = '';
   document.getElementById('categoryDescription').value = '';
   document.getElementById('newUnitPrice').value = '';
-  document.getElementById('generatedCodeDisplay').innerHTML = '<span class="code-placeholder">Select category</span>';
+  document.getElementById('generatedCodeDisplay').innerHTML = '<span class="code-placeholder">-</span>';
   
   // Reload categories to include newly added one
   loadExistingCategories();
