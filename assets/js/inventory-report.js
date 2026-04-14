@@ -1,3 +1,6 @@
+/* ============================================
+   INVENTORY REPORT MODULE JAVASCRIPT
+   ============================================ */
 
 // Global variables for inventory module
 let inventoryPortalOpen = false;
@@ -330,7 +333,7 @@ function renderInventoryListTable(data) {
   if (!tbody) return;
   
   if (!data || data.length === 0) {
-    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 6);
+    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 7);
     return;
   }
 
@@ -398,6 +401,7 @@ function renderInventoryListTable(data) {
 
   tbody.innerHTML = rows + totalRow;
 }
+
 // ============================================
 // ACTION DROPDOWN
 // ============================================
@@ -514,7 +518,7 @@ function submitUsageRecord() {
     return;
   }
 
-  showInventoryLoadingModal('Recording usage...');
+  showInventoryLoadingModal('Recording usage and checking FIFO...');
 
   const usageCost = quantityUsed * currentUsageItem.unitCost;
 
@@ -556,7 +560,7 @@ function submitUsageRecord() {
       hideInventoryLoadingModal();
       showInventoryMessage('Error recording usage: ' + (error.message || error), 'error');
     })
-    .recordInventoryUsage({ formData: JSON.stringify(formData) });
+    .recordInventoryUsage(formData);
 }
 
 function showSuccessModalUsage(message, callback) {
@@ -569,12 +573,16 @@ function showSuccessModalUsage(message, callback) {
     document.body.appendChild(modal);
   }
   
+  const htmlMessage = message.split('\n').map(function(line) {
+    return escapeHtml(line);
+  }).join('<br>');
+  
   modal.innerHTML = `
     <div class="success-modal-content-usage">
       <div class="success-modal-icon-usage">
         <i class="fas fa-check-circle"></i>
       </div>
-      <div class="success-modal-message-usage">${escapeHtml(message)}</div>
+      <div class="success-modal-message-usage">${htmlMessage}</div>
       <button class="success-modal-btn-usage" onclick="closeSuccessModalUsage(true)">
         Close
       </button>
@@ -597,68 +605,6 @@ function closeSuccessModalUsage(executeCallback) {
   }
 }
 
-// Add this CSS at the end of the file in a script tag or in your main CSS
-const usageModalStyle = document.createElement('style');
-usageModalStyle.textContent = `
-  .success-modal-usage {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-  }
-
-  .success-modal-content-usage {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    max-width: 380px;
-    text-align: center;
-    animation: slideIn 0.3s ease-out;
-  }
-
-  .success-modal-icon-usage {
-    margin-bottom: 15px;
-  }
-
-  .success-modal-icon-usage i {
-    font-size: 50px;
-    color: #06d6a0;
-  }
-
-  .success-modal-message-usage {
-    font-size: 14px;
-    color: #2d3748;
-    line-height: 1.6;
-    margin-bottom: 20px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
-  }
-
-  .success-modal-btn-usage {
-    padding: 10px 28px;
-    background: linear-gradient(135deg, #4361ee, #7209b7);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s;
-  }
-
-  .success-modal-btn-usage:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
-  }
-`;
-document.head.appendChild(usageModalStyle);
 // ============================================
 // REMOVE INVENTORY
 // ============================================
@@ -818,3 +764,83 @@ window.submitUsageRecord = submitUsageRecord;
 window.removeInventoryItem = removeInventoryItem;
 window.showSuccessModalUsage = showSuccessModalUsage;
 window.closeSuccessModalUsage = closeSuccessModalUsage;
+
+/* Add CSS for success modal */
+const usageModalStyle = document.createElement('style');
+usageModalStyle.textContent = `
+  .success-modal-usage {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+  }
+
+  .success-modal-content-usage {
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    max-width: 380px;
+    text-align: center;
+    animation: slideInUsage 0.3s ease-out;
+  }
+
+  @keyframes slideInUsage {
+    from {
+      transform: translateY(-30px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  .success-modal-icon-usage {
+    margin-bottom: 15px;
+  }
+
+  .success-modal-icon-usage i {
+    font-size: 50px;
+    color: #06d6a0;
+  }
+
+  .success-modal-message-usage {
+    font-size: 14px;
+    color: #2d3748;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .success-modal-btn-usage {
+    padding: 10px 28px;
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.3s;
+  }
+
+  .success-modal-btn-usage:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+  }
+
+  .report-table td.text-right {
+    text-align: right;
+  }
+
+  .report-table td.text-center {
+    text-align: center;
+  }
+`;
+document.head.appendChild(usageModalStyle);
