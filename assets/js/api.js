@@ -155,7 +155,10 @@ class ApiService {
   async removeInventory(inventoryCode, options = {}) {
     return this.request('removeInventory', { inventoryCode }, options);
   }
-
+async getNextInventoryCode(mainCode, options = {}) {
+  this.log('getNextInventoryCode called for:', mainCode);
+  return this.request('getNextInventoryCode', { mainCode: mainCode }, options);
+}
   // ============================================
   // FIXED ASSETS API
   // ============================================
@@ -279,6 +282,7 @@ window.callGAS = async function(action, data = {}) {
     'getInventoryListData': () => API.getInventoryListData(),
     'recordInventoryUsage': () => API.recordInventoryUsage(data),
     'removeInventory': () => API.removeInventory(data.inventoryCode),
+    'getNextInventoryCode': () => API.getNextInventoryCode(data.mainCode),
     'generateAssetCode': () => API.generateAssetCode(data.assetType),
     'addNewAsset': () => API.addNewAsset(data),
     'getDetailedRegister': () => API.getDetailedRegister(),
