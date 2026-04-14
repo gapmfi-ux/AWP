@@ -333,7 +333,7 @@ function renderInventoryListTable(data) {
   if (!tbody) return;
   
   if (!data || data.length === 0) {
-    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 7);
+    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 6);
     return;
   }
 
@@ -359,25 +359,30 @@ function renderInventoryListTable(data) {
     });
     
     items.forEach(function(row, index) {
-      const unitCost = parseFloat(row.unitCost) || 0;
+      // Ensure proper data extraction
+      const inventoryCode = String(row.inventoryCode || '').trim();
+      const categoryName = String(row.categoryName || '').trim();
+      const description = String(row.description || '').trim();
       const quantity = parseInt(row.quantity) || 0;
+      const unitCost = parseFloat(row.unitCost) || 0;
       const totalCost = quantity * unitCost;
       
       totalInventoryCost += totalCost;
       
-      const subCodeDisplay = String(row.subCode).padStart(3, '0');
-      const statusBadge = quantity > 0 ? '<span style="color: #06d6a0;">●</span>' : '<span style="color: #ef476f;">●</span>';
+      const statusBadge = quantity > 0 ? '<span style="color: #06d6a0; font-size: 14px;">●</span>' : '<span style="color: #ef476f; font-size: 14px;">●</span>';
+      
+      console.log('Row data:', { inventoryCode, categoryName, description, quantity, unitCost });
       
       rows += `
         <tr>
-          <td><strong>${escapeHtml(row.inventoryCode)} ${statusBadge}</strong></td>
-          <td>${escapeHtml(row.categoryName)}</td>
-          <td>${escapeHtml(row.description)}</td>
-          <td>${quantity}</td>
-          <td>${formatCurrency(unitCost)}</td>
-          <td>${formatCurrency(totalCost)}</td>
+          <td><strong>${escapeHtml(inventoryCode)} ${statusBadge}</strong></td>
+          <td>${escapeHtml(categoryName)}</td>
+          <td>${escapeHtml(description)}</td>
+          <td class="text-right">${quantity}</td>
+          <td class="text-right">${formatCurrency(unitCost)}</td>
+          <td class="text-right">${formatCurrency(totalCost)}</td>
           <td>
-            <button class="action-btn" onclick="openInventoryActionDropdown(event, '${escapeHtml(row.inventoryCode)}', '${escapeHtml(row.categoryName)}', '${escapeHtml(row.description || '')}', '${escapeHtml(row.mainCode)}', '${row.subCode}', '${quantity}', '${unitCost}')">
+            <button class="action-btn" onclick="openInventoryActionDropdown(event, '${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}', '${escapeHtml(description)}', '${escapeHtml(row.mainCode)}', '${row.subCode}', '${quantity}', '${unitCost}')">
               <i class="fas fa-ellipsis-v"></i>
             </button>
           </td>
@@ -396,7 +401,6 @@ function renderInventoryListTable(data) {
 
   tbody.innerHTML = rows + totalRow;
 }
-
 // ============================================
 // ACTION DROPDOWN
 // ============================================
