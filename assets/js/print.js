@@ -37,7 +37,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get print styles
+  // Get print styles - REMOVES HEADER/FOOTER
   getPrintStyles: function() {
     return `
       <style>
@@ -47,9 +47,14 @@ const printUtils = {
           box-sizing: border-box;
         }
         
+        html, body {
+          margin: 0;
+          padding: 0;
+        }
+        
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 15mm;
+          padding: 12mm;
           font-size: 10px;
           line-height: 1.3;
           color: #2d3748;
@@ -67,7 +72,7 @@ const printUtils = {
         .print-report-header h1 {
           font-size: 18px;
           color: #2d3748;
-          margin-bottom: 5px;
+          margin: 0 0 5px 0;
           font-weight: 600;
           letter-spacing: 1px;
         }
@@ -75,7 +80,7 @@ const printUtils = {
         .print-report-header .date-info {
           font-size: 9px;
           color: #718096;
-          margin-top: 5px;
+          margin: 0;
           padding-top: 3px;
           border-top: 1px dashed #e2e8f0;
         }
@@ -160,6 +165,7 @@ const printUtils = {
           background: #d0f0e6 !important;
           font-weight: 700;
           color: #06d6a0 !important;
+          text-align: right;
         }
         
         .subtotal-row {
@@ -283,19 +289,39 @@ const printUtils = {
           font-weight: 700;
         }
         
-        /* Print-specific adjustments */
+        /* REMOVE BROWSER HEADERS AND FOOTERS */
+        @page {
+          margin: 0;
+          padding: 0;
+          size: A4;
+        }
+        
         @media print {
+          * {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
+          html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+          }
+          
           body {
-            padding: 10mm;
+            padding: 12mm !important;
             font-size: 9px;
           }
           
           table {
             border-collapse: collapse;
+            page-break-inside: avoid;
           }
           
           th, td {
             border: 1px solid #999;
+            page-break-inside: avoid;
           }
           
           .grouped-report {
@@ -308,6 +334,11 @@ const printUtils = {
           
           tfoot {
             display: table-footer-group;
+          }
+          
+          /* Remove browser headers/footers */
+          .noprint {
+            display: none !important;
           }
         }
       </style>
@@ -337,7 +368,7 @@ const printUtils = {
     // Clone the table
     const tableClone = originalTable.cloneNode(true);
     
-    // Remove action buttons column if present (last column with Action button)
+    // Remove action buttons column if present
     const headerCells = tableClone.querySelectorAll('thead th');
     let actionColumnIndex = -1;
     
@@ -373,7 +404,7 @@ const printUtils = {
 
     const dateTime = this.getPrintDateTime();
     
-    // Create complete print window content with full styles
+    // Create print window content
     const printContent = `
       <!DOCTYPE html>
       <html>
@@ -388,7 +419,7 @@ const printUtils = {
           <h1>${this.escapeHtml(title)}</h1>
           <div class="date-info">
             ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div>Printed on: ${dateTime.date} at ${dateTime.time}</div>
+            <div>Printed: ${dateTime.full}</div>
           </div>
         </div>
         
@@ -399,7 +430,7 @@ const printUtils = {
       </html>
     `;
 
-    console.log('Opening print window with content length:', printContent.length);
+    console.log('Opening print window');
 
     // Open print window
     const printWindow = window.open('', '_blank', 'width=900,height=600');
@@ -425,19 +456,31 @@ const printUtils = {
     }, 300);
   },
 
-  // Print container report (for grouped reports)
+  // Print container report (for grouped reports like investments and asset summary)
   printContainerReport: function(containerId, title, dateInfo) {
     console.log('printContainerReport called with:', { containerId, title, dateInfo });
     
     const container = document.getElementById(containerId);
     if (!container) {
       console.error('Container not found:', containerId);
-      alert('Report data not found');
+      alert('Report data not found: ' + containerId);
+      return;
+    }
+
+    // Check if container has content
+    if (!container.innerHTML || container.innerHTML.trim() === '') {
+      console.error('Container is empty:', containerId);
+      alert('Report is empty. Please generate the report first.');
       return;
     }
 
     const content = container.cloneNode(true);
     const dateTime = this.getPrintDateTime();
+    
+    // Clean up the HTML - remove loading spinners, etc
+    content.querySelectorAll('.no-print, .action-btn, [style*="display: none"]').forEach(el => {
+      el.remove();
+    });
     
     const printContent = `
       <!DOCTYPE html>
@@ -453,7 +496,7 @@ const printUtils = {
           <h1>${this.escapeHtml(title)}</h1>
           <div class="date-info">
             ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div>Printed on: ${dateTime.date} at ${dateTime.time}</div>
+            <div>Printed: ${dateTime.full}</div>
           </div>
         </div>
         
@@ -461,6 +504,8 @@ const printUtils = {
       </body>
       </html>
     `;
+
+    console.log('Opening print window with content length:', printContent.length);
 
     const printWindow = window.open('', '_blank', 'width=900,height=600');
     if (!printWindow) {
@@ -517,7 +562,6 @@ const printUtils = {
       }
     }
 
-    console.log('Printing with tableId:', tableId);
     this.printTable(tableId, title, dateInfo);
   },
 
@@ -534,6 +578,7 @@ const printUtils = {
       const title = 'SUMMARY ASSET REGISTER';
       const toDate = document.getElementById('summaryToDate')?.value || '';
       const dateInfo = toDate ? `As at: ${toDate}` : '';
+      console.log('Printing summary register from container');
       this.printContainerReport('summaryDetailsContainer', title, dateInfo);
     }
   },
@@ -544,6 +589,7 @@ const printUtils = {
     
     let title = '';
     let tableId = '';
+    let containerId = '';
     let dateInfo = '';
 
     if (tabName === 'purchaseReport') {
@@ -554,23 +600,24 @@ const printUtils = {
       if (fromDate && toDate) {
         dateInfo = `Period: ${fromDate} to ${toDate}`;
       }
-      console.log('Calling printTable with:', { tableId, title, dateInfo });
       this.printTable(tableId, title, dateInfo);
     } else if (tabName === 'fullReport') {
       title = 'INVESTMENT FULL REPORT';
+      containerId = 'fullReportContainer';
       const toDate = document.getElementById('fullReportToDate')?.value || '';
       if (toDate) {
         dateInfo = `As at: ${toDate}`;
       }
-      this.printContainerReport('fullReportContainer', title, dateInfo);
+      this.printContainerReport(containerId, title, dateInfo);
     } else if (tabName === 'interestReport') {
       title = 'INVESTMENT INTEREST REPORT';
+      containerId = 'interestReportContainer';
       const fromDate = document.getElementById('interestFromDate')?.value || '';
       const toDate = document.getElementById('interestToDate')?.value || '';
       if (fromDate && toDate) {
         dateInfo = `Period: ${fromDate} to ${toDate}`;
       }
-      this.printContainerReport('interestReportContainer', title, dateInfo);
+      this.printContainerReport(containerId, title, dateInfo);
     } else if (tabName === 'maturedReport') {
       title = 'MATURED INVESTMENTS REPORT';
       tableId = 'maturedReportTable';
@@ -591,7 +638,6 @@ const printUtils = {
 
     const color = types[type] || types.info;
     
-    // Create simple alert
     const alertDiv = document.createElement('div');
     alertDiv.style.cssText = `
       position: fixed;
