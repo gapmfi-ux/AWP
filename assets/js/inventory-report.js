@@ -1,6 +1,5 @@
 /* ============================================
    INVENTORY REPORT MODULE JAVASCRIPT
-   Using google.script.run (same pattern as add-asset)
    ============================================ */
 
 // Global variables for inventory module
@@ -30,8 +29,8 @@ function initInventoryReportModule() {
   if (usageToDate) usageToDate.value = today;
   if (inventoryToDate) inventoryToDate.value = today;
 
-  // Load initial data
-  loadPurchaseReport();
+  // Load initial data - Inventory List first (since it's the active tab)
+  loadInventoryList();
   
   // Close dropdown when clicking outside
   document.addEventListener('click', function(event) {
@@ -341,29 +340,50 @@ function renderInventoryListTable(data) {
   let totalInventoryCost = 0;
   let rows = '';
 
-  for (let i = 0; i < data.length; i++) {
-    const row = data[i];
-    const unitCost = parseFloat(row.unitCost) || 0;
-    const quantity = parseInt(row.quantity) || 0;
-    const totalCost = quantity * unitCost;
+  // Group by main code
+  const grouped = {};
+  data.forEach(function(item) {
+    if (!grouped[item.mainCode]) {
+      grouped[item.mainCode] = [];
+    }
+    grouped[item.mainCode].push(item);
+  });
+
+  // Render each main code with sub codes
+  for (const mainCode in grouped) {
+    const items = grouped[mainCode];
     
-    totalInventoryCost += totalCost;
+    // Sort by sub code to ensure 001, 002, 003 order
+    items.sort(function(a, b) {
+      return a.subCode - b.subCode;
+    });
     
-    rows += `
-      <tr>
-        <td>${escapeHtml(row.inventoryCode || '')}</td>
-        <td>${escapeHtml(row.categoryName || '')}</td>
-        <td>${escapeHtml(row.description || '')}</td>
-        <td>${quantity}</td>
-        <td>${formatCurrency(unitCost)}</td>
-        <td>${formatCurrency(totalCost)}</td>
-        <td>
-          <button class="action-btn" onclick="openInventoryActionDropdown(event, '${escapeHtml(row.inventoryCode)}', '${escapeHtml(row.categoryName)}', '${escapeHtml(row.description || '')}', '${quantity}', '${unitCost}')">
-            <i class="fas fa-ellipsis-v"></i> Action
-          </button>
-        </td>
-      </tr>
-    `;
+    items.forEach(function(row, index) {
+      const unitCost = parseFloat(row.unitCost) || 0;
+      const quantity = parseInt(row.quantity) || 0;
+      const totalCost = quantity * unitCost;
+      
+      totalInventoryCost += totalCost;
+      
+      const subCodeDisplay = String(row.subCode).padStart(3, '0');
+      const statusBadge = quantity > 0 ? '<span style="color: #06d6a0;">●</span>' : '<span style="color: #ef476f;">●</span>';
+      
+      rows += `
+        <tr>
+          <td><strong>${escapeHtml(row.inventoryCode)} ${statusBadge}</strong></td>
+          <td>${escapeHtml(row.categoryName)}</td>
+          <td>${escapeHtml(row.description)}</td>
+          <td>${quantity}</td>
+          <td>${formatCurrency(unitCost)}</td>
+          <td>${formatCurrency(totalCost)}</td>
+          <td>
+            <button class="action-btn" onclick="openInventoryActionDropdown(event, '${escapeHtml(row.inventoryCode)}', '${escapeHtml(row.categoryName)}', '${escapeHtml(row.description || '')}', '${escapeHtml(row.mainCode)}', '${row.subCode}', '${quantity}', '${unitCost}')">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </td>
+        </tr>
+      `;
+    });
   }
 
   const totalRow = `
@@ -381,7 +401,7 @@ function renderInventoryListTable(data) {
 // ACTION DROPDOWN
 // ============================================
 
-function openInventoryActionDropdown(event, inventoryCode, categoryName, description, quantity, unitCost) {
+function openInventoryActionDropdown(event, inventoryCode, categoryName, description, mainCode, subCode, quantity, unitCost) {
   closeInventoryActionDropdown();
   
   const button = event.target.closest('button');
@@ -394,7 +414,7 @@ function openInventoryActionDropdown(event, inventoryCode, categoryName, descrip
   
   portal.innerHTML = `
     <div class="action-dropdown-content">
-      <button class="dropdown-item" onclick="openUsageModal('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}', '${escapeHtml(description)}', '${quantity}', '${unitCost}')">
+      <button class="dropdown-item" onclick="openUsageModal('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}', '${escapeHtml(description)}', '${escapeHtml(mainCode)}', '${subCode}', '${quantity}', '${unitCost}')">
         <i class="fas fa-box-open"></i> Record Usage
       </button>
       <button class="dropdown-item" onclick="removeInventoryItem('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}')">
@@ -425,11 +445,13 @@ function closeInventoryActionDropdown() {
 // USAGE MODAL
 // ============================================
 
-function openUsageModal(inventoryCode, categoryName, description, quantity, unitCost) {
+function openUsageModal(inventoryCode, categoryName, description, mainCode, subCode, quantity, unitCost) {
   closeInventoryActionDropdown();
   
   currentUsageItem = {
     code: inventoryCode,
+    mainCode: mainCode,
+    subCode: parseInt(subCode),
     name: categoryName,
     description: description,
     quantity: parseInt(quantity),
@@ -491,12 +513,14 @@ function submitUsageRecord() {
     return;
   }
 
-  showInventoryLoadingModal('Recording usage...');
+  showInventoryLoadingModal('Recording usage and checking FIFO...');
 
   const usageCost = quantityUsed * currentUsageItem.unitCost;
 
   const formData = {
     inventoryCode: currentUsageItem.code,
+    mainCode: currentUsageItem.mainCode,
+    subCode: currentUsageItem.subCode,
     categoryName: currentUsageItem.name,
     description: currentUsageItem.description,
     quantityUsed: quantityUsed,
@@ -511,12 +535,14 @@ function submitUsageRecord() {
     .withSuccessHandler(function(response) {
       console.log('Usage recorded:', response);
       hideInventoryLoadingModal();
-      if (response && !response.error) {
+      if (response && response.success) {
         closeUsageModal();
-        showInventoryMessage('Usage recorded successfully!', 'success');
-        loadInventoryList();
+        showInventoryMessage('✓ Usage recorded successfully!\n(FIFO validation applied)', 'success');
+        setTimeout(function() {
+          loadInventoryList();
+        }, 1500);
       } else {
-        showInventoryMessage('Error recording usage: ' + (response?.error || 'Unknown error'), 'error');
+        showInventoryMessage('⚠ ' + (response?.error || 'Unknown error'), 'error');
       }
     })
     .withFailureHandler(function(error) {
@@ -534,15 +560,15 @@ function submitUsageRecord() {
 function removeInventoryItem(inventoryCode, categoryName) {
   closeInventoryActionDropdown();
   
-  if (confirm(`Are you sure you want to remove inventory:\n${inventoryCode} - ${categoryName}?`)) {
+  if (confirm(`Are you sure you want to remove:\n${inventoryCode} - ${categoryName}?`)) {
     showInventoryLoadingModal('Removing inventory...');
     
     google.script.run
       .withSuccessHandler(function(response) {
         console.log('Remove response:', response);
         hideInventoryLoadingModal();
-        if (response && !response.error) {
-          showInventoryMessage('Inventory removed successfully!', 'success');
+        if (response && response.success) {
+          showInventoryMessage('✓ Inventory removed successfully!', 'success');
           loadInventoryList();
         } else {
           showInventoryMessage('Error removing inventory: ' + (response?.error || 'Unknown error'), 'error');
@@ -582,15 +608,13 @@ function escapeHtml(str) {
 }
 
 function showInventoryMessage(message, type) {
-  // Check if printUtils has a message function
   if (window.printUtils && printUtils.showMessage) {
     printUtils.showMessage(message, type);
     return;
   }
   
-  // Fallback to simple alert if printUtils not available
   if (type === 'error') {
-    alert('Error: ' + message);
+    alert('⚠ ' + message);
   } else {
     alert(message);
   }
@@ -605,7 +629,7 @@ function showInventoryEmptyState(elementId, message, colspan) {
       <td colspan="${colspan}" class="empty-state">
         <i class="fas fa-folder-open"></i>
         <p>${escapeHtml(message)}</p>
-       </td>
+      </td>
     </tr>
   `;
 }
@@ -621,19 +645,17 @@ function showInventoryLoadingSpinner(elementId, colspan) {
           <div class="spinner-small"></div>
           <span>Loading...</span>
         </div>
-       </td>
+      </td>
     </tr>
   `;
 }
 
 function showInventoryLoadingModal(message) {
-  // Use printUtils loading modal if available
   if (window.printUtils && printUtils.showLoading) {
     printUtils.showLoading(message);
     return;
   }
   
-  // Fallback - create simple loading indicator
   let modal = document.getElementById('inventoryLoadingModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -661,7 +683,6 @@ function showInventoryLoadingModal(message) {
   `;
   modal.style.display = 'flex';
   
-  // Add keyframe animation if not exists
   if (!document.querySelector('#loading-spinner-style')) {
     const style = document.createElement('style');
     style.id = 'loading-spinner-style';
