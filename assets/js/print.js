@@ -37,7 +37,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get print styles - NO TIMESTAMP, LANDSCAPE/PORTRAIT SUPPORT
+  // Get print styles - LANDSCAPE, NO HEADERS/FOOTERS, NO ACTION BUTTONS
   getPrintStyles: function() {
     return `
       <style>
@@ -50,13 +50,15 @@ const printUtils = {
         html, body {
           margin: 0;
           padding: 0;
+          width: 100%;
+          height: 100%;
         }
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 12mm;
-          font-size: 9px;
-          line-height: 1.3;
+          padding: 10mm;
+          font-size: 8px;
+          line-height: 1.2;
           color: #2d3748;
           background: white;
         }
@@ -64,56 +66,56 @@ const printUtils = {
         /* Report Header */
         .print-report-header {
           text-align: center;
-          margin-bottom: 15px;
+          margin-bottom: 12px;
           border-bottom: 2px solid #4361ee;
-          padding-bottom: 10px;
+          padding-bottom: 8px;
         }
         
         .print-report-header h1 {
-          font-size: 18px;
+          font-size: 16px;
           color: #2d3748;
-          margin: 0 0 5px 0;
+          margin: 0;
           font-weight: 600;
           letter-spacing: 1px;
         }
         
         .print-report-header .date-info {
-          font-size: 9px;
+          font-size: 8px;
           color: #718096;
-          margin: 0;
-          padding-top: 3px;
+          margin-top: 4px;
+          padding-top: 2px;
           border-top: 1px dashed #e2e8f0;
         }
         
         .print-report-header .date-info div {
-          margin: 2px 0;
+          margin: 1px 0;
         }
         
         /* Table Styles */
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 10px;
-          font-size: 9px;
+          margin-top: 8px;
+          font-size: 8px;
         }
         
         th {
           background: #f7fafc;
-          padding: 6px 4px;
+          padding: 4px 3px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-weight: 700;
-          font-size: 9px;
+          font-size: 8px;
           text-transform: uppercase;
-          letter-spacing: 0.3px;
+          letter-spacing: 0.2px;
           color: #2d3748;
         }
         
         td {
-          padding: 5px 4px;
+          padding: 3px 2px;
           border: 1px solid #e2e8f0;
           text-align: center;
-          font-size: 9px;
+          font-size: 8px;
           color: #4a5568;
         }
         
@@ -123,26 +125,31 @@ const printUtils = {
         
         /* Group Title */
         .group-title {
-          font-size: 11px;
+          font-size: 10px;
           font-weight: 700;
           background: linear-gradient(135deg, #4361ee, #7209b7);
           color: white;
-          padding: 6px 10px;
-          margin: 10px 0 0 0;
-          border-radius: 4px 4px 0 0;
+          padding: 4px 8px;
+          margin: 8px 0 0 0;
+          border-radius: 3px 3px 0 0;
         }
         
         .group-table-wrapper {
           border: 1px solid #e2e8f0;
           border-top: none;
-          border-radius: 0 0 4px 4px;
+          border-radius: 0 0 3px 3px;
           overflow-x: auto;
-          margin-bottom: 5px;
+          margin-bottom: 4px;
         }
         
         .group-table {
           width: 100%;
           border-collapse: collapse;
+        }
+        
+        .grouped-report {
+          margin-bottom: 8px;
+          page-break-inside: avoid;
         }
         
         .subtotal-row {
@@ -155,6 +162,7 @@ const printUtils = {
           color: #4361ee !important;
           border: 1px solid #4361ee;
           font-weight: 600;
+          padding: 3px 2px;
         }
         
         .grand-total-row {
@@ -167,16 +175,48 @@ const printUtils = {
           color: #118d57 !important;
           border: 1px solid #06d6a0;
           font-weight: 700;
+          padding: 4px 3px;
+        }
+        
+        .total-row {
+          background: #e8f8f3 !important;
+          font-weight: 700;
+        }
+        
+        .total-row td {
+          background: #e8f8f3 !important;
+          color: #118d57 !important;
+          border: 1px solid #06d6a0;
+          font-weight: 700;
+          padding: 4px 3px;
         }
         
         .text-right {
           text-align: right;
+          padding-right: 4px;
         }
         
-        /* LANDSCAPE AND PORTRAIT SUPPORT */
+        .text-left {
+          text-align: left;
+        }
+        
+        .text-center {
+          text-align: center;
+        }
+        
+        .action-btn {
+          display: none !important;
+        }
+        
+        /* LANDSCAPE AND PORTRAIT SUPPORT - NO HEADERS/FOOTERS */
         @page {
-          margin: 0.5in;
-          size: A4;
+          size: A4 landscape;
+          margin: 8mm;
+          padding: 0;
+        }
+        
+        @page :first {
+          margin: 8mm;
         }
         
         @media print {
@@ -185,15 +225,18 @@ const printUtils = {
             padding: 0 !important;
           }
           
-          html, body {
+          html {
             margin: 0;
-            padding: 0.5in;
-            width: 100%;
-            height: 100%;
+            padding: 0;
           }
           
           body {
-            padding: 0.5in !important;
+            margin: 0;
+            padding: 8mm;
+            width: 100%;
+            height: 100%;
+            font-size: 8px;
+            background: white !important;
           }
           
           table {
@@ -203,6 +246,7 @@ const printUtils = {
           
           th, td {
             border: 1px solid #999;
+            page-break-inside: avoid;
           }
           
           .grouped-report {
@@ -212,9 +256,54 @@ const printUtils = {
           thead {
             display: table-header-group;
           }
+          
+          tfoot {
+            display: table-footer-group;
+          }
+          
+          /* Remove browser headers and footers */
+          @page {
+            margin-top: 8mm;
+            margin-bottom: 8mm;
+            margin-left: 8mm;
+            margin-right: 8mm;
+          }
         }
       </style>
     `;
+  },
+
+  // Remove action button columns from tables
+  removeActionColumns: function(table) {
+    const clone = table.cloneNode(true);
+    
+    // Find action column index
+    const headerCells = clone.querySelectorAll('thead th');
+    let actionColumnIndex = -1;
+    
+    headerCells.forEach((th, index) => {
+      if (th.textContent.toLowerCase().includes('action')) {
+        actionColumnIndex = index;
+      }
+    });
+
+    // Remove action column
+    if (actionColumnIndex >= 0) {
+      // Remove from header
+      const headerRow = clone.querySelector('thead tr');
+      if (headerRow && headerRow.cells[actionColumnIndex]) {
+        headerRow.deleteCell(actionColumnIndex);
+      }
+      
+      // Remove from all body rows
+      clone.querySelectorAll('tbody tr').forEach(row => {
+        if (row.cells[actionColumnIndex]) {
+          row.deleteCell(actionColumnIndex);
+        }
+      });
+    }
+    
+    return clone;
   },
 
   // Print investment report
@@ -273,7 +362,7 @@ const printUtils = {
       return;
     }
 
-    const tableClone = originalTable.cloneNode(true);
+    const tableClone = this.removeActionColumns(originalTable);
     
     const printContent = `
       <!DOCTYPE html>
@@ -295,7 +384,7 @@ const printUtils = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert('Please disable popup blocker to print.');
       return;
@@ -307,10 +396,7 @@ const printUtils = {
     
     setTimeout(() => {
       printWindow.print();
-      setTimeout(() => {
-        printWindow.close();
-      }, 500);
-    }, 300);
+    }, 500);
   },
 
   // Print investment container (grouped reports)
@@ -324,12 +410,20 @@ const printUtils = {
       return;
     }
 
-    const containerHTML = container.innerHTML;
+    let containerHTML = container.innerHTML;
     if (!containerHTML || containerHTML.trim() === '') {
       console.error('Container is empty');
       alert('Report is empty. Please generate the report first.');
       return;
     }
+
+    // Remove action buttons from HTML
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = containerHTML;
+    tempDiv.querySelectorAll('.action-btn').forEach(btn => {
+      btn.remove();
+    });
+    containerHTML = tempDiv.innerHTML;
 
     const printContent = `
       <!DOCTYPE html>
@@ -351,7 +445,7 @@ const printUtils = {
       </html>
     `;
 
-    const printWindow = window.open('', '_blank', 'width=1200,height=800');
+    const printWindow = window.open('', '_blank');
     if (!printWindow) {
       alert('Please disable popup blocker to print.');
       return;
@@ -363,10 +457,7 @@ const printUtils = {
     
     setTimeout(() => {
       printWindow.print();
-      setTimeout(() => {
-        printWindow.close();
-      }, 500);
-    }, 300);
+    }, 500);
   },
 
   // Print inventory report
@@ -445,7 +536,7 @@ const printUtils = {
         </html>
       `;
 
-      const printWindow = window.open('', '_blank', 'width=1400,height=800');
+      const printWindow = window.open('', '_blank');
       if (!printWindow) {
         alert('Please disable popup blocker to print.');
         return;
@@ -457,10 +548,7 @@ const printUtils = {
       
       setTimeout(() => {
         printWindow.print();
-        setTimeout(() => {
-          printWindow.close();
-        }, 500);
-      }, 300);
+      }, 500);
     }
   },
 
