@@ -62,35 +62,51 @@ function generateCategoryCode() {
     return;
   }
   
+  showInventoryLoadingModal('Generating code...');
+  
   API.generateInventoryCategoryCode()
     .then(function(response) {
+      hideInventoryLoadingModal();
       console.log('Category code response:', response);
+      console.log('Response type:', typeof response);
+      
       const field = document.getElementById('categoryCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
-      if (field && response) {
-        field.value = response;
-        console.log('Set categoryCode field to:', response);
+      if (response) {
+        const mainCode = String(response).trim();
+        console.log('Extracted main code:', mainCode);
+        
+        field.value = mainCode;
         
         // Display the generated code with 001 suffix
-        const inventoryCode = response + '001';
+        const inventoryCode = mainCode + '001';
         if (codeDisplay) {
           codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
           console.log('Updated code display to:', inventoryCode);
         }
-        
-        console.log('Category code generated:', response);
       } else {
         console.error('No response for category code');
         showInventoryMessage('Error generating category code', 'error');
       }
     })
     .catch(function(error) {
+      hideInventoryLoadingModal();
       console.error('Error generating category code:', error);
       showInventoryMessage('Error generating category code: ' + (error.message || error), 'error');
     });
 }
 
+function displayNextInventoryCode(mainCode) {
+  console.log('Displaying next inventory code for main code:', mainCode);
+  
+  const nextInventoryCode = mainCode + '001';
+  const codeDisplay = document.getElementById('generatedCodeDisplay');
+  if (codeDisplay) {
+    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextInventoryCode + '</span>';
+    console.log('Updated code display to:', nextInventoryCode);
+  }
+}
 function loadExistingCategories() {
   console.log('Loading existing categories via API');
   
