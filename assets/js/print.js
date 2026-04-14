@@ -55,7 +55,7 @@ const printUtils = {
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
           padding: 12mm;
-          font-size: 10px;
+          font-size: 9px;
           line-height: 1.3;
           color: #2d3748;
           background: white;
@@ -83,6 +83,10 @@ const printUtils = {
           margin: 0;
           padding-top: 3px;
           border-top: 1px dashed #e2e8f0;
+        }
+        
+        .print-report-header .date-info div {
+          margin: 2px 0;
         }
         
         /* Table Styles */
@@ -227,6 +231,11 @@ const printUtils = {
           page-break-inside: avoid;
         }
         
+        .group-table {
+          width: 100%;
+          border-collapse: collapse;
+        }
+        
         /* Highlight rows for summary register */
         .highlight-row {
           background: #f0f4ff !important;
@@ -336,7 +345,6 @@ const printUtils = {
             display: table-footer-group;
           }
           
-          /* Remove browser headers/footers */
           .noprint {
             display: none !important;
           }
@@ -456,79 +464,6 @@ const printUtils = {
     }, 300);
   },
 
-  // Print container report (for grouped reports like investments and asset summary)
-  printContainerReport: function(containerId, title, dateInfo) {
-    console.log('printContainerReport called with:', { containerId, title, dateInfo });
-    
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found:', containerId);
-      alert('Report data not found: ' + containerId);
-      return;
-    }
-
-    // Check if container has content
-    if (!container.innerHTML || container.innerHTML.trim() === '') {
-      console.error('Container is empty:', containerId);
-      alert('Report is empty. Please generate the report first.');
-      return;
-    }
-
-    const content = container.cloneNode(true);
-    const dateTime = this.getPrintDateTime();
-    
-    // Clean up the HTML - remove loading spinners, etc
-    content.querySelectorAll('.no-print, .action-btn, [style*="display: none"]').forEach(el => {
-      el.remove();
-    });
-    
-    const printContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>${this.escapeHtml(title)}</title>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        ${this.getPrintStyles()}
-      </head>
-      <body>
-        <div class="print-report-header">
-          <h1>${this.escapeHtml(title)}</h1>
-          <div class="date-info">
-            ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div>Printed: ${dateTime.full}</div>
-          </div>
-        </div>
-        
-        ${content.innerHTML}
-      </body>
-      </html>
-    `;
-
-    console.log('Opening print window with content length:', printContent.length);
-
-    const printWindow = window.open('', '_blank', 'width=900,height=600');
-    if (!printWindow) {
-      alert('Please disable your browser popup blocker to print.');
-      return;
-    }
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-      try {
-        printWindow.print();
-        setTimeout(() => {
-          printWindow.close();
-        }, 500);
-      } catch(e) {
-        console.error('Print error:', e);
-      }
-    }, 300);
-  },
-
   // Print inventory report
   printInventoryReport: function(tabId) {
     console.log('printInventoryReport called for tab:', tabId);
@@ -565,7 +500,7 @@ const printUtils = {
     this.printTable(tableId, title, dateInfo);
   },
 
-   // Print asset register
+  // Print asset register
   printAssetRegister: function(tabName) {
     console.log('printAssetRegister called for tab:', tabName);
     
@@ -579,137 +514,25 @@ const printUtils = {
       const toDate = document.getElementById('summaryToDate')?.value || '';
       const dateInfo = toDate ? `As at: ${toDate}` : '';
       
-      // Get the summary table directly
-      const summaryTable = document.getElementById('summaryRegisterTable');
-      if (!summaryTable) {
-        alert('Summary register table not found');
-        return;
-      }
-      
-      const dateTime = this.getPrintDateTime();
-      const tableClone = summaryTable.cloneNode(true);
-      
-      const printContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <title>${this.escapeHtml(title)}</title>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          ${this.getPrintStyles()}
-        </head>
-        <body>
-          <div class="print-report-header">
-            <h1>${this.escapeHtml(title)}</h1>
-            <div class="date-info">
-              ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
-              <div>Printed: ${dateTime.full}</div>
-            </div>
-          </div>
-          
-          ${tableClone.outerHTML}
-        </body>
-        </html>
-      `;
-
-      const printWindow = window.open('', '_blank', 'width=900,height=600');
-      if (!printWindow) {
-        alert('Please disable your browser popup blocker to print.');
-        return;
-      }
-
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-      printWindow.focus();
-      
-      setTimeout(() => {
-        try {
-          printWindow.print();
-          setTimeout(() => {
-            printWindow.close();
-          }, 500);
-        } catch(e) {
-          console.error('Print error:', e);
-        }
-      }, 300);
-    }
-  },
-    // Print investment report
-  printInvestmentReport: function(tabName) {
-    console.log('printInvestmentReport called for tab:', tabName);
-    
-    let title = '';
-    let tableId = '';
-    let containerId = '';
-    let dateInfo = '';
-
-    if (tabName === 'purchaseReport') {
-      title = 'INVESTMENT PURCHASE REPORT';
-      tableId = 'purchaseReportTable';
-      const fromDate = document.getElementById('purchaseFromDate')?.value || '';
-      const toDate = document.getElementById('purchaseToDate')?.value || '';
-      if (fromDate && toDate) {
-        dateInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-      this.printTable(tableId, title, dateInfo);
-    } else if (tabName === 'fullReport') {
-      title = 'INVESTMENT FULL REPORT';
-      containerId = 'fullReportContainer';
-      const toDate = document.getElementById('fullReportToDate')?.value || '';
-      if (toDate) {
-        dateInfo = `As at: ${toDate}`;
-      }
-      this.printInvestmentContainer(containerId, title, dateInfo);
-    } else if (tabName === 'interestReport') {
-      title = 'INVESTMENT INTEREST REPORT';
-      containerId = 'interestReportContainer';
-      const fromDate = document.getElementById('interestFromDate')?.value || '';
-      const toDate = document.getElementById('interestToDate')?.value || '';
-      if (fromDate && toDate) {
-        dateInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-      this.printInvestmentContainer(containerId, title, dateInfo);
-    } else if (tabName === 'maturedReport') {
-      title = 'MATURED INVESTMENTS REPORT';
-      tableId = 'maturedReportTable';
-      const toDate = new Date().toISOString().split('T')[0];
-      dateInfo = `As at: ${toDate}`;
-      this.printTable(tableId, title, dateInfo);
+      // Print the summary table directly
+      this.printSummaryRegisterTable(title, dateInfo);
     }
   },
 
-  // New helper function for investment container reports
-  printInvestmentContainer: function(containerId, title, dateInfo) {
-    console.log('printInvestmentContainer called with:', { containerId, title, dateInfo });
+  // Print summary register table
+  printSummaryRegisterTable: function(title, dateInfo) {
+    console.log('printSummaryRegisterTable called');
     
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found:', containerId);
-      alert('Report data not found. Please generate the report first.');
+    // Get the summary details table
+    const summaryDetailsTable = document.getElementById('summaryDetailsTable');
+    if (!summaryDetailsTable) {
+      console.error('summaryDetailsTable not found');
+      alert('Summary table not found. Please generate the report first.');
       return;
     }
 
-    if (!container.innerHTML || container.innerHTML.trim() === '') {
-      console.error('Container is empty:', containerId);
-      alert('Report is empty. Please generate the report first.');
-      return;
-    }
-
+    const tableClone = summaryDetailsTable.cloneNode(true);
     const dateTime = this.getPrintDateTime();
-    
-    // Get all tables from the container
-    const tables = container.querySelectorAll('table');
-    let tablesHTML = '';
-    tables.forEach(table => {
-      const tableClone = table.cloneNode(true);
-      tablesHTML += tableClone.outerHTML;
-    });
-    
-    if (!tablesHTML) {
-      console.error('No tables found in container:', containerId);
-      alert('No data to print in this report.');
-      return;
-    }
     
     const printContent = `
       <!DOCTYPE html>
@@ -729,14 +552,12 @@ const printUtils = {
           </div>
         </div>
         
-        ${tablesHTML}
+        ${tableClone.outerHTML}
       </body>
       </html>
     `;
 
-    console.log('Opening print window with content length:', printContent.length);
-
-    const printWindow = window.open('', '_blank', 'width=900,height=600');
+    const printWindow = window.open('', '_blank', 'width=1000,height=700');
     if (!printWindow) {
       alert('Please disable your browser popup blocker to print.');
       return;
@@ -758,7 +579,115 @@ const printUtils = {
     }, 300);
   },
 
-   
+  // Print investment report
+  printInvestmentReport: function(tabName) {
+    console.log('printInvestmentReport called for tab:', tabName);
+    
+    let title = '';
+    let tableId = '';
+    let dateInfo = '';
+
+    if (tabName === 'purchaseReport') {
+      title = 'INVESTMENT PURCHASE REPORT';
+      tableId = 'purchaseReportTable';
+      const fromDate = document.getElementById('purchaseFromDate')?.value || '';
+      const toDate = document.getElementById('purchaseToDate')?.value || '';
+      if (fromDate && toDate) {
+        dateInfo = `Period: ${fromDate} to ${toDate}`;
+      }
+      this.printTable(tableId, title, dateInfo);
+    } else if (tabName === 'fullReport') {
+      title = 'INVESTMENT FULL REPORT';
+      const toDate = document.getElementById('fullReportToDate')?.value || '';
+      if (toDate) {
+        dateInfo = `As at: ${toDate}`;
+      }
+      this.printInvestmentGroupedReport('fullReportContainer', title, dateInfo);
+    } else if (tabName === 'interestReport') {
+      title = 'INVESTMENT INTEREST REPORT';
+      const fromDate = document.getElementById('interestFromDate')?.value || '';
+      const toDate = document.getElementById('interestToDate')?.value || '';
+      if (fromDate && toDate) {
+        dateInfo = `Period: ${fromDate} to ${toDate}`;
+      }
+      this.printInvestmentGroupedReport('interestReportContainer', title, dateInfo);
+    } else if (tabName === 'maturedReport') {
+      title = 'MATURED INVESTMENTS REPORT';
+      tableId = 'maturedReportTable';
+      const toDate = new Date().toISOString().split('T')[0];
+      dateInfo = `As at: ${toDate}`;
+      this.printTable(tableId, title, dateInfo);
+    }
+  },
+
+  // Print investment grouped report
+  printInvestmentGroupedReport: function(containerId, title, dateInfo) {
+    console.log('printInvestmentGroupedReport called with:', { containerId, title, dateInfo });
+    
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('Container not found:', containerId);
+      alert('Report container not found. Please generate the report first.');
+      return;
+    }
+
+    // Get all the HTML from the container
+    const containerHTML = container.innerHTML;
+    if (!containerHTML || containerHTML.trim() === '') {
+      console.error('Container is empty:', containerId);
+      alert('Report is empty. Please generate the report first.');
+      return;
+    }
+
+    const dateTime = this.getPrintDateTime();
+    
+    const printContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>${this.escapeHtml(title)}</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        ${this.getPrintStyles()}
+      </head>
+      <body>
+        <div class="print-report-header">
+          <h1>${this.escapeHtml(title)}</h1>
+          <div class="date-info">
+            ${dateInfo ? `<div>${this.escapeHtml(dateInfo)}</div>` : ''}
+            <div>Printed: ${dateTime.full}</div>
+          </div>
+        </div>
+        
+        ${containerHTML}
+      </body>
+      </html>
+    `;
+
+    console.log('Opening print window with content length:', printContent.length);
+
+    const printWindow = window.open('', '_blank', 'width=1000,height=700');
+    if (!printWindow) {
+      alert('Please disable your browser popup blocker to print.');
+      return;
+    }
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      try {
+        printWindow.print();
+        setTimeout(() => {
+          printWindow.close();
+        }, 500);
+      } catch(e) {
+        console.error('Print error:', e);
+      }
+    }, 300);
+  },
+
   // Generic print message function
   showMessage: function(message, type) {
     const types = {
