@@ -1065,3 +1065,11 @@ function populateInvestmentDetailsForRedeem(investmentCode) {
   }
 
 })();
+  window.printInvestmentReport = function(tabName) {
+    if (typeof printUtils !== 'undefined' && printUtils.printInvestmentReport) {
+      printUtils.printInvestmentReport(tabName);
+    } else {
+      console.error('printUtils not available');
+      alert('Print utility not loaded');
+    }
+  };
