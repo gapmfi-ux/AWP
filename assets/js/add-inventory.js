@@ -32,15 +32,33 @@ function initInventoryModule() {
 function handleNewCategoryChange() {
   const select = document.getElementById('newCategory');
   const addNewFields = document.getElementById('addNewCategoryFields');
+  const codeDisplay = document.getElementById('generatedCodeDisplay');
 
   if (select.value === 'add-new') {
     addNewFields.style.display = 'block';
     generateCategoryCode();
+  } else if (select.value) {
+    // Selected existing category - show the next inventory code
+    addNewFields.style.display = 'none';
+    displayNextInventoryCode(select.value);
   } else {
     addNewFields.style.display = 'none';
+    codeDisplay.innerHTML = '<span class="code-placeholder">Select category to generate code</span>';
     document.getElementById('categoryName').value = '';
     document.getElementById('categoryCode').value = '';
     document.getElementById('categoryDescription').value = '';
+  }
+}
+
+function displayNextInventoryCode(mainCode) {
+  console.log('Displaying next inventory code for main code:', mainCode);
+  
+  // Calculate the next sub code (001)
+  const nextInventoryCode = mainCode + '001';
+  
+  const codeDisplay = document.getElementById('generatedCodeDisplay');
+  if (codeDisplay) {
+    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px;">' + nextInventoryCode + '</span>';
   }
 }
 
@@ -57,8 +75,17 @@ function generateCategoryCode() {
     .then(function(response) {
       console.log('Category code response:', response);
       const field = document.getElementById('categoryCode');
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      
       if (field && response) {
         field.value = response;
+        
+        // Display the generated code with 001 suffix
+        const inventoryCode = response + '001';
+        if (codeDisplay) {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px;">' + inventoryCode + '</span>';
+        }
+        
         console.log('Category code generated:', response);
       } else {
         console.error('No response for category code');
@@ -184,11 +211,12 @@ function submitNewInventory() {
       hideInventoryLoadingModal();
       
       if (response && response.success) {
-        let message = '✓ Inventory added successfully!\n';
-        message += 'Code: ' + response.fullCode;
+        let message = '✓ Inventory added successfully!\n\n';
+        message += 'Code: ' + response.fullCode + '\n';
+        message += 'Category: ' + categoryName;
         
         if (response.wasMerged) {
-          message += '\n\n(Same price detected - merged with existing 001)';
+          message += '\n\n(Same price detected - merged with existing batch)';
         }
         
         showInventoryMessage(message, 'success');
@@ -220,6 +248,7 @@ function resetInventoryForm() {
   document.getElementById('categoryName').value = '';
   document.getElementById('categoryDescription').value = '';
   document.getElementById('newUnitPrice').value = '';
+  document.getElementById('generatedCodeDisplay').innerHTML = '<span class="code-placeholder">Select category to generate code</span>';
   
   // Reload categories to include newly added one
   loadExistingCategories();
