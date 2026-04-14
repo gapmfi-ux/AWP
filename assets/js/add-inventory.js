@@ -1,11 +1,3 @@
-/* ============================================
-   ADD INVENTORY MODULE JAVASCRIPT
-   Using API wrapper (JSONP)
-   ============================================ */
-
-// ============================================
-// INITIALIZATION
-// ============================================
 
 function initInventoryModule() {
   console.log('Initializing Add Inventory Module');
@@ -53,12 +45,11 @@ function handleNewCategoryChange() {
 function displayNextInventoryCode(mainCode) {
   console.log('Displaying next inventory code for main code:', mainCode);
   
-  // Calculate the next sub code (001)
   const nextInventoryCode = mainCode + '001';
-  
   const codeDisplay = document.getElementById('generatedCodeDisplay');
   if (codeDisplay) {
-    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px;">' + nextInventoryCode + '</span>';
+    codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextInventoryCode + '</span>';
+    console.log('Updated code display to:', nextInventoryCode);
   }
 }
 
@@ -79,11 +70,13 @@ function generateCategoryCode() {
       
       if (field && response) {
         field.value = response;
+        console.log('Set categoryCode field to:', response);
         
         // Display the generated code with 001 suffix
         const inventoryCode = response + '001';
         if (codeDisplay) {
-          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px;">' + inventoryCode + '</span>';
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
+          console.log('Updated code display to:', inventoryCode);
         }
         
         console.log('Category code generated:', response);
@@ -290,13 +283,17 @@ function showSuccessModal(message, callback) {
     document.body.appendChild(modal);
   }
   
+  const htmlMessage = message.split('\n').map(function(line) {
+    return escapeHtml(line);
+  }).join('<br>');
+  
   modal.innerHTML = `
     <div class="success-modal-content">
       <div class="success-modal-icon">
         <i class="fas fa-check-circle"></i>
       </div>
-      <div class="success-modal-message">${escapeHtml(message)}</div>
-      <button class="success-modal-btn" onclick="closeSuccessModal(${typeof callback === 'function' ? 'true' : 'false'})">
+      <div class="success-modal-message">${htmlMessage}</div>
+      <button class="success-modal-btn" onclick="closeSuccessModal(true)">
         Close
       </button>
     </div>
@@ -414,10 +411,10 @@ style.textContent = `
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
     max-width: 380px;
     text-align: center;
-    animation: slideIn 0.3s ease-out;
+    animation: successSlideIn 0.3s ease-out;
   }
 
-  @keyframes slideIn {
+  @keyframes successSlideIn {
     from {
       transform: translateY(-30px);
       opacity: 0;
@@ -442,8 +439,6 @@ style.textContent = `
     color: #2d3748;
     line-height: 1.6;
     margin-bottom: 20px;
-    white-space: pre-wrap;
-    word-wrap: break-word;
   }
 
   .success-modal-btn {
