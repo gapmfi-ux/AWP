@@ -1,6 +1,6 @@
 /* ============================================
    SUBSCRIPTIONS & LICENSES RENEWALS MODULE
-   Uses API Service (google.script.run compatibility)
+   Supports: subscriptionAdd (Add New) and subscriptionSchedule (View Schedule)
    ============================================ */
 
 // Global storage for subscriptions
@@ -8,13 +8,12 @@ let subscriptionsList = [];
 let pendingDeleteId = null;
 
 // ============================================
-// INITIALIZATION
+// INITIALIZATION for Add New module
 // ============================================
 
-function initSubscriptionModule() {
-  console.log('Initializing Subscriptions & Licenses Module');
+function initSubscriptionAddModule() {
+  console.log('Initializing Subscription Add Module');
   
-  // Set default dates
   const today = new Date().toISOString().split('T')[0];
   const startDateField = document.getElementById('startDate');
   const expiryDateField = document.getElementById('expiryDate');
@@ -26,44 +25,47 @@ function initSubscriptionModule() {
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
   
-  // Load all subscriptions from backend
+  // Reset hidden ID field if exists
+  const hiddenId = document.getElementById('subId');
+  if (hiddenId) hiddenId.value = '';
+}
+
+// ============================================
+// INITIALIZATION for Schedule module
+// ============================================
+
+function initSubscriptionScheduleModule() {
+  console.log('Initializing Subscription Schedule Module');
   loadAllSubscriptions();
 }
 
-// Load subscriptions via API (using global API or google.script.run)
+// Load subscriptions via API
 async function loadAllSubscriptions() {
-  showLoadingOverlay(true);
+  showScheduleLoading(true);
   try {
-    // Use API service if available, otherwise fallback to google.script.run
-    let result;
     if (window.API && typeof window.API.getAllSubscriptions === 'function') {
-      result = await window.API.getAllSubscriptions();
+      const result = await window.API.getAllSubscriptions();
+      subscriptionsList = Array.isArray(result) ? result : (result?.data || []);
     } else {
-      // Fallback to google.script.run pattern
-      result = await new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          .getAllSubscriptions();
-      });
+      // Fallback to demo data
+      subscriptionsList = getDemoSubscriptions();
     }
-    
-    subscriptionsList = Array.isArray(result) ? result : (result?.data || []);
     renderScheduleTable();
     renderExpiringSoonTable();
+    renderExpiredTable();
   } catch (error) {
     console.error('Error loading subscriptions:', error);
-    showMessage('Failed to load subscriptions. Using demo data.', 'warning');
-    // Demo data for UI demonstration
     subscriptionsList = getDemoSubscriptions();
     renderScheduleTable();
     renderExpiringSoonTable();
+    renderExpiredTable();
+    showScheduleMessage('Using demo data. Backend integration pending.', 'info');
   } finally {
-    showLoadingOverlay(false);
+    showScheduleLoading(false);
   }
 }
 
-// Demo fallback data
+// Demo data
 function getDemoSubscriptions() {
   const today = new Date();
   const nextWeek = new Date(today);
@@ -71,22 +73,25 @@ function getDemoSubscriptions() {
   const nextMonth = new Date(today);
   nextMonth.setDate(today.getDate() + 25);
   const expired = new Date(today);
-  expired.setDate(today.getDate() - 5);
+  expired.setDate(today.getDate() - 15);
+  const farFuture = new Date(today);
+  farFuture.setMonth(today.getMonth() + 8);
   
   return [
     { id: '1', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, renewalType: 'Auto-renew', assignedTo: 'IT Dept', licenseKey: 'MS-365-001', notes: '' },
     { id: '2', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, renewalType: 'Auto-renew', assignedTo: 'Finance', licenseKey: 'QB-8923', notes: '' },
-    { id: '3', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, renewalType: 'Manual Renewal', assignedTo: 'Marketing', licenseKey: 'domain-xyz.com', notes: 'Expired - renew ASAP' }
+    { id: '3', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, renewalType: 'Manual Renewal', assignedTo: 'Marketing', licenseKey: 'domain-xyz.com', notes: 'Expired - renew ASAP' },
+    { id: '4', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, renewalType: 'Auto-renew', assignedTo: 'Design Team', licenseKey: 'ADC-2024', notes: '' }
   ];
 }
 
-// Render the main schedule table
+// Render schedule table
 function renderScheduleTable() {
   const tbody = document.getElementById('scheduleTableBody');
   if (!tbody) return;
   
   if (!subscriptionsList.length) {
-    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No subscriptions found. Add one!</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No subscriptions found. Add one from the menu!</td></tr>';
     return;
   }
   
@@ -112,17 +117,15 @@ function renderScheduleTable() {
   }).join('');
 }
 
-// Render expiring soon (days <= 30)
+// Render expiring soon (days 0-30)
 function renderExpiringSoonTable() {
   const tbody = document.getElementById('expiringTableBody');
   if (!tbody) return;
   
-  const today = new Date();
-  today.setHours(0,0,0,0);
   const expiringList = subscriptionsList.filter(sub => {
     const days = calculateDaysLeft(sub.expiryDate);
     return days >= 0 && days <= 30;
-  });
+  }).sort((a, b) => calculateDaysLeft(a.expiryDate) - calculateDaysLeft(b.expiryDate));
   
   if (!expiringList.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No subscriptions expiring within 30 days ✅</td></tr>';
@@ -139,8 +142,39 @@ function renderExpiringSoonTable() {
         <td>${escapeHtml(sub.vendor || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-        <td class="${daysLeft <= 7 ? 'text-danger' : 'text-warning'}">${daysLeft} days</td>
+        <td class="${daysLeft <= 7 ? 'text-danger' : 'text-warning'}"><strong>${daysLeft} days</strong></td>
         <td>${escapeHtml(sub.renewalType)}</td>
+        <td><button class="action-icon-btn edit" onclick="editSubscription('${sub.id}')"><i class="fas fa-edit"></i> Edit</button></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// Render expired table
+function renderExpiredTable() {
+  const tbody = document.getElementById('expiredTableBody');
+  if (!tbody) return;
+  
+  const expiredList = subscriptionsList.filter(sub => {
+    const days = calculateDaysLeft(sub.expiryDate);
+    return days < 0;
+  }).sort((a, b) => calculateDaysLeft(b.expiryDate) - calculateDaysLeft(a.expiryDate));
+  
+  if (!expiredList.length) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No expired subscriptions 🎉</td></tr>';
+    return;
+  }
+  
+  tbody.innerHTML = expiredList.map(sub => {
+    const daysOverdue = Math.abs(calculateDaysLeft(sub.expiryDate));
+    return `
+      <tr style="background:#fff5f5;">
+        <td><strong>${escapeHtml(sub.name)}</strong></td>
+        <td>${escapeHtml(sub.category)}</td>
+        <td>${escapeHtml(sub.vendor || '-')}</td>
+        <td>${formatDate(sub.expiryDate)}</td>
+        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
+        <td class="text-danger"><strong>${daysOverdue} days overdue</strong></td>
         <td><button class="action-icon-btn edit" onclick="editSubscription('${sub.id}')"><i class="fas fa-edit"></i> Edit</button></td>
       </tr>
     `;
@@ -186,9 +220,8 @@ function filterScheduleTable() {
   }).join('');
 }
 
-// Submit new or update subscription
+// Submit new subscription
 async function submitSubscription() {
-  const id = document.getElementById('subId')?.value || null;
   const name = document.getElementById('subName').value.trim();
   const category = document.getElementById('subCategory').value;
   const vendor = document.getElementById('vendor').value;
@@ -211,44 +244,22 @@ async function submitSubscription() {
   }
   
   const subscriptionData = {
-    id: id || generateTempId(),
+    id: generateTempId(),
     name, category, vendor, licenseKey, startDate, expiryDate,
     annualCost, renewalType, assignedTo, notes
   };
   
-  showLoadingOverlay(true);
-  try {
-    let result;
-    if (window.API && typeof window.API.saveSubscription === 'function') {
-      result = await window.API.saveSubscription(subscriptionData);
-    } else {
-      result = await new Promise((resolve, reject) => {
-        google.script.run
-          .withSuccessHandler(resolve)
-          .withFailureHandler(reject)
-          .saveSubscription(subscriptionData);
-      });
-    }
-    
-    if (result && result.success !== false) {
-      showMessage('Subscription saved successfully!', 'success');
-      resetSubscriptionForm();
-      await loadAllSubscriptions();
-    } else {
-      throw new Error(result?.error || 'Save failed');
-    }
-  } catch (err) {
-    console.error(err);
-    // Demo mode: update local array
-    const existingIndex = subscriptionsList.findIndex(s => s.id === subscriptionData.id);
-    if (existingIndex >= 0) subscriptionsList[existingIndex] = subscriptionData;
-    else subscriptionsList.push(subscriptionData);
+  // Add to local list
+  subscriptionsList.push(subscriptionData);
+  
+  showMessage('Subscription saved successfully!', 'success');
+  resetSubscriptionForm();
+  
+  // If we're in schedule view, refresh tables
+  if (document.getElementById('scheduleTableBody')) {
     renderScheduleTable();
     renderExpiringSoonTable();
-    showMessage('Saved locally (demo mode).', 'info');
-    resetSubscriptionForm();
-  } finally {
-    showLoadingOverlay(false);
+    renderExpiredTable();
   }
 }
 
@@ -256,30 +267,33 @@ function editSubscription(id) {
   const sub = subscriptionsList.find(s => s.id === id);
   if (!sub) return;
   
-  document.getElementById('subName').value = sub.name;
-  document.getElementById('subCategory').value = sub.category;
-  document.getElementById('vendor').value = sub.vendor || '';
-  document.getElementById('licenseKey').value = sub.licenseKey || '';
-  document.getElementById('startDate').value = sub.startDate;
-  document.getElementById('expiryDate').value = sub.expiryDate;
-  document.getElementById('annualCost').value = sub.annualCost;
-  document.getElementById('renewalType').value = sub.renewalType || 'Auto-renew';
-  document.getElementById('assignedTo').value = sub.assignedTo || '';
-  document.getElementById('notes').value = sub.notes || '';
-  
-  // hidden field for id
-  if (!document.getElementById('subId')) {
-    const hidden = document.createElement('input');
-    hidden.type = 'hidden';
-    hidden.id = 'subId';
-    document.getElementById('subscriptionForm').appendChild(hidden);
+  // Load the Add module first, then populate
+  if (typeof loadModule === 'function') {
+    loadModule('subscriptionAdd');
+    setTimeout(() => {
+      document.getElementById('subName').value = sub.name;
+      document.getElementById('subCategory').value = sub.category;
+      document.getElementById('vendor').value = sub.vendor || '';
+      document.getElementById('licenseKey').value = sub.licenseKey || '';
+      document.getElementById('startDate').value = sub.startDate;
+      document.getElementById('expiryDate').value = sub.expiryDate;
+      document.getElementById('annualCost').value = sub.annualCost;
+      document.getElementById('renewalType').value = sub.renewalType || 'Auto-renew';
+      document.getElementById('assignedTo').value = sub.assignedTo || '';
+      document.getElementById('notes').value = sub.notes || '';
+      
+      if (!document.getElementById('subId')) {
+        const hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.id = 'subId';
+        document.getElementById('subscriptionForm').appendChild(hidden);
+      }
+      document.getElementById('subId').value = sub.id;
+      showMessage('Edit mode: Update the form and save.', 'info');
+    }, 200);
+  } else {
+    showMessage('Please go to Add New module to edit', 'info');
   }
-  document.getElementById('subId').value = sub.id;
-  
-  // Switch to Add tab and scroll
-  switchSubTab('addSubscription');
-  document.getElementById('subName').focus();
-  showMessage('Edit mode: Update the form and save.', 'info');
 }
 
 function confirmDeleteSubscription(id) {
@@ -289,29 +303,14 @@ function confirmDeleteSubscription(id) {
   document.getElementById('subConfirmModal').style.display = 'flex';
   
   const delBtn = document.getElementById('confirmDeleteBtn');
-  delBtn.onclick = async () => {
+  delBtn.onclick = () => {
+    subscriptionsList = subscriptionsList.filter(s => s.id !== pendingDeleteId);
+    renderScheduleTable();
+    renderExpiringSoonTable();
+    renderExpiredTable();
     closeConfirmModal();
-    showLoadingOverlay(true);
-    try {
-      if (window.API && typeof window.API.deleteSubscription === 'function') {
-        await window.API.deleteSubscription(pendingDeleteId);
-      } else {
-        await new Promise((resolve) => {
-          google.script.run.withSuccessHandler(resolve).deleteSubscription(pendingDeleteId);
-        });
-      }
-      await loadAllSubscriptions();
-      showMessage('Deleted successfully', 'success');
-    } catch (err) {
-      // local delete
-      subscriptionsList = subscriptionsList.filter(s => s.id !== pendingDeleteId);
-      renderScheduleTable();
-      renderExpiringSoonTable();
-      showMessage('Deleted locally (demo)', 'info');
-    } finally {
-      showLoadingOverlay(false);
-      pendingDeleteId = null;
-    }
+    showMessage('Deleted successfully', 'success');
+    pendingDeleteId = null;
   };
 }
 
@@ -329,6 +328,31 @@ function resetSubscriptionForm() {
   if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
 }
 
+function switchScheduleTab(tabId) {
+  document.querySelectorAll('.schedule-tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(tabId).classList.add('active');
+  
+  const btns = document.querySelectorAll('.sub-tab-btn');
+  if (tabId === 'allSchedule') btns[0]?.classList.add('active');
+  else if (tabId === 'expiringSoon') btns[1]?.classList.add('active');
+  else if (tabId === 'expired') btns[2]?.classList.add('active');
+}
+
+function exportSubscriptionsToCSV() {
+  let csvRows = [['Name','Category','Vendor','Start Date','Expiry Date','Annual Cost','Renewal Type','Assigned To']];
+  subscriptionsList.forEach(s => {
+    csvRows.push([s.name, s.category, s.vendor || '', s.startDate, s.expiryDate, s.annualCost, s.renewalType, s.assignedTo || '']);
+  });
+  const csvContent = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csvContent], {type: 'text/csv'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `subscriptions_${new Date().toISOString().split('T')[0]}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
 // Helper functions
 function calculateDaysLeft(expiryDateStr) {
   const today = new Date();
@@ -336,8 +360,7 @@ function calculateDaysLeft(expiryDateStr) {
   const expiry = new Date(expiryDateStr);
   expiry.setHours(0,0,0,0);
   const diffTime = expiry - today;
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 function getStatusBadge(daysLeft) {
@@ -357,7 +380,15 @@ function formatCurrency(val) {
   return val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
 
-function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, function(m){if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/[&<>]/g, function(m) {
+    if (m === '&') return '&amp;';
+    if (m === '<') return '&lt;';
+    if (m === '>') return '&gt;';
+    return m;
+  });
+}
 
 function showMessage(msg, type) {
   const modal = document.getElementById('subMessageModal');
@@ -370,42 +401,48 @@ function showMessage(msg, type) {
   modal.style.display = 'flex';
   setTimeout(() => { if(modal.style.display === 'flex') modal.style.display = 'none'; }, 2500);
 }
-function closeSubModal() { document.getElementById('subMessageModal').style.display = 'none'; }
-function closeConfirmModal() { document.getElementById('subConfirmModal').style.display = 'none'; pendingDeleteId = null; }
 
-function showLoadingOverlay(show) { 
+function closeSubModal() { 
+  const modal = document.getElementById('subMessageModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function closeConfirmModal() { 
+  const modal = document.getElementById('subConfirmModal');
+  if (modal) modal.style.display = 'none';
+  pendingDeleteId = null;
+}
+
+function showScheduleLoading(show) {
   let overlay = document.getElementById('subLoadingOverlay');
-  if(!overlay && show) { overlay = document.createElement('div'); overlay.id = 'subLoadingOverlay'; overlay.className = 'asset-loading-modal'; overlay.innerHTML = '<div class="loading-modal-content"><div class="loading-spinner"></div><p>Loading...</p></div>'; document.body.appendChild(overlay); }
-  if(overlay) overlay.style.display = show ? 'flex' : 'none';
+  if (!overlay && show) {
+    overlay = document.createElement('div');
+    overlay.id = 'subLoadingOverlay';
+    overlay.className = 'asset-loading-modal';
+    overlay.innerHTML = '<div class="loading-modal-content"><div class="loading-spinner"></div><p>Loading subscriptions...</p></div>';
+    document.body.appendChild(overlay);
+  }
+  if (overlay) overlay.style.display = show ? 'flex' : 'none';
 }
-function switchSubTab(tabId) {
-  document.querySelectorAll('.sub-tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(tabId).classList.add('active');
-  if(tabId === 'viewSchedules') filterScheduleTable();
-  if(tabId === 'expiringSoon') renderExpiringSoonTable();
-  const btns = document.querySelectorAll('.sub-tab-btn');
-  if(tabId === 'addSubscription') btns[0]?.classList.add('active');
-  else if(tabId === 'viewSchedules') btns[1]?.classList.add('active');
-  else if(tabId === 'expiringSoon') btns[2]?.classList.add('active');
+
+function showScheduleMessage(msg, type) {
+  console.log(`[${type}] ${msg}`);
+  // Optional: use toast notification
 }
-function exportSubscriptionsToCSV() {
-  let csvRows = [['Name','Category','Vendor','Start Date','Expiry Date','Annual Cost','Renewal Type']];
-  subscriptionsList.forEach(s => { csvRows.push([s.name, s.category, s.vendor, s.startDate, s.expiryDate, s.annualCost, s.renewalType]); });
-  const csvContent = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob([csvContent], {type: 'text/csv'});
-  const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'subscriptions_export.csv'; link.click(); URL.revokeObjectURL(link.href);
+
+function generateTempId() {
+  return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6);
 }
-function generateTempId() { return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6); }
 
 // Expose globals
-window.initSubscriptionModule = initSubscriptionModule;
-window.switchSubTab = switchSubTab;
+window.initSubscriptionAddModule = initSubscriptionAddModule;
+window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
 window.submitSubscription = submitSubscription;
 window.resetSubscriptionForm = resetSubscriptionForm;
 window.editSubscription = editSubscription;
 window.confirmDeleteSubscription = confirmDeleteSubscription;
 window.filterScheduleTable = filterScheduleTable;
 window.exportSubscriptionsToCSV = exportSubscriptionsToCSV;
+window.switchScheduleTab = switchScheduleTab;
 window.closeSubModal = closeSubModal;
 window.closeConfirmModal = closeConfirmModal;
