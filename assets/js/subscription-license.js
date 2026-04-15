@@ -1,5 +1,6 @@
 // ============================================
 // SUBSCRIPTION SCHEDULE MODULE
+// Integrated with main API service
 // ============================================
 
 let subscriptionsList = [];
@@ -52,8 +53,30 @@ function loadSubscriptionsFromStorage() {
   if (stored) {
     subscriptionsList = JSON.parse(stored);
   } else {
-    subscriptionsList = getDemoSubscriptions();
-    saveSubscriptionsToStorage();
+    // Try to load from API first
+    if (typeof API !== 'undefined' && API) {
+      API.getAllSubscriptions()
+        .then(function(response) {
+          if (response && response.data && Array.isArray(response.data)) {
+            subscriptionsList = response.data;
+            saveSubscriptionsToStorage();
+            renderAllTables();
+          } else {
+            subscriptionsList = getDemoSubscriptions();
+            saveSubscriptionsToStorage();
+            renderAllTables();
+          }
+        })
+        .catch(function(error) {
+          console.error('Error loading subscriptions from API:', error);
+          subscriptionsList = getDemoSubscriptions();
+          saveSubscriptionsToStorage();
+          renderAllTables();
+        });
+    } else {
+      subscriptionsList = getDemoSubscriptions();
+      saveSubscriptionsToStorage();
+    }
   }
 }
 
@@ -538,7 +561,13 @@ function formatDateForInput(date) {
 }
 
 function formatCurrency(val) {
-  return val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+  if (val === null || val === undefined || val === '') return '0.00';
+  const numValue = parseFloat(val);
+  if (isNaN(numValue)) return '0.00';
+  return numValue.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
 }
 
 function escapeHtml(str) {
@@ -552,16 +581,33 @@ function escapeHtml(str) {
 }
 
 function showToast(message, type) {
-  const toast = document.getElementById('subToast');
-  if (!toast) return;
+  // Try to use the global toast from main if available
+  if (window.printUtils && window.printUtils.showMessage) {
+    window.printUtils.showMessage(message, type);
+    return;
+  }
   
+  const toast = document.getElementById('subToast');
+  if (!toast) {
+    // Create toast if it doesn't exist
+    const newToast = document.createElement('div');
+    newToast.id = 'subToast';
+    newToast.className = 'sub-toast';
+    newToast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4361ee;color:white;padding:12px 24px;border-radius:8px;z-index:1000;display:none;';
+    newToast.innerHTML = '<span id="subToastMessage"></span>';
+    document.body.appendChild(newToast);
+  }
+  
+  const toastEl = document.getElementById('subToast');
   const msgSpan = document.getElementById('subToastMessage');
-  msgSpan.innerText = message;
-  toast.style.backgroundColor = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
-  toast.style.display = 'block';
-  setTimeout(() => {
-    toast.style.display = 'none';
-  }, 3000);
+  if (msgSpan) msgSpan.innerText = message;
+  if (toastEl) {
+    toastEl.style.backgroundColor = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
+    toastEl.style.display = 'block';
+    setTimeout(() => {
+      toastEl.style.display = 'none';
+    }, 3000);
+  }
 }
 
 // Expose global functions for schedule module
