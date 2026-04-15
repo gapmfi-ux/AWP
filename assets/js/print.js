@@ -1,6 +1,6 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Consistent margins on ALL pages - NO browser headers/footers
+   COMPLETELY REMOVE browser headers/footers - Consistent margins on ALL pages
    ============================================ */
 
 // Global print utility with clean formatting
@@ -35,7 +35,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - Consistent margins on ALL pages
+  // Get clean print styles - Aggressively remove browser headers/footers
   getPrintStyles: function() {
     return `
       <style>
@@ -55,7 +55,6 @@ const printUtils = {
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 12mm 9.6mm;
           font-size: 10pt;
           line-height: 1.4;
           color: #1a202c;
@@ -205,24 +204,38 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* CRITICAL: Consistent margins on ALL pages */
+        /* CRITICAL: Aggressively remove browser headers/footers */
         @media print {
-          /* Ensure all pages have the same margins */
+          /* Remove default browser print header/footer completely */
           @page {
             size: A4 landscape;
             margin: 15mm 12mm;
           }
           
-          /* Remove any default browser margins */
-          html {
-            margin: 0;
-            padding: 0;
+          /* Hide URL, date, page numbers, and any browser-generated content */
+          @page :header {
+            display: none;
+          }
+          
+          @page :footer {
+            display: none;
+          }
+          
+          /* Reset all margins */
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           body {
-            margin: 0;
-            padding: 0;
+            margin: 0 !important;
+            padding: 0 !important;
             width: 100%;
+          }
+          
+          /* Hide any potential browser-generated elements */
+          header, footer, nav, aside, .no-print {
+            display: none !important;
           }
           
           /* Ensure consistent spacing on all pages */
@@ -287,7 +300,7 @@ const printUtils = {
     return clone;
   },
 
-  // Generate clean print document - NO extra headers/footers
+  // Generate clean print document - NO browser headers/footers
   generatePrintDocument: function(title, contentHtml, periodInfo) {
     let headerHtml = '';
     if (title || periodInfo) {
@@ -307,14 +320,23 @@ const printUtils = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${this.getPrintStyles()}
         <style>
-          /* Additional override for consistent page margins */
+          /* Multiple overrides to ensure no browser headers/footers */
           @media print {
             @page {
               margin: 15mm 12mm;
             }
+            @page :header {
+              display: none;
+            }
+            @page :footer {
+              display: none;
+            }
             body {
               margin: 0;
               padding: 0;
+            }
+            /* Hide any potential print headers */
+              }
             }
           }
         </style>
