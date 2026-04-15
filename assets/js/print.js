@@ -1,6 +1,6 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Clean print view - NO headers, NO footers, NO top spacing
+   Clean print view with balanced margins
    ============================================ */
 
 // Global print utility with clean formatting
@@ -35,7 +35,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - NO HEADERS, NO FOOTERS, ZERO TOP MARGIN
+  // Get clean print styles - balanced margins
   getPrintStyles: function() {
     return `
       <style>
@@ -55,19 +55,18 @@ const printUtils = {
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 0;
-          margin: 0;
+          padding: 15mm 12mm;
           font-size: 10pt;
           line-height: 1.4;
           color: #1a202c;
           background: white;
         }
         
-        /* Simple Report Header - Minimal, no extra spacing */
+        /* Report Header */
         .print-report-header {
           text-align: center;
-          margin: 0 0 15px 0;
-          padding: 0;
+          margin-bottom: 20px;
+          padding-bottom: 10px;
           page-break-after: avoid;
         }
         
@@ -82,7 +81,7 @@ const printUtils = {
         .period-info {
           font-size: 10pt;
           color: #4a5568;
-          margin-top: 5px;
+          margin-top: 6px;
           padding: 0;
         }
         
@@ -104,7 +103,7 @@ const printUtils = {
         th {
           background: #2c3e66;
           color: white;
-          padding: 8px 6px;
+          padding: 10px 8px;
           border: 1px solid #1a2a4a;
           text-align: center;
           font-weight: 700;
@@ -114,7 +113,7 @@ const printUtils = {
         }
         
         td {
-          padding: 6px 5px;
+          padding: 8px 6px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-size: 9pt;
@@ -133,7 +132,7 @@ const printUtils = {
         
         .text-right {
           text-align: right !important;
-          padding-right: 8px !important;
+          padding-right: 10px !important;
         }
         
         .text-center {
@@ -142,7 +141,7 @@ const printUtils = {
         
         /* Group Report Styles */
         .grouped-report {
-          margin-bottom: 15px;
+          margin-bottom: 18px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
@@ -153,7 +152,7 @@ const printUtils = {
           background: linear-gradient(135deg, #2c3e66, #4361ee);
           color: white;
           padding: 8px 12px;
-          margin: 10px 0 0 0;
+          margin: 12px 0 0 0;
           border-radius: 4px 4px 0 0;
           page-break-after: avoid;
           break-after: avoid;
@@ -206,17 +205,16 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* Print-specific optimizations - NO HEADERS/FOOTERS */
+        /* Print-specific optimizations */
         @media print {
           html, body {
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 0;
+            padding: 0;
           }
           
           body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100%;
+            margin: 0;
+            padding: 12mm 10mm;
           }
           
           table {
@@ -244,15 +242,14 @@ const printUtils = {
             display: none !important;
           }
           
-          /* Remove browser default headers and footers completely */
+          /* Page margins - balanced */
           @page {
             size: A4 landscape;
-            margin: 0 !important;
-            padding: 0 !important;
+            margin: 15mm 12mm;
           }
           
           @page :first {
-            margin: 0 !important;
+            margin-top: 15mm;
           }
         }
       </style>
@@ -295,9 +292,8 @@ const printUtils = {
     return clone;
   },
 
-  // Generate clean print document - ONLY report name and period, NO extra spacing
+  // Generate clean print document
   generatePrintDocument: function(title, contentHtml, periodInfo) {
-    // Build header only if title or period exists
     let headerHtml = '';
     if (title || periodInfo) {
       headerHtml = `
@@ -492,7 +488,7 @@ const printUtils = {
     }
   },
 
-  // Open print window with proper handling
+  // Open print window
   openPrintWindow: function(printContent, title) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
