@@ -1,0 +1,428 @@
+/* Subscription & Licenses Module Styles */
+
+.subscription-container {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.subscription-header {
+  margin-bottom: 24px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.subscription-header h1 {
+  font-size: 1.5rem;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.subscription-header h1 i {
+  color: #4361ee;
+}
+
+.subscription-header p {
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+/* Tabs */
+.sub-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.sub-tab-btn {
+  background: none;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #64748b;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sub-tab-btn i {
+  font-size: 0.9rem;
+}
+
+.sub-tab-btn:hover {
+  background: #f1f5f9;
+  color: #4361ee;
+}
+
+.sub-tab-btn.active {
+  color: #4361ee;
+  border-bottom: 2px solid #4361ee;
+  background: #f8fafc;
+}
+
+.sub-tab-content {
+  display: none;
+  animation: fadeIn 0.25s ease;
+}
+
+.sub-tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Form Styles */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-group label i {
+  color: #4361ee;
+  font-size: 0.75rem;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: all 0.2s;
+  background: white;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #4361ee;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+}
+
+.form-actions {
+  display: flex;
+  gap: 16px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.submit-btn, .reset-btn {
+  padding: 10px 24px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.submit-btn {
+  background: linear-gradient(135deg, #4361ee, #3b2e8a);
+  color: white;
+}
+
+.submit-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
+.reset-btn {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+}
+
+.reset-btn:hover {
+  background: #e2e8f0;
+}
+
+/* Table Styles */
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 40px;
+  padding: 6px 16px;
+  gap: 8px;
+}
+
+.search-box i {
+  color: #94a3b8;
+}
+
+.search-box input {
+  border: none;
+  background: transparent;
+  padding: 6px 0;
+  width: 240px;
+  font-size: 0.8rem;
+  outline: none;
+}
+
+.export-btn {
+  background: #eef2ff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 30px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #4361ee;
+  transition: all 0.2s;
+}
+
+.export-btn:hover {
+  background: #4361ee;
+  color: white;
+}
+
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  background: white;
+}
+
+.subscription-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.subscription-table th {
+  background: #f8fafc;
+  padding: 12px 12px;
+  text-align: left;
+  font-weight: 700;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.subscription-table td {
+  padding: 12px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+.subscription-table tr:hover {
+  background: #fafcff;
+}
+
+.loading-cell {
+  text-align: center;
+  padding: 40px !important;
+  color: #94a3b8;
+}
+
+/* Status badges */
+.status-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 30px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.status-critical {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.status-warning {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.status-healthy {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.status-expired {
+  background: #f1f5f9;
+  color: #64748b;
+}
+
+/* Action buttons */
+.action-icon-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1rem;
+  margin: 0 4px;
+  transition: 0.1s;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+.action-icon-btn.edit {
+  color: #4361ee;
+}
+.action-icon-btn.edit:hover {
+  background: #eef2ff;
+}
+.action-icon-btn.delete {
+  color: #ef476f;
+}
+.action-icon-btn.delete:hover {
+  background: #ffe4e8;
+}
+
+/* Alert banner */
+.alert-banner {
+  background: #fffbeb;
+  border-left: 4px solid #f59e0b;
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.85rem;
+  color: #b45309;
+}
+
+/* Modals */
+.sub-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.sub-modal-content {
+  background: white;
+  padding: 28px 32px;
+  border-radius: 20px;
+  text-align: center;
+  max-width: 360px;
+  width: 90%;
+  animation: modalPop 0.2s ease;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.sub-modal-content i {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.sub-modal-content p {
+  font-size: 1rem;
+  margin-bottom: 20px;
+  color: #1e293b;
+}
+
+.modal-ok-btn, .modal-cancel-btn, .modal-delete-btn {
+  padding: 8px 24px;
+  border-radius: 30px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modal-ok-btn {
+  background: #4361ee;
+  color: white;
+}
+
+.modal-cancel-btn {
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.modal-delete-btn {
+  background: #ef476f;
+  color: white;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .subscription-container {
+    padding: 16px;
+  }
+  .form-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .sub-tabs {
+    gap: 4px;
+  }
+  .sub-tab-btn {
+    padding: 8px 12px;
+    font-size: 0.75rem;
+  }
+  .subscription-table th, .subscription-table td {
+    padding: 8px 6px;
+    font-size: 0.7rem;
+  }
+  .search-box input {
+    width: 160px;
+  }
+}
