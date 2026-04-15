@@ -4,48 +4,72 @@
   </div>
 
   <form id="subscriptionForm" onsubmit="event.preventDefault(); submitSubscription();">
-    <div class="form-grid-2">
+    <!-- First Row: Category, Start Date, Expiry Date -->
+    <div class="form-row-three">
       <div class="form-group">
-        <label>Subscription/License Name</label>
-        <input type="text" id="subName" placeholder="e.g., Microsoft 365 Business Premium" required>
-      </div>
-      <div class="form-group">
-        <label>Category</label>
-        <select id="subCategory" required>
+        <label>Category:</label>
+        <select id="subCategory" onchange="handleCategoryChange()" required>
           <option value="">Select Category</option>
+          <option value="add-new">+ Add New Category</option>
         </select>
       </div>
-    </div>
 
-    <div class="form-grid-2">
       <div class="form-group">
-        <label>Vendor/Provider</label>
-        <input type="text" id="vendor" placeholder="e.g., Microsoft, Google, GoDaddy">
-      </div>
-      <div class="form-group">
-        <label>Subscription/License Code</label>
-        <input type="text" id="licenseCode" readonly placeholder="Auto-generated">
-      </div>
-    </div>
-
-    <div class="form-grid-2">
-      <div class="form-group">
-        <label>Purchase/Start Date</label>
+        <label>Purchase/Start Date:</label>
         <input type="date" id="startDate" required>
       </div>
+
       <div class="form-group">
-        <label>Expiry/Renewal Date</label>
+        <label>Expiry/Renewal Date:</label>
         <input type="date" id="expiryDate" required>
       </div>
     </div>
 
-    <div class="form-grid-2">
+    <!-- Add New Category Fields (Hidden by default) -->
+    <div id="addNewCategoryFields" style="display: none;">
+      <div class="form-row-two">
+        <div class="form-group">
+          <label>Category Name:</label>
+          <input type="text" id="categoryName" placeholder="e.g., Software License">
+        </div>
+        <div class="form-group">
+          <label>Main Code:</label>
+          <input type="text" id="categoryCode" readonly placeholder="Auto-generated">
+        </div>
+      </div>
       <div class="form-group">
-        <label>Annual Cost (GH₵)</label>
+        <label>Description:</label>
+        <textarea id="categoryDescription" placeholder="Category description" rows="2"></textarea>
+      </div>
+    </div>
+
+    <!-- Second Row: Name, Vendor, License Code -->
+    <div class="form-row-three">
+      <div class="form-group">
+        <label>Subscription/License Name:</label>
+        <input type="text" id="subName" placeholder="e.g., Microsoft 365 Business Premium" required>
+      </div>
+      <div class="form-group">
+        <label>Vendor/Provider:</label>
+        <input type="text" id="vendor" placeholder="e.g., Microsoft, Google, GoDaddy">
+      </div>
+      <div class="form-group">
+        <label>License Code:</label>
+        <div class="code-display" id="generatedCodeDisplay">
+          <span class="code-placeholder">-</span>
+        </div>
+        <input type="hidden" id="licenseCode">
+      </div>
+    </div>
+
+    <!-- Third Row: Annual Cost, Payment Mode -->
+    <div class="form-row-two">
+      <div class="form-group">
+        <label>Annual Cost (GH₵):</label>
         <input type="number" id="annualCost" step="0.01" placeholder="0.00" required>
       </div>
       <div class="form-group">
-        <label>Payment Mode</label>
+        <label>Payment Mode:</label>
         <select id="paymentMode">
           <option value="Prepaid">Prepaid</option>
           <option value="In Arrears">In Arrears</option>
@@ -70,7 +94,7 @@
   border-radius: 16px;
   padding: 24px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.04);
-  max-width: 900px;
+  max-width: 1000px;
   margin: 0 auto;
 }
 
@@ -84,13 +108,6 @@
   font-size: 1.5rem;
   color: #0f172a;
   margin: 0;
-}
-
-.form-grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 18px;
 }
 
 .form-group {
@@ -108,7 +125,8 @@
 }
 
 .form-group input, 
-.form-group select {
+.form-group select,
+.form-group textarea {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
@@ -119,7 +137,8 @@
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: #4361ee;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
@@ -128,6 +147,57 @@
 .form-group input[readonly] {
   background: #f7fafc;
   cursor: not-allowed;
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 60px;
+}
+
+.form-row-two {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+.form-row-three {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin-bottom: 18px;
+}
+
+/* Code Display Styles */
+.code-display {
+  padding: 10px 12px;
+  border: 2px dashed #4361ee;
+  border-radius: 10px;
+  background: #f0f4ff;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #4361ee;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 1px;
+}
+
+.code-placeholder {
+  color: #a0aec0;
+  font-weight: 400;
+  font-size: 0.75rem;
+  letter-spacing: normal;
+}
+
+#addNewCategoryFields {
+  background: #f7fafc;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  margin-bottom: 18px;
 }
 
 .form-actions {
@@ -188,7 +258,7 @@
   .subscription-container {
     padding: 16px;
   }
-  .form-grid-2 {
+  .form-row-three, .form-row-two {
     grid-template-columns: 1fr;
     gap: 12px;
   }
