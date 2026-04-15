@@ -56,9 +56,9 @@ const printUtils = {
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 10mm;
-          font-size: 8px;
-          line-height: 1.2;
+          padding: 15mm;
+          font-size: 11px;
+          line-height: 1.6;
           color: #2d3748;
           background: white;
         }
@@ -66,80 +66,89 @@ const printUtils = {
         /* Report Header */
         .print-report-header {
           text-align: center;
-          margin-bottom: 12px;
-          border-bottom: 2px solid #4361ee;
-          padding-bottom: 8px;
+          margin-bottom: 18px;
+          border-bottom: 3px solid #4361ee;
+          padding-bottom: 12px;
+          page-break-after: avoid;
         }
         
         .print-report-header h1 {
-          font-size: 16px;
+          font-size: 22px;
           color: #2d3748;
           margin: 0;
-          font-weight: 600;
-          letter-spacing: 1px;
+          font-weight: 700;
+          letter-spacing: 1.5px;
         }
         
         .print-report-header .date-info {
-          font-size: 8px;
+          font-size: 10px;
           color: #718096;
-          margin-top: 4px;
-          padding-top: 2px;
+          margin-top: 8px;
+          padding-top: 6px;
           border-top: 1px dashed #e2e8f0;
         }
         
         .print-report-header .date-info div {
-          margin: 1px 0;
+          margin: 2px 0;
         }
         
         /* Table Styles */
         table {
           width: 100%;
           border-collapse: collapse;
-          margin-top: 8px;
-          font-size: 8px;
+          margin-top: 12px;
+          margin-bottom: 12px;
+          font-size: 11px;
         }
         
         th {
           background: #f7fafc;
-          padding: 4px 3px;
+          padding: 8px 6px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-weight: 700;
-          font-size: 8px;
+          font-size: 11px;
           text-transform: uppercase;
-          letter-spacing: 0.2px;
+          letter-spacing: 0.5px;
           color: #2d3748;
         }
         
         td {
-          padding: 3px 2px;
+          padding: 7px 5px;
           border: 1px solid #e2e8f0;
           text-align: center;
-          font-size: 8px;
+          font-size: 10px;
           color: #4a5568;
+          line-height: 1.4;
         }
         
         tbody tr:nth-child(even) {
           background: #fafbfc;
         }
         
+        tbody tr:hover {
+          background: #f0f4ff;
+        }
+        
         /* Group Title */
         .group-title {
-          font-size: 10px;
+          font-size: 13px;
           font-weight: 700;
           background: linear-gradient(135deg, #4361ee, #7209b7);
           color: white;
-          padding: 4px 8px;
-          margin: 8px 0 0 0;
-          border-radius: 3px 3px 0 0;
+          padding: 8px 12px;
+          margin: 12px 0 0 0;
+          border-radius: 4px 4px 0 0;
+          page-break-after: avoid;
         }
         
         .group-table-wrapper {
           border: 1px solid #e2e8f0;
           border-top: none;
-          border-radius: 0 0 3px 3px;
+          border-radius: 0 0 4px 4px;
           overflow-x: auto;
-          margin-bottom: 4px;
+          margin-bottom: 8px;
+          page-break-inside: avoid;
         }
         
         .group-table {
@@ -148,56 +157,63 @@ const printUtils = {
         }
         
         .grouped-report {
-          margin-bottom: 8px;
+          margin-bottom: 12px;
           page-break-inside: avoid;
         }
         
         .subtotal-row {
           background: #f0f4ff !important;
           font-weight: 600;
+          page-break-after: avoid;
         }
         
         .subtotal-row td {
           background: #f0f4ff !important;
           color: #4361ee !important;
-          border: 1px solid #4361ee;
+          border: 1.5px solid #4361ee;
           font-weight: 600;
-          padding: 3px 2px;
+          padding: 7px 5px;
+          font-size: 11px;
         }
         
         .grand-total-row {
           background: #e8f8f3 !important;
           font-weight: 700;
+          page-break-after: avoid;
         }
         
         .grand-total-row td {
           background: #e8f8f3 !important;
           color: #118d57 !important;
-          border: 1px solid #06d6a0;
+          border: 1.5px solid #06d6a0;
           font-weight: 700;
-          padding: 4px 3px;
+          padding: 8px 6px;
+          font-size: 11px;
         }
         
         .total-row {
           background: #e8f8f3 !important;
           font-weight: 700;
+          page-break-after: avoid;
         }
         
         .total-row td {
           background: #e8f8f3 !important;
           color: #118d57 !important;
-          border: 1px solid #06d6a0;
+          border: 1.5px solid #06d6a0;
           font-weight: 700;
-          padding: 4px 3px;
+          padding: 8px 6px;
+          font-size: 11px;
         }
         
         .text-right {
           text-align: right;
-          padding-right: 4px;
+          padding-right: 6px;
         }
         
         .text-left {
           text-align: left;
+          padding-left: 6px;
         }
         
         .text-center {
@@ -211,12 +227,12 @@ const printUtils = {
         /* LANDSCAPE AND PORTRAIT SUPPORT - NO HEADERS/FOOTERS */
         @page {
           size: A4 landscape;
-          margin: 8mm;
+          margin: 10mm;
           padding: 0;
         }
         
         @page :first {
-          margin: 8mm;
+          margin: 10mm;
         }
         
         @media print {
@@ -232,16 +248,19 @@ const printUtils = {
           
           body {
             margin: 0;
-            padding: 8mm;
+            padding: 12mm;
             width: 100%;
             height: 100%;
-            font-size: 8px;
+            font-size: 11px;
+            line-height: 1.6;
             background: white !important;
           }
           
           table {
-            page-break-inside: avoid;
+            page-break-inside: auto;
             width: 100%;
+            margin-top: 8px;
+            margin-bottom: 8px;
           }
           
           th, td {
@@ -249,8 +268,23 @@ const printUtils = {
             page-break-inside: avoid;
           }
           
+          tbody tr {
+            page-break-inside: avoid;
+            page-break-after: auto;
+          }
+          
           .grouped-report {
             page-break-inside: avoid;
+            page-break-after: auto;
+            margin-bottom: 10px;
+          }
+          
+          .print-report-header {
+            page-break-after: avoid;
+          }
+          
+          .group-title {
+            page-break-after: avoid;
           }
           
           thead {
@@ -263,10 +297,10 @@ const printUtils = {
           
           /* Remove browser headers and footers */
           @page {
-            margin-top: 8mm;
-            margin-bottom: 8mm;
-            margin-left: 8mm;
-            margin-right: 8mm;
+            margin-top: 10mm;
+            margin-bottom: 10mm;
+            margin-left: 10mm;
+            margin-right: 10mm;
           }
         }
       </style>
