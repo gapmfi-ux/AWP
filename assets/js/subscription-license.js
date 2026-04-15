@@ -1,14 +1,14 @@
 /* ============================================
    SUBSCRIPTIONS & LICENSES RENEWALS MODULE
-   Supports: subscriptionAdd (Add New) and subscriptionSchedule (View Schedule)
+   Supports: subscriptionAdd and subscriptionSchedule
    ============================================ */
 
-// Global storage for subscriptions
+// Global storage
 let subscriptionsList = [];
 let pendingDeleteId = null;
 
 // ============================================
-// INITIALIZATION for Add New module
+// ADD NEW MODULE INITIALIZATION
 // ============================================
 
 function initSubscriptionAddModule() {
@@ -25,44 +25,35 @@ function initSubscriptionAddModule() {
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
   
-  // Reset hidden ID field if exists
-  const hiddenId = document.getElementById('subId');
-  if (hiddenId) hiddenId.value = '';
+  // Load existing data from localStorage
+  loadSubscriptionsFromStorage();
 }
 
 // ============================================
-// INITIALIZATION for Schedule module
+// SCHEDULE MODULE INITIALIZATION
 // ============================================
 
 function initSubscriptionScheduleModule() {
   console.log('Initializing Subscription Schedule Module');
-  loadAllSubscriptions();
+  loadSubscriptionsFromStorage();
+  renderScheduleTable();
+  renderExpiringSoonTable();
+  renderExpiredTable();
 }
 
-// Load subscriptions via API
-async function loadAllSubscriptions() {
-  showScheduleLoading(true);
-  try {
-    if (window.API && typeof window.API.getAllSubscriptions === 'function') {
-      const result = await window.API.getAllSubscriptions();
-      subscriptionsList = Array.isArray(result) ? result : (result?.data || []);
-    } else {
-      // Fallback to demo data
-      subscriptionsList = getDemoSubscriptions();
-    }
-    renderScheduleTable();
-    renderExpiringSoonTable();
-    renderExpiredTable();
-  } catch (error) {
-    console.error('Error loading subscriptions:', error);
+// Load from localStorage
+function loadSubscriptionsFromStorage() {
+  const stored = localStorage.getItem('subscriptions_list');
+  if (stored) {
+    subscriptionsList = JSON.parse(stored);
+  } else {
     subscriptionsList = getDemoSubscriptions();
-    renderScheduleTable();
-    renderExpiringSoonTable();
-    renderExpiredTable();
-    showScheduleMessage('Using demo data. Backend integration pending.', 'info');
-  } finally {
-    showScheduleLoading(false);
+    saveSubscriptionsToStorage();
   }
+}
+
+function saveSubscriptionsToStorage() {
+  localStorage.setItem('subscriptions_list', JSON.stringify(subscriptionsList));
 }
 
 // Demo data
@@ -85,7 +76,61 @@ function getDemoSubscriptions() {
   ];
 }
 
-// Render schedule table
+// ============================================
+// SUBMIT NEW SUBSCRIPTION
+// ============================================
+
+function submitSubscription() {
+  const name = document.getElementById('subName').value.trim();
+  const category = document.getElementById('subCategory').value;
+  const vendor = document.getElementById('vendor').value;
+  const licenseKey = document.getElementById('licenseKey').value;
+  const startDate = document.getElementById('startDate').value;
+  const expiryDate = document.getElementById('expiryDate').value;
+  const annualCost = parseFloat(document.getElementById('annualCost').value);
+  const renewalType = document.getElementById('renewalType').value;
+  const assignedTo = document.getElementById('assignedTo').value;
+  const notes = document.getElementById('notes').value;
+  
+  if (!name || !category || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
+    showToast('Please fill all required fields', 'error');
+    return;
+  }
+  
+  if (new Date(expiryDate) <= new Date(startDate)) {
+    showToast('Expiry date must be after start date', 'error');
+    return;
+  }
+  
+  const subscriptionData = {
+    id: generateId(),
+    name, category, vendor, licenseKey, startDate, expiryDate,
+    annualCost, renewalType, assignedTo, notes
+  };
+  
+  subscriptionsList.push(subscriptionData);
+  saveSubscriptionsToStorage();
+  
+  showToast('Subscription saved successfully!', 'success');
+  resetSubscriptionForm();
+}
+
+function resetSubscriptionForm() {
+  const form = document.getElementById('subscriptionForm');
+  if (form) form.reset();
+  const today = new Date().toISOString().split('T')[0];
+  const startField = document.getElementById('startDate');
+  if (startField) startField.value = today;
+  const nextYear = new Date();
+  nextYear.setFullYear(nextYear.getFullYear() + 1);
+  const expiryField = document.getElementById('expiryDate');
+  if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
+}
+
+// ============================================
+// RENDER FUNCTIONS FOR SCHEDULE MODULE
+// ============================================
+
 function renderScheduleTable() {
   const tbody = document.getElementById('scheduleTableBody');
   if (!tbody) return;
@@ -117,7 +162,6 @@ function renderScheduleTable() {
   }).join('');
 }
 
-// Render expiring soon (days 0-30)
 function renderExpiringSoonTable() {
   const tbody = document.getElementById('expiringTableBody');
   if (!tbody) return;
@@ -150,7 +194,6 @@ function renderExpiringSoonTable() {
   }).join('');
 }
 
-// Render expired table
 function renderExpiredTable() {
   const tbody = document.getElementById('expiredTableBody');
   if (!tbody) return;
@@ -181,7 +224,6 @@ function renderExpiredTable() {
   }).join('');
 }
 
-// Filter schedule table by search
 function filterScheduleTable() {
   const searchTerm = document.getElementById('scheduleSearch')?.value.toLowerCase() || '';
   const tbody = document.getElementById('scheduleTableBody');
@@ -220,54 +262,15 @@ function filterScheduleTable() {
   }).join('');
 }
 
-// Submit new subscription
-async function submitSubscription() {
-  const name = document.getElementById('subName').value.trim();
-  const category = document.getElementById('subCategory').value;
-  const vendor = document.getElementById('vendor').value;
-  const licenseKey = document.getElementById('licenseKey').value;
-  const startDate = document.getElementById('startDate').value;
-  const expiryDate = document.getElementById('expiryDate').value;
-  const annualCost = parseFloat(document.getElementById('annualCost').value);
-  const renewalType = document.getElementById('renewalType').value;
-  const assignedTo = document.getElementById('assignedTo').value;
-  const notes = document.getElementById('notes').value;
-  
-  if (!name || !category || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
-    showMessage('Please fill all required fields (Name, Category, Dates, valid Cost)', 'error');
-    return;
-  }
-  
-  if (new Date(expiryDate) <= new Date(startDate)) {
-    showMessage('Expiry date must be after start date', 'error');
-    return;
-  }
-  
-  const subscriptionData = {
-    id: generateTempId(),
-    name, category, vendor, licenseKey, startDate, expiryDate,
-    annualCost, renewalType, assignedTo, notes
-  };
-  
-  // Add to local list
-  subscriptionsList.push(subscriptionData);
-  
-  showMessage('Subscription saved successfully!', 'success');
-  resetSubscriptionForm();
-  
-  // If we're in schedule view, refresh tables
-  if (document.getElementById('scheduleTableBody')) {
-    renderScheduleTable();
-    renderExpiringSoonTable();
-    renderExpiredTable();
-  }
-}
+// ============================================
+// EDIT & DELETE FUNCTIONS
+// ============================================
 
 function editSubscription(id) {
   const sub = subscriptionsList.find(s => s.id === id);
   if (!sub) return;
   
-  // Load the Add module first, then populate
+  // Switch to Add New module
   if (typeof loadModule === 'function') {
     loadModule('subscriptionAdd');
     setTimeout(() => {
@@ -282,58 +285,36 @@ function editSubscription(id) {
       document.getElementById('assignedTo').value = sub.assignedTo || '';
       document.getElementById('notes').value = sub.notes || '';
       
-      if (!document.getElementById('subId')) {
-        const hidden = document.createElement('input');
-        hidden.type = 'hidden';
-        hidden.id = 'subId';
-        document.getElementById('subscriptionForm').appendChild(hidden);
-      }
-      document.getElementById('subId').value = sub.id;
-      showMessage('Edit mode: Update the form and save.', 'info');
+      // Remove the old record first
+      subscriptionsList = subscriptionsList.filter(s => s.id !== id);
+      saveSubscriptionsToStorage();
+      
+      showToast('Edit mode: Update the form and save.', 'info');
     }, 200);
-  } else {
-    showMessage('Please go to Add New module to edit', 'info');
   }
 }
 
 function confirmDeleteSubscription(id) {
-  pendingDeleteId = id;
-  const confirmMsg = document.getElementById('confirmMessage');
-  if (confirmMsg) confirmMsg.innerText = 'Delete this subscription permanently?';
-  document.getElementById('subConfirmModal').style.display = 'flex';
-  
-  const delBtn = document.getElementById('confirmDeleteBtn');
-  delBtn.onclick = () => {
-    subscriptionsList = subscriptionsList.filter(s => s.id !== pendingDeleteId);
+  if (confirm('Are you sure you want to delete this subscription permanently?')) {
+    subscriptionsList = subscriptionsList.filter(s => s.id !== id);
+    saveSubscriptionsToStorage();
     renderScheduleTable();
     renderExpiringSoonTable();
     renderExpiredTable();
-    closeConfirmModal();
-    showMessage('Deleted successfully', 'success');
-    pendingDeleteId = null;
-  };
+    showToast('Subscription deleted successfully', 'success');
+  }
 }
 
-function resetSubscriptionForm() {
-  const form = document.getElementById('subscriptionForm');
-  if (form) form.reset();
-  const hiddenId = document.getElementById('subId');
-  if (hiddenId) hiddenId.value = '';
-  const today = new Date().toISOString().split('T')[0];
-  const startField = document.getElementById('startDate');
-  if (startField) startField.value = today;
-  const nextYear = new Date();
-  nextYear.setFullYear(nextYear.getFullYear() + 1);
-  const expiryField = document.getElementById('expiryDate');
-  if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
-}
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
 
 function switchScheduleTab(tabId) {
   document.querySelectorAll('.schedule-tab-content').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.schedule-tab-btn').forEach(b => b.classList.remove('active'));
   document.getElementById(tabId).classList.add('active');
   
-  const btns = document.querySelectorAll('.sub-tab-btn');
+  const btns = document.querySelectorAll('.schedule-tab-btn');
   if (tabId === 'allSchedule') btns[0]?.classList.add('active');
   else if (tabId === 'expiringSoon') btns[1]?.classList.add('active');
   else if (tabId === 'expired') btns[2]?.classList.add('active');
@@ -351,9 +332,9 @@ function exportSubscriptionsToCSV() {
   link.download = `subscriptions_${new Date().toISOString().split('T')[0]}.csv`;
   link.click();
   URL.revokeObjectURL(link.href);
+  showToast('Export complete!', 'success');
 }
 
-// Helper functions
 function calculateDaysLeft(expiryDateStr) {
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -390,51 +371,25 @@ function escapeHtml(str) {
   });
 }
 
-function showMessage(msg, type) {
-  const modal = document.getElementById('subMessageModal');
-  const msgText = document.getElementById('modalMessageText');
-  const icon = document.getElementById('modalIcon');
-  if (!modal) return;
-  msgText.innerText = msg;
-  icon.className = type === 'success' ? 'fas fa-check-circle' : (type === 'error' ? 'fas fa-times-circle' : 'fas fa-info-circle');
-  icon.style.color = type === 'success' ? '#06d6a0' : (type === 'error' ? '#ef476f' : '#4361ee');
-  modal.style.display = 'flex';
-  setTimeout(() => { if(modal.style.display === 'flex') modal.style.display = 'none'; }, 2500);
+function showToast(message, type) {
+  const toastId = document.getElementById('subToast') ? 'subToast' : 'subScheduleToast';
+  const toast = document.getElementById(toastId);
+  const msgSpan = document.getElementById(toastId === 'subToast' ? 'subToastMessage' : 'subScheduleToastMessage');
+  if (!toast) return;
+  
+  msgSpan.innerText = message;
+  toast.style.backgroundColor = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
+  toast.style.display = 'block';
+  setTimeout(() => {
+    toast.style.display = 'none';
+  }, 3000);
 }
 
-function closeSubModal() { 
-  const modal = document.getElementById('subMessageModal');
-  if (modal) modal.style.display = 'none';
+function generateId() {
+  return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 8);
 }
 
-function closeConfirmModal() { 
-  const modal = document.getElementById('subConfirmModal');
-  if (modal) modal.style.display = 'none';
-  pendingDeleteId = null;
-}
-
-function showScheduleLoading(show) {
-  let overlay = document.getElementById('subLoadingOverlay');
-  if (!overlay && show) {
-    overlay = document.createElement('div');
-    overlay.id = 'subLoadingOverlay';
-    overlay.className = 'asset-loading-modal';
-    overlay.innerHTML = '<div class="loading-modal-content"><div class="loading-spinner"></div><p>Loading subscriptions...</p></div>';
-    document.body.appendChild(overlay);
-  }
-  if (overlay) overlay.style.display = show ? 'flex' : 'none';
-}
-
-function showScheduleMessage(msg, type) {
-  console.log(`[${type}] ${msg}`);
-  // Optional: use toast notification
-}
-
-function generateTempId() {
-  return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 6);
-}
-
-// Expose globals
+// Expose global functions
 window.initSubscriptionAddModule = initSubscriptionAddModule;
 window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
 window.submitSubscription = submitSubscription;
@@ -444,5 +399,3 @@ window.confirmDeleteSubscription = confirmDeleteSubscription;
 window.filterScheduleTable = filterScheduleTable;
 window.exportSubscriptionsToCSV = exportSubscriptionsToCSV;
 window.switchScheduleTab = switchScheduleTab;
-window.closeSubModal = closeSubModal;
-window.closeConfirmModal = closeConfirmModal;
