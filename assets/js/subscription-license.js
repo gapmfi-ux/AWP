@@ -1,3 +1,4 @@
+
 let subscriptionsList = [];
 let currentRenewId = null;
 let currentFilter = { fromDate: '', toDate: '' };
