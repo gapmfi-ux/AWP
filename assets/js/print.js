@@ -1,6 +1,6 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Clean print view with balanced margins
+   Clean print view with reduced margins (20% less)
    ============================================ */
 
 // Global print utility with clean formatting
@@ -35,7 +35,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - balanced margins
+  // Get clean print styles - REDUCED MARGINS (20% less)
   getPrintStyles: function() {
     return `
       <style>
@@ -55,18 +55,18 @@ const printUtils = {
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 15mm 12mm;
+          padding: 12mm 9.6mm;
           font-size: 10pt;
           line-height: 1.4;
           color: #1a202c;
           background: white;
         }
         
-        /* Report Header */
+        /* Report Header - Reduced spacing */
         .print-report-header {
           text-align: center;
-          margin-bottom: 20px;
-          padding-bottom: 10px;
+          margin-bottom: 16px;
+          padding-bottom: 8px;
           page-break-after: avoid;
         }
         
@@ -81,11 +81,11 @@ const printUtils = {
         .period-info {
           font-size: 10pt;
           color: #4a5568;
-          margin-top: 6px;
+          margin-top: 5px;
           padding: 0;
         }
         
-        /* Table Styles */
+        /* Table Styles - Reduced padding */
         .print-table-wrapper {
           margin: 0;
           page-break-inside: auto;
@@ -103,7 +103,7 @@ const printUtils = {
         th {
           background: #2c3e66;
           color: white;
-          padding: 10px 8px;
+          padding: 8px 6px;
           border: 1px solid #1a2a4a;
           text-align: center;
           font-weight: 700;
@@ -113,7 +113,7 @@ const printUtils = {
         }
         
         td {
-          padding: 8px 6px;
+          padding: 6px 5px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-size: 9pt;
@@ -132,16 +132,16 @@ const printUtils = {
         
         .text-right {
           text-align: right !important;
-          padding-right: 10px !important;
+          padding-right: 8px !important;
         }
         
         .text-center {
           text-align: center !important;
         }
         
-        /* Group Report Styles */
+        /* Group Report Styles - Reduced spacing */
         .grouped-report {
-          margin-bottom: 18px;
+          margin-bottom: 14px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
@@ -151,8 +151,8 @@ const printUtils = {
           font-weight: 800;
           background: linear-gradient(135deg, #2c3e66, #4361ee);
           color: white;
-          padding: 8px 12px;
-          margin: 12px 0 0 0;
+          padding: 6px 10px;
+          margin: 10px 0 0 0;
           border-radius: 4px 4px 0 0;
           page-break-after: avoid;
           break-after: avoid;
@@ -205,7 +205,7 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* Print-specific optimizations */
+        /* Print-specific optimizations - Reduced margins */
         @media print {
           html, body {
             margin: 0;
@@ -214,7 +214,7 @@ const printUtils = {
           
           body {
             margin: 0;
-            padding: 12mm 10mm;
+            padding: 9.6mm 8mm;
           }
           
           table {
@@ -242,14 +242,14 @@ const printUtils = {
             display: none !important;
           }
           
-          /* Page margins - balanced */
+          /* Page margins - Reduced by 20% (from 15mm to 12mm, from 12mm to 9.6mm) */
           @page {
             size: A4 landscape;
-            margin: 15mm 12mm;
+            margin: 12mm 9.6mm;
           }
           
           @page :first {
-            margin-top: 15mm;
+            margin-top: 12mm;
           }
         }
       </style>
