@@ -1,19 +1,173 @@
-
-
 let subscriptionsList = [];
 let currentRenewId = null;
 let currentFilter = { fromDate: '', toDate: '' };
 
-// Category list
-const subscriptionCategories = [
-  'Software License',
-  'SaaS Subscription', 
-  'Domain Renewal',
-  'SSL Certificate',
-  'Maintenance Contract',
-  'Cloud Service',
-  'Other'
-];
+// ============================================
+// CATEGORY MANAGEMENT (Like Inventory)
+// ============================================
+
+function loadSubscriptionCategories() {
+  console.log('Loading subscription categories via API');
+  
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available, using default categories');
+    loadDefaultCategories();
+    return;
+  }
+  
+  API.getSubscriptionCategories()
+    .then(function(response) {
+      console.log('Categories response:', response);
+      const select = document.getElementById('subCategory');
+      if (!select) return;
+      
+      // Clear existing options except the first one
+      while (select.options.length > 2) {
+        select.remove(2);
+      }
+      
+      if (response && Array.isArray(response) && response.length > 0) {
+        response.forEach(function(cat) {
+          const option = document.createElement('option');
+          option.value = cat.code;
+          option.textContent = cat.name + ' (' + cat.code + ')';
+          select.appendChild(option);
+        });
+        console.log('Loaded ' + response.length + ' categories');
+      } else {
+        // Fallback to default categories
+        loadDefaultCategories();
+      }
+    })
+    .catch(function(error) {
+      console.error('Error loading categories:', error);
+      loadDefaultCategories();
+    });
+}
+
+function loadDefaultCategories() {
+  const categorySelect = document.getElementById('subCategory');
+  if (categorySelect) {
+    const defaultCategories = [
+      'Software License',
+      'SaaS Subscription', 
+      'Domain Renewal',
+      'SSL Certificate',
+      'Maintenance Contract',
+      'Cloud Service',
+      'Other'
+    ];
+    
+    categorySelect.innerHTML = '<option value="">Select Category</option><option value="add-new">+ Add New Category</option>';
+    defaultCategories.forEach(cat => {
+      const option = document.createElement('option');
+      option.value = cat;
+      option.textContent = cat;
+      categorySelect.appendChild(option);
+    });
+  }
+}
+
+function handleCategoryChange() {
+  const select = document.getElementById('subCategory');
+  const addNewFields = document.getElementById('addNewCategoryFields');
+  const licenseCodeField = document.getElementById('licenseCode');
+  
+  if (select.value === 'add-new') {
+    if (addNewFields) addNewFields.style.display = 'block';
+    generateCategoryCode();
+  } else if (select.value && select.value !== 'add-new' && select.value !== '') {
+    if (addNewFields) addNewFields.style.display = 'none';
+    generateLicenseCode();
+  } else {
+    if (addNewFields) addNewFields.style.display = 'none';
+    if (licenseCodeField) licenseCodeField.value = '';
+  }
+}
+
+function generateCategoryCode() {
+  console.log('Generating subscription category code via API');
+  
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    showToast('API not available', 'error');
+    return;
+  }
+  
+  showToast('Generating code...', 'info');
+  
+  API.generateSubscriptionCategoryCode()
+    .then(function(response) {
+      console.log('Category code response:', response);
+      
+      const field = document.getElementById('categoryCode');
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      
+      if (response) {
+        const mainCode = String(response).trim();
+        if (field) field.value = mainCode;
+        
+        // Display the generated code with 001 suffix (new code, so always 001)
+        const licenseCode = mainCode + '001';
+        if (codeDisplay) {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + licenseCode + '</span>';
+        }
+        if (document.getElementById('licenseCode')) {
+          document.getElementById('licenseCode').value = licenseCode;
+        }
+      } else {
+        console.error('No response for category code');
+        showToast('Error generating category code', 'error');
+      }
+    })
+    .catch(function(error) {
+      console.error('Error generating category code:', error);
+      showToast('Error generating category code: ' + (error.message || error), 'error');
+    });
+}
+
+function generateLicenseCode() {
+  const categorySelect = document.getElementById('subCategory');
+  const selectedCategory = categorySelect.value;
+  
+  if (!selectedCategory || selectedCategory === '' || selectedCategory === 'add-new') {
+    return;
+  }
+  
+  console.log('Generating license code for category:', selectedCategory);
+  
+  if (typeof API === 'undefined' || !API) {
+    // Fallback: generate local code
+    const prefix = selectedCategory.substring(0, 3).toUpperCase();
+    const year = new Date().getFullYear();
+    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+    const code = `${prefix}-${year}-${random}`;
+    document.getElementById('licenseCode').value = code;
+    return;
+  }
+  
+  API.getNextSubscriptionCode(selectedCategory)
+    .then(function(response) {
+      console.log('Next subscription code:', response);
+      const codeField = document.getElementById('licenseCode');
+      if (response && codeField) {
+        let nextCode = response;
+        if (typeof response === 'object' && response.result) {
+          nextCode = response.result;
+        }
+        codeField.value = String(nextCode).trim();
+      }
+    })
+    .catch(function(error) {
+      console.error('Error generating license code:', error);
+      // Fallback
+      const prefix = selectedCategory.substring(0, 3).toUpperCase();
+      const year = new Date().getFullYear();
+      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+      const code = `${prefix}-${year}-${random}`;
+      document.getElementById('licenseCode').value = code;
+    });
+}
 
 // ============================================
 // ADD NEW MODULE INITIALIZATION
@@ -22,17 +176,7 @@ const subscriptionCategories = [
 function initSubscriptionAddModule() {
   console.log('Initializing Subscription Add Module');
   
-  const categorySelect = document.getElementById('subCategory');
-  if (categorySelect) {
-    categorySelect.innerHTML = '<option value="">Select Category</option>';
-    subscriptionCategories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat;
-      option.textContent = cat;
-      categorySelect.appendChild(option);
-    });
-  }
-  
+  // Set default dates
   const today = new Date().toISOString().split('T')[0];
   const startDateField = document.getElementById('startDate');
   const expiryDateField = document.getElementById('expiryDate');
@@ -44,18 +188,14 @@ function initSubscriptionAddModule() {
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
   
-  generateLicenseCode();
+  // Load categories from API or default
+  loadSubscriptionCategories();
+  
+  // Hide add-new category fields initially
+  const addNewFields = document.getElementById('addNewCategoryFields');
+  if (addNewFields) addNewFields.style.display = 'none';
+  
   loadSubscriptionsFromStorage();
-}
-
-function generateLicenseCode() {
-  const codeField = document.getElementById('licenseCode');
-  if (codeField) {
-    const prefix = 'SUB';
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    codeField.value = `${prefix}-${year}-${random}`;
-  }
 }
 
 // ============================================
@@ -161,8 +301,31 @@ function isWithinDateRange(expiryDate) {
 // ============================================
 
 function submitSubscription() {
+  const categorySelect = document.getElementById('subCategory');
+  const categoryValue = categorySelect.value;
+  
+  let category, categoryCode, categoryDescription;
+  
+  // Handle add-new category
+  if (categoryValue === 'add-new') {
+    category = document.getElementById('categoryName').value;
+    categoryCode = document.getElementById('categoryCode').value;
+    categoryDescription = document.getElementById('categoryDescription').value;
+    
+    if (!category || !categoryCode) {
+      showToast('Please fill in all category fields', 'error');
+      return;
+    }
+  } else if (categoryValue && categoryValue !== '') {
+    category = categoryValue;
+    categoryCode = categoryValue;
+    categoryDescription = '';
+  } else {
+    showToast('Please select a category', 'error');
+    return;
+  }
+  
   const name = document.getElementById('subName').value.trim();
-  const category = document.getElementById('subCategory').value;
   const vendor = document.getElementById('vendor').value;
   const licenseCode = document.getElementById('licenseCode').value;
   const startDate = document.getElementById('startDate').value;
@@ -170,7 +333,7 @@ function submitSubscription() {
   const annualCost = parseFloat(document.getElementById('annualCost').value);
   const paymentMode = document.getElementById('paymentMode').value;
   
-  if (!name || !category || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
+  if (!name || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
     showToast('Please fill all required fields', 'error');
     return;
   }
@@ -183,29 +346,79 @@ function submitSubscription() {
   const subscriptionData = {
     id: generateId(),
     code: licenseCode,
-    name, category, vendor, startDate, expiryDate,
-    annualCost, paymentMode
+    name: name,
+    category: category,
+    categoryCode: categoryCode,
+    categoryDescription: categoryDescription,
+    vendor: vendor,
+    startDate: startDate,
+    expiryDate: expiryDate,
+    annualCost: annualCost,
+    paymentMode: paymentMode
   };
   
-  subscriptionsList.push(subscriptionData);
-  saveSubscriptionsToStorage();
-  
-  showToast('Subscription saved successfully!', 'success');
-  resetSubscriptionForm();
-  generateLicenseCode();
+  // If using API, save to backend
+  if (typeof API !== 'undefined' && API) {
+    showToast('Saving subscription...', 'info');
+    
+    API.addSubscription(subscriptionData)
+      .then(function(response) {
+        console.log('Subscription saved:', response);
+        if (response && response.success) {
+          subscriptionsList.push(subscriptionData);
+          saveSubscriptionsToStorage();
+          showToast('Subscription saved successfully!', 'success');
+          resetSubscriptionForm();
+        } else {
+          showToast('Error: ' + (response?.error || 'Unknown error'), 'error');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error saving subscription:', error);
+        showToast('Error saving subscription: ' + (error.message || error), 'error');
+      });
+  } else {
+    // Local storage fallback
+    subscriptionsList.push(subscriptionData);
+    saveSubscriptionsToStorage();
+    showToast('Subscription saved successfully!', 'success');
+    resetSubscriptionForm();
+  }
 }
 
 function resetSubscriptionForm() {
   const form = document.getElementById('subscriptionForm');
   if (form) form.reset();
+  
   const today = new Date().toISOString().split('T')[0];
   const startField = document.getElementById('startDate');
   if (startField) startField.value = today;
+  
   const nextYear = new Date();
   nextYear.setFullYear(nextYear.getFullYear() + 1);
   const expiryField = document.getElementById('expiryDate');
   if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
+  
   document.getElementById('paymentMode').value = 'Prepaid';
+  
+  // Hide add-new category fields
+  const addNewFields = document.getElementById('addNewCategoryFields');
+  if (addNewFields) addNewFields.style.display = 'none';
+  
+  // Clear category selection
+  const categorySelect = document.getElementById('subCategory');
+  if (categorySelect) categorySelect.value = '';
+  
+  // Clear license code
+  const codeField = document.getElementById('licenseCode');
+  if (codeField) codeField.value = '';
+  
+  // Clear code display
+  const codeDisplay = document.getElementById('generatedCodeDisplay');
+  if (codeDisplay) codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+  
+  // Reload categories
+  loadSubscriptionCategories();
 }
 
 // ============================================
@@ -236,7 +449,7 @@ function renderAllSchedulesGrouped() {
   }
   
   if (!filteredList.length) {
-    container.innerHTML = '<div class="table-wrapper"><table class="subscription-table"><tbody><tr><td colspan="10" class="loading-cell">No subscriptions found</td></tr></tbody></table></div>';
+    container.innerHTML = '<div class="table-wrapper"><table class="subscription-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions found</td></tr></tbody></table></div>';
     return;
   }
   
@@ -252,7 +465,7 @@ function renderAllSchedulesGrouped() {
   let totalAnnualCost = 0;
   let html = '<div class="table-wrapper"><table class="subscription-table"><thead><tr>';
   html += '<th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th>';
-  html += '<th>Expiry Date</th><th>Annual Cost (GH₵)</th><th>Payment Mode</th><th>Days Left</th><th>Status</th>';
+  html += '<th>Expiry Date</th><th>Annual Cost (GH₵)</th><th>Payment Mode</th><th>Days Left</th>';
   html += '</tr></thead><tbody>';
   
   // Sort categories alphabetically
@@ -263,12 +476,11 @@ function renderAllSchedulesGrouped() {
     let categoryTotal = 0;
     
     // Add group header
-    html += `<tr class="group-header"><td colspan="10"><strong>${escapeHtml(category)}</strong> (${items.length} items)</td></tr>`;
+    html += `<tr class="group-header"><td colspan="9"><strong>${escapeHtml(category)}</strong> (${items.length} items)</td></tr>`;
     
     // Add items
     items.forEach(sub => {
       const daysLeft = calculateDaysLeft(sub.expiryDate);
-      const status = getStatusBadge(daysLeft);
       categoryTotal += sub.annualCost;
       
       html += `
@@ -281,19 +493,18 @@ function renderAllSchedulesGrouped() {
           <td>${formatDate(sub.expiryDate)}</td>
           <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
           <td>${escapeHtml(sub.paymentMode)}</td>
-          <td>${daysLeft}</td>
-          <td>${status}</td>
+          <td class="${daysLeft < 0 ? 'text-danger' : (daysLeft <= 7 ? 'text-warning' : '')}">${daysLeft}</td>
         </tr>
       `;
     });
     
     // Add category subtotal
-    html += `<tr class="group-total-row"><td colspan="6"><strong>Category Total</strong></td><td colspan="4"><strong>GH₵ ${formatCurrency(categoryTotal)}</strong></td></tr>`;
+    html += `<tr class="group-total-row"><td colspan="6"><strong>Category Total</strong></td><td colspan="3"><strong>GH₵ ${formatCurrency(categoryTotal)}</strong></td></tr>`;
     totalAnnualCost += categoryTotal;
   }
   
   // Add grand total
-  html += `<tr class="grand-total-row"><td colspan="6"><strong>GRAND TOTAL</strong></td><td colspan="4"><strong>GH₵ ${formatCurrency(totalAnnualCost)}</strong></td></tr>`;
+  html += `<tr class="grand-total-row"><td colspan="6"><strong>GRAND TOTAL</strong></td><td colspan="3"><strong>GH₵ ${formatCurrency(totalAnnualCost)}</strong></td></tr>`;
   html += '</tbody></table></div>';
   
   container.innerHTML = html;
@@ -308,7 +519,7 @@ function renderPrepaidTable() {
   );
   
   if (!prepaidList.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No prepaid subscriptions</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No prepaid subscriptions</td></tr>';
     return;
   }
   
@@ -317,7 +528,6 @@ function renderPrepaidTable() {
     const daysLeft = calculateDaysLeft(sub.expiryDate);
     const monthsLeft = Math.max(0, daysLeft / 30.44);
     const remainingAmount = monthlyCharge * monthsLeft;
-    const status = getStatusBadge(daysLeft);
     
     return `
       <tr>
@@ -328,7 +538,6 @@ function renderPrepaidTable() {
         <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
         <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
         <td>GH₵ ${formatCurrency(remainingAmount)}</td>
-        <td>${status}</td>
       </tr>
     `;
   }).join('');
@@ -343,7 +552,7 @@ function renderArrearsTable() {
   );
   
   if (!arrearsList.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No in-arrears subscriptions</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No in-arrears subscriptions</td></tr>';
     return;
   }
   
@@ -354,7 +563,6 @@ function renderArrearsTable() {
     const monthlyCharge = sub.annualCost / 12;
     const amountPaid = monthlyCharge * elapsedMonths;
     const remainingAmount = sub.annualCost - amountPaid;
-    const status = getStatusBadge(daysLeft);
     
     return `
       <tr>
@@ -365,7 +573,6 @@ function renderArrearsTable() {
         <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
         <td>GH₵ ${formatCurrency(amountPaid)}</td>
         <td>GH₵ ${formatCurrency(remainingAmount)}</td>
-        <td>${status}</td>
       </tr>
     `;
   }).join('');
@@ -463,7 +670,7 @@ function closeRenewModal() {
 function printSubscriptionSchedule() {
   const printContent = document.querySelector('.subscription-schedule-container').cloneNode(true);
   
-  printContent.querySelectorAll('.renew-btn, .export-btn, .print-btn, .search-box, .header-actions, .filter-btn, .clear-btn').forEach(el => {
+  printContent.querySelectorAll('.renew-btn, .export-btn, .print-btn, .search-box, .header-actions, .filter-btn, .clear-btn, .schedule-tab-btn').forEach(el => {
     if (el) el.remove();
   });
   
@@ -481,6 +688,8 @@ function printSubscriptionSchedule() {
           .group-header { background-color: #e2e8f0; font-weight: bold; }
           .group-total-row { background-color: #fef3c7; }
           .grand-total-row { background-color: #4361ee; color: white; }
+          .text-danger { color: #dc2626; }
+          .text-warning { color: #d97706; }
         </style>
       </head>
       <body>
@@ -501,11 +710,9 @@ function printSubscriptionSchedule() {
 // ============================================
 
 function exportSubscriptionsToCSV() {
-  let csvRows = [['Code', 'Name', 'Category', 'Vendor', 'Start Date', 'Expiry Date', 'Annual Cost', 'Payment Mode', 'Status']];
+  let csvRows = [['Code', 'Name', 'Category', 'Vendor', 'Start Date', 'Expiry Date', 'Annual Cost', 'Payment Mode']];
   subscriptionsList.forEach(s => {
-    const daysLeft = calculateDaysLeft(s.expiryDate);
-    const status = daysLeft < 0 ? 'Expired' : (daysLeft <= 7 ? 'Critical' : (daysLeft <= 30 ? 'Expiring Soon' : 'Healthy'));
-    csvRows.push([s.code, s.name, s.category, s.vendor || '', s.startDate, s.expiryDate, s.annualCost, s.paymentMode, status]);
+    csvRows.push([s.code, s.name, s.category, s.vendor || '', s.startDate, s.expiryDate, s.annualCost, s.paymentMode]);
   });
   const csvContent = csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
   const blob = new Blob([csvContent], {type: 'text/csv'});
@@ -538,13 +745,6 @@ function calculateDaysLeft(expiryDateStr) {
   expiry.setHours(0,0,0,0);
   const diffTime = expiry - today;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-}
-
-function getStatusBadge(daysLeft) {
-  if (daysLeft < 0) return '<span class="status-badge status-expired">Expired</span>';
-  if (daysLeft <= 7) return '<span class="status-badge status-critical">Critical</span>';
-  if (daysLeft <= 30) return '<span class="status-badge status-warning">Expiring soon</span>';
-  return '<span class="status-badge status-healthy">Healthy</span>';
 }
 
 function formatDate(dateStr) {
@@ -605,3 +805,4 @@ window.processRenewal = processRenewal;
 window.printSubscriptionSchedule = printSubscriptionSchedule;
 window.applyDateFilter = applyDateFilter;
 window.clearDateFilter = clearDateFilter;
+window.handleCategoryChange = handleCategoryChange;
