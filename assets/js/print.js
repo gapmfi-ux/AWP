@@ -1,19 +1,10 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Improved print view with better formatting, pagination, 
-   company header, and professional report styling
+   Clean print view with only report name and period
    ============================================ */
 
-// Global print utility with enhanced features
+// Global print utility with clean formatting
 const printUtils = {
-  // Company information for header
-  companyInfo: {
-    name: 'ASSET MANAGEMENT SYSTEM',
-    address: '',
-    phone: '',
-    email: ''
-  },
-
   // Get current date/time for report
   getPrintDateTime: function() {
     const now = new Date();
@@ -63,7 +54,7 @@ const printUtils = {
       .replace(/\n/g, '<br>');
   },
 
-  // Get enhanced print styles - PROFESSIONAL LANDSCAPE LAYOUT
+  // Get clean print styles - LANDSCAPE, NO HEADERS/FOOTERS, NO SIGNATURES
   getPrintStyles: function() {
     return `
       <style>
@@ -90,61 +81,27 @@ const printUtils = {
           background: white;
         }
         
-        /* Enhanced Report Header with Company Branding */
+        /* Clean Report Header - Only Title and Period */
         .print-report-header {
           text-align: center;
           margin-bottom: 20px;
           page-break-after: avoid;
         }
         
-        .company-name {
-          font-size: 20pt;
-          font-weight: 800;
-          color: #1a202c;
-          letter-spacing: 2px;
-          margin-bottom: 5px;
-          text-transform: uppercase;
-        }
-        
         .report-title {
           font-size: 16pt;
           font-weight: 700;
           color: #2c3e66;
-          margin: 8px 0;
+          margin: 0 0 8px 0;
           padding-bottom: 8px;
           border-bottom: 2px solid #4361ee;
           display: inline-block;
         }
         
-        .report-subtitle {
+        .period-info {
           font-size: 11pt;
           color: #4a5568;
-          margin-top: 5px;
-        }
-        
-        .date-info-box {
-          margin-top: 12px;
-          padding: 8px 15px;
-          background: #f7fafc;
-          border-radius: 4px;
-          display: inline-block;
-          font-size: 9pt;
-          color: #2d3748;
-          border: 1px solid #e2e8f0;
-        }
-        
-        .date-info-box div {
-          margin: 2px 0;
-        }
-        
-        .print-meta {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 15px;
-          padding-top: 8px;
-          border-top: 1px dashed #cbd5e0;
-          font-size: 8pt;
-          color: #718096;
+          margin-top: 8px;
         }
         
         /* Enhanced Table Styles */
@@ -273,36 +230,6 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* Footer Styles */
-        .print-footer {
-          margin-top: 25px;
-          padding-top: 10px;
-          border-top: 1px solid #e2e8f0;
-          font-size: 8pt;
-          color: #718096;
-          text-align: center;
-          page-break-before: avoid;
-        }
-        
-        .signature-section {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 30px;
-          padding-top: 20px;
-        }
-        
-        .signature-line {
-          text-align: center;
-          width: 200px;
-        }
-        
-        .signature-line hr {
-          margin: 5px 0;
-          border: none;
-          border-top: 1px solid #000;
-          width: 180px;
-        }
-        
         /* Page break utilities */
         .page-break-before {
           page-break-before: always;
@@ -355,12 +282,6 @@ const printUtils = {
           .no-print,
           .dropdown-item {
             display: none !important;
-          }
-          
-          /* Remove action column */
-          th:last-child:contains("Action"),
-          td:last-child:has(button) {
-            display: none;
           }
           
           /* Page margins */
@@ -416,49 +337,8 @@ const printUtils = {
     return clone;
   },
 
-  // Generate complete print document with header and footer
-  generatePrintDocument: function(title, contentHtml, dateInfo, options = {}) {
-    const dateTime = this.getPrintDateTime();
-    const company = this.companyInfo;
-    
-    // Build additional info lines
-    let additionalInfo = '';
-    if (options.additionalInfo) {
-      additionalInfo = `<div class="report-subtitle">${this.escapeHtml(options.additionalInfo)}</div>`;
-    }
-    
-    // Build signature section if requested
-    let signatureSection = '';
-    if (options.showSignatures) {
-      signatureSection = `
-        <div class="signature-section">
-          <div class="signature-line">
-            <hr>
-            <div>Prepared By</div>
-          </div>
-          <div class="signature-line">
-            <hr>
-            <div>Checked By</div>
-          </div>
-          <div class="signature-line">
-            <hr>
-            <div>Approved By</div>
-          </div>
-        </div>
-      `;
-    }
-    
-    // Build watermark if requested
-    let watermark = '';
-    if (options.watermark) {
-      watermark = `
-        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); 
-                    font-size: 60pt; color: rgba(0,0,0,0.05); white-space: nowrap; z-index: 999; pointer-events: none;">
-          ${this.escapeHtml(options.watermark)}
-        </div>
-      `;
-    }
-    
+  // Generate clean print document - only report name and period
+  generatePrintDocument: function(title, contentHtml, periodInfo) {
     return `<!DOCTYPE html>
       <html>
       <head>
@@ -468,95 +348,59 @@ const printUtils = {
         ${this.getPrintStyles()}
       </head>
       <body>
-        ${watermark}
         <div class="print-report-header">
-          <div class="company-name">${this.escapeHtml(company.name)}</div>
-          ${company.address ? `<div style="font-size: 9pt; color: #4a5568;">${this.escapeHtml(company.address)}</div>` : ''}
           <div class="report-title">${this.escapeHtml(title)}</div>
-          ${additionalInfo}
-          <div class="date-info-box">
-            ${dateInfo ? `<div><strong>Period:</strong> ${this.escapeHtml(dateInfo)}</div>` : ''}
-            <div><strong>Printed On:</strong> ${dateTime.date} at ${dateTime.time}</div>
-          </div>
+          ${periodInfo ? `<div class="period-info">${this.escapeHtml(periodInfo)}</div>` : ''}
         </div>
         
         ${contentHtml}
-        
-        <div class="print-footer">
-          <div>Generated by Asset Management System</div>
-          <div>This is a computer-generated document and requires no signature.</div>
-          <div>Page <span class="pageNumber"></span> of <span class="totalPages"></span></div>
-        </div>
-        ${signatureSection}
-        
-        <script>
-          // Page numbering
-          if (typeof window !== 'undefined') {
-            setTimeout(function() {
-              var pageNumbers = document.querySelectorAll('.pageNumber');
-              var totalPagesSpan = document.querySelector('.totalPages');
-              if (totalPagesSpan) {
-                // Get total pages from @page count (approximation)
-                var pages = document.querySelectorAll('.page-break-before').length + 1;
-                totalPagesSpan.textContent = pages || '1';
-              }
-              pageNumbers.forEach(function(span, i) {
-                span.textContent = i + 1;
-              });
-            }, 100);
-          }
-        <\/script>
       </body>
       </html>
     `;
   },
 
-  // Print investment report (enhanced)
+  // Print investment report
   printInvestmentReport: function(tabName) {
     console.log('printInvestmentReport called for tab:', tabName);
     
     let title = '';
-    let dateInfo = '';
-    let options = {};
+    let periodInfo = '';
     
     if (tabName === 'purchaseReport') {
       title = 'INVESTMENT PURCHASE REPORT';
       const fromDate = document.getElementById('purchaseFromDate')?.value || '';
       const toDate = document.getElementById('purchaseToDate')?.value || '';
       if (fromDate && toDate) {
-        dateInfo = `${fromDate} to ${toDate}`;
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
       }
-      this.printInvestmentTable('purchaseReportTable', title, dateInfo, options);
+      this.printInvestmentTable('purchaseReportTable', title, periodInfo);
     } else if (tabName === 'fullReport') {
       title = 'ACTIVE INVESTMENTS REPORT';
       const toDate = document.getElementById('fullReportToDate')?.value || '';
       const groupBy = document.getElementById('reportTypeSelect')?.value || 'By Type';
       if (toDate) {
-        dateInfo = `As at ${toDate} | Grouped By: ${groupBy}`;
+        periodInfo = `As at: ${toDate} | Grouped By: ${groupBy}`;
       }
-      options.additionalInfo = `Showing all active investments as at report date`;
-      this.printInvestmentContainer('fullReportContainer', title, dateInfo, options);
+      this.printInvestmentContainer('fullReportContainer', title, periodInfo);
     } else if (tabName === 'interestReport') {
       title = 'INTEREST ACCRUAL REPORT';
       const fromDate = document.getElementById('interestFromDate')?.value || '';
       const toDate = document.getElementById('interestToDate')?.value || '';
       const groupBy = document.getElementById('interestReportTypeSelect')?.value || 'By Type';
       if (fromDate && toDate) {
-        dateInfo = `${fromDate} to ${toDate} | Grouped By: ${groupBy}`;
+        periodInfo = `Period: ${fromDate} to ${toDate} | Grouped By: ${groupBy}`;
       }
-      options.additionalInfo = `Interest accrued during the selected period`;
-      this.printInvestmentContainer('interestReportContainer', title, dateInfo, options);
+      this.printInvestmentContainer('interestReportContainer', title, periodInfo);
     } else if (tabName === 'maturedReport') {
       title = 'MATURED INVESTMENTS REPORT';
       const toDate = document.getElementById('maturedToDate')?.value || new Date().toISOString().split('T')[0];
-      dateInfo = `As at ${toDate}`;
-      options.additionalInfo = `List of investments that have matured on or before the report date`;
-      this.printInvestmentTable('maturedReportTable', title, dateInfo, options);
+      periodInfo = `As at: ${toDate}`;
+      this.printInvestmentTable('maturedReportTable', title, periodInfo);
     }
   },
 
-  // Print investment table (enhanced)
-  printInvestmentTable: function(tableId, title, dateInfo, options = {}) {
+  // Print investment table
+  printInvestmentTable: function(tableId, title, periodInfo) {
     console.log('printInvestmentTable called with:', { tableId, title });
     
     const tableWrapper = document.getElementById(tableId);
@@ -576,13 +420,13 @@ const printUtils = {
     const tableClone = this.removeActionColumns(originalTable);
     const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
     
-    const printDocument = this.generatePrintDocument(title, tableHtml, dateInfo, options);
+    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
     
     this.openPrintWindow(printDocument, title);
   },
 
-  // Print investment container (grouped reports) - enhanced
-  printInvestmentContainer: function(containerId, title, dateInfo, options = {}) {
+  // Print investment container (grouped reports)
+  printInvestmentContainer: function(containerId, title, periodInfo) {
     console.log('printInvestmentContainer called with:', { containerId, title });
     
     const container = document.getElementById(containerId);
@@ -612,17 +456,16 @@ const printUtils = {
     });
     containerHTML = tempDiv.innerHTML;
     
-    const printDocument = this.generatePrintDocument(title, containerHTML, dateInfo, options);
+    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
     
     this.openPrintWindow(printDocument, title);
   },
 
-  // Print inventory report (enhanced)
+  // Print inventory report
   printInventoryReport: function(tabId) {
     let title = '';
-    let dateInfo = '';
+    let periodInfo = '';
     let tableId = '';
-    let options = {};
 
     if (tabId === 'purchaseReport') {
       title = 'INVENTORY PURCHASE REPORT';
@@ -630,41 +473,35 @@ const printUtils = {
       const fromDate = document.getElementById('purchaseFromDate')?.value || '';
       const toDate = document.getElementById('purchaseToDate')?.value || '';
       if (fromDate && toDate) {
-        dateInfo = `${fromDate} to ${toDate}`;
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
       }
-      options.additionalInfo = 'Detailed record of inventory purchases during the period';
     } else if (tabId === 'usageReport') {
       title = 'INVENTORY USAGE REPORT';
       tableId = 'usageReportTable';
       const fromDate = document.getElementById('usageFromDate')?.value || '';
       const toDate = document.getElementById('usageToDate')?.value || '';
       if (fromDate && toDate) {
-        dateInfo = `${fromDate} to ${toDate}`;
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
       }
-      options.additionalInfo = 'Detailed record of inventory consumption during the period';
     } else if (tabId === 'inventoryList') {
       title = 'INVENTORY STOCK LIST';
       tableId = 'inventoryListTable';
       const asAtDate = document.getElementById('inventoryToDate')?.value || '';
       if (asAtDate) {
-        dateInfo = `As at ${asAtDate}`;
+        periodInfo = `As at: ${asAtDate}`;
       }
-      options.additionalInfo = 'Current inventory stock levels and valuation';
-      options.showSignatures = true;
     }
 
-    this.printInvestmentTable(tableId, title, dateInfo, options);
+    this.printInvestmentTable(tableId, title, periodInfo);
   },
 
-  // Print asset register (enhanced)
+  // Print asset register
   printAssetRegister: function(tabName) {
-    let options = {};
-    
     if (tabName === 'detailedRegister') {
       const title = 'DETAILED FIXED ASSET REGISTER';
       const asAtDate = document.getElementById('detailedToDate')?.value || '';
       const groupBy = document.getElementById('groupBySelect')?.value || '';
-      let dateInfo = asAtDate ? `As at ${asAtDate}` : '';
+      let periodInfo = asAtDate ? `As at: ${asAtDate}` : '';
       if (groupBy && groupBy !== 'full') {
         const groupLabels = {
           'type': 'Grouped by Asset Type',
@@ -675,17 +512,13 @@ const printUtils = {
           'office': 'Office Equipment Only',
           'motor': 'Motor Vehicle Only'
         };
-        dateInfo += ` | ${groupLabels[groupBy] || ''}`;
+        periodInfo += ` | ${groupLabels[groupBy] || ''}`;
       }
-      options.additionalInfo = 'Complete schedule of fixed assets with accumulated depreciation and net book value';
-      options.showSignatures = true;
-      this.printInvestmentTable('detailedRegisterTable', title, dateInfo, options);
+      this.printInvestmentTable('detailedRegisterTable', title, periodInfo);
     } else if (tabName === 'summaryRegister') {
       const title = 'SUMMARY FIXED ASSET REGISTER';
       const toDate = document.getElementById('summaryToDate')?.value || '';
-      const dateInfo = toDate ? `As at ${toDate}` : '';
-      options.additionalInfo = 'Summary of fixed assets by category with cost, depreciation, and net book value';
-      options.showSignatures = true;
+      const periodInfo = toDate ? `As at: ${toDate}` : '';
       
       // For summary register, print the table directly
       const summaryTable = document.getElementById('summaryDetailsTable');
@@ -700,7 +533,7 @@ const printUtils = {
       tableClone.querySelectorAll('button, .action-btn').forEach(btn => btn.remove());
       const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
       
-      const printDocument = this.generatePrintDocument(title, tableHtml, dateInfo, options);
+      const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
       this.openPrintWindow(printDocument, title);
     }
   },
@@ -717,13 +550,10 @@ const printUtils = {
     printWindow.document.close();
     printWindow.focus();
     
-    // Wait for images and fonts to load before printing
+    // Wait for content to load before printing
     setTimeout(() => {
       printWindow.print();
-      
-      // Optional: Close the window after printing (user may want to keep it)
-      // setTimeout(() => { printWindow.close(); }, 1000);
-    }, 800);
+    }, 500);
   },
 
   // Export to PDF (opens print dialog - user can choose Save as PDF)
@@ -739,7 +569,7 @@ const printUtils = {
     }
   },
 
-  // Generic print message function (enhanced)
+  // Generic print message function
   showMessage: function(message, type) {
     const types = {
       success: { bg: '#c6f6d5', color: '#22543d', border: '#48bb78' },
@@ -785,6 +615,16 @@ const printUtils = {
             opacity: 1;
           }
         }
+        @keyframes slideOutRight {
+          from {
+            transform: translateX(0);
+            opacity: 1;
+          }
+          to {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+        }
       `;
       document.head.appendChild(styleSheet);
     }
@@ -793,21 +633,15 @@ const printUtils = {
       alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
       setTimeout(() => alertDiv.remove(), 300);
     }, 3000);
-  },
-
-  // Update company information
-  setCompanyInfo: function(info) {
-    this.companyInfo = { ...this.companyInfo, ...info };
   }
 };
 
 // Make printUtils available globally
 window.printUtils = printUtils;
 
-// Auto-initialize with some default styles
+// Auto-initialize
 if (typeof document !== 'undefined') {
   document.addEventListener('DOMContentLoaded', function() {
-    // Add any global print preparation logic here
-    console.log('Print utils initialized');
+    console.log('Print utils initialized - clean print view ready');
   });
 }
