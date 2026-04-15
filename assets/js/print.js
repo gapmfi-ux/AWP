@@ -1,28 +1,10 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Clean print view with only report name and period
+   Clean print view - NO headers, NO footers, NO top spacing
    ============================================ */
 
 // Global print utility with clean formatting
 const printUtils = {
-  // Get current date/time for report
-  getPrintDateTime: function() {
-    const now = new Date();
-    return {
-      date: now.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }),
-      time: now.toLocaleTimeString('en-US', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      full: now.toLocaleString(),
-      timestamp: now.toISOString()
-    };
-  },
-
   // Format currency for print
   formatCurrency: function(value) {
     if (value === null || value === undefined || value === '') return '0.00';
@@ -50,11 +32,10 @@ const printUtils = {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;')
-      .replace(/\n/g, '<br>');
+      .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - LANDSCAPE, NO HEADERS/FOOTERS, NO SIGNATURES
+  // Get clean print styles - NO HEADERS, NO FOOTERS, ZERO TOP MARGIN
   getPrintStyles: function() {
     return `
       <style>
@@ -74,39 +55,40 @@ const printUtils = {
         
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-          padding: 12mm 10mm;
+          padding: 0;
+          margin: 0;
           font-size: 10pt;
-          line-height: 1.5;
+          line-height: 1.4;
           color: #1a202c;
           background: white;
         }
         
-        /* Clean Report Header - Only Title and Period */
+        /* Simple Report Header - Minimal, no extra spacing */
         .print-report-header {
           text-align: center;
-          margin-bottom: 20px;
+          margin: 0 0 15px 0;
+          padding: 0;
           page-break-after: avoid;
         }
         
         .report-title {
-          font-size: 16pt;
+          font-size: 14pt;
           font-weight: 700;
           color: #2c3e66;
-          margin: 0 0 8px 0;
-          padding-bottom: 8px;
-          border-bottom: 2px solid #4361ee;
-          display: inline-block;
+          margin: 0;
+          padding: 0;
         }
         
         .period-info {
-          font-size: 11pt;
+          font-size: 10pt;
           color: #4a5568;
-          margin-top: 8px;
+          margin-top: 5px;
+          padding: 0;
         }
         
-        /* Enhanced Table Styles */
+        /* Table Styles */
         .print-table-wrapper {
-          margin: 15px 0;
+          margin: 0;
           page-break-inside: auto;
           overflow-x: visible;
         }
@@ -122,7 +104,7 @@ const printUtils = {
         th {
           background: #2c3e66;
           color: white;
-          padding: 10px 8px;
+          padding: 8px 6px;
           border: 1px solid #1a2a4a;
           text-align: center;
           font-weight: 700;
@@ -132,7 +114,7 @@ const printUtils = {
         }
         
         td {
-          padding: 8px 6px;
+          padding: 6px 5px;
           border: 1px solid #cbd5e0;
           text-align: center;
           font-size: 9pt;
@@ -144,10 +126,6 @@ const printUtils = {
           background: #f9fafb;
         }
         
-        tbody tr:hover {
-          background: #edf2f7;
-        }
-        
         /* Text alignment classes */
         .text-left {
           text-align: left !important;
@@ -155,7 +133,7 @@ const printUtils = {
         
         .text-right {
           text-align: right !important;
-          padding-right: 10px !important;
+          padding-right: 8px !important;
         }
         
         .text-center {
@@ -164,19 +142,19 @@ const printUtils = {
         
         /* Group Report Styles */
         .grouped-report {
-          margin-bottom: 20px;
+          margin-bottom: 15px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
         
         .group-title {
-          font-size: 12pt;
+          font-size: 11pt;
           font-weight: 800;
           background: linear-gradient(135deg, #2c3e66, #4361ee);
           color: white;
-          padding: 10px 15px;
-          margin: 15px 0 0 0;
-          border-radius: 6px 6px 0 0;
+          padding: 8px 12px;
+          margin: 10px 0 0 0;
+          border-radius: 4px 4px 0 0;
           page-break-after: avoid;
           break-after: avoid;
         }
@@ -184,29 +162,27 @@ const printUtils = {
         .group-table-wrapper {
           border: 1px solid #cbd5e0;
           border-top: none;
-          border-radius: 0 0 6px 6px;
+          border-radius: 0 0 4px 4px;
           overflow-x: auto;
-          margin-bottom: 5px;
+          margin-bottom: 0;
         }
         
         .subtotal-row {
           background: #e8f0fe !important;
           font-weight: 700;
-          page-break-after: avoid;
         }
         
         .subtotal-row td {
           background: #e8f0fe !important;
           color: #2c3e66 !important;
-          border-top: 1.5px solid #4361ee;
-          border-bottom: 1.5px solid #4361ee;
+          border-top: 1px solid #4361ee;
+          border-bottom: 1px solid #4361ee;
           font-weight: 700;
         }
         
         .grand-total-row {
           background: #e6f7f0 !important;
           font-weight: 800;
-          page-break-after: avoid;
         }
         
         .grand-total-row td {
@@ -230,29 +206,17 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* Page break utilities */
-        .page-break-before {
-          page-break-before: always;
-          break-before: page;
-        }
-        
-        .page-break-after {
-          page-break-after: always;
-          break-after: page;
-        }
-        
-        .avoid-break {
-          page-break-inside: avoid;
-          break-inside: avoid;
-        }
-        
-        /* Print-specific optimizations */
+        /* Print-specific optimizations - NO HEADERS/FOOTERS */
         @media print {
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          
           body {
-            margin: 0;
-            padding: 10mm;
+            margin: 0 !important;
+            padding: 0 !important;
             width: 100%;
-            height: 100%;
           }
           
           table {
@@ -268,15 +232,11 @@ const printUtils = {
             display: table-header-group;
           }
           
-          tfoot {
-            display: table-footer-group;
-          }
-          
           .grouped-report {
             page-break-inside: avoid;
           }
           
-          /* Hide action buttons and interactive elements */
+          /* Hide action buttons */
           .action-btn, 
           button, 
           .no-print,
@@ -284,14 +244,15 @@ const printUtils = {
             display: none !important;
           }
           
-          /* Page margins */
+          /* Remove browser default headers and footers completely */
           @page {
             size: A4 landscape;
-            margin: 15mm 12mm;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           
           @page :first {
-            margin-top: 20mm;
+            margin: 0 !important;
           }
         }
       </style>
@@ -302,7 +263,7 @@ const printUtils = {
   removeActionColumns: function(table) {
     const clone = table.cloneNode(true);
     
-    // Find and remove action column (any column with Action in header or containing buttons)
+    // Find and remove action column
     const headerCells = clone.querySelectorAll('thead th');
     let actionColumnIndex = -1;
     
@@ -313,15 +274,12 @@ const printUtils = {
       }
     });
 
-    // Remove action column if found
     if (actionColumnIndex >= 0) {
-      // Remove from header
       const headerRow = clone.querySelector('thead tr');
       if (headerRow && headerRow.cells[actionColumnIndex]) {
         headerRow.deleteCell(actionColumnIndex);
       }
       
-      // Remove from all body rows
       clone.querySelectorAll('tbody tr').forEach(row => {
         if (row.cells[actionColumnIndex]) {
           row.deleteCell(actionColumnIndex);
@@ -329,7 +287,7 @@ const printUtils = {
       });
     }
     
-    // Also remove any buttons anywhere in the table
+    // Remove any buttons
     clone.querySelectorAll('button, .action-btn, .dropdown-item').forEach(btn => {
       btn.remove();
     });
@@ -337,22 +295,29 @@ const printUtils = {
     return clone;
   },
 
-  // Generate clean print document - only report name and period
+  // Generate clean print document - ONLY report name and period, NO extra spacing
   generatePrintDocument: function(title, contentHtml, periodInfo) {
+    // Build header only if title or period exists
+    let headerHtml = '';
+    if (title || periodInfo) {
+      headerHtml = `
+        <div class="print-report-header">
+          ${title ? `<div class="report-title">${this.escapeHtml(title)}</div>` : ''}
+          ${periodInfo ? `<div class="period-info">${this.escapeHtml(periodInfo)}</div>` : ''}
+        </div>
+      `;
+    }
+    
     return `<!DOCTYPE html>
       <html>
       <head>
-        <title>${this.escapeHtml(title)}</title>
+        <title>${this.escapeHtml(title || 'Report')}</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${this.getPrintStyles()}
       </head>
       <body>
-        <div class="print-report-header">
-          <div class="report-title">${this.escapeHtml(title)}</div>
-          ${periodInfo ? `<div class="period-info">${this.escapeHtml(periodInfo)}</div>` : ''}
-        </div>
-        
+        ${headerHtml}
         ${contentHtml}
       </body>
       </html>
@@ -401,8 +366,6 @@ const printUtils = {
 
   // Print investment table
   printInvestmentTable: function(tableId, title, periodInfo) {
-    console.log('printInvestmentTable called with:', { tableId, title });
-    
     const tableWrapper = document.getElementById(tableId);
     if (!tableWrapper) {
       console.error('Table not found:', tableId);
@@ -421,14 +384,11 @@ const printUtils = {
     const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
     
     const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    
     this.openPrintWindow(printDocument, title);
   },
 
   // Print investment container (grouped reports)
   printInvestmentContainer: function(containerId, title, periodInfo) {
-    console.log('printInvestmentContainer called with:', { containerId, title });
-    
     const container = document.getElementById(containerId);
     if (!container) {
       console.error('Container not found:', containerId);
@@ -438,18 +398,16 @@ const printUtils = {
 
     let containerHTML = container.innerHTML;
     if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No investments')) {
-      console.error('Container is empty or contains no data');
       this.showMessage('Report is empty. Please generate the report first.', 'error');
       return;
     }
 
-    // Remove action buttons and interactive elements from HTML
+    // Remove action buttons and interactive elements
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = containerHTML;
     tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, [onclick]').forEach(el => {
       el.remove();
     });
-    // Remove any onclick attributes
     tempDiv.querySelectorAll('*').forEach(el => {
       el.removeAttribute('onclick');
       el.removeAttribute('onchange');
@@ -457,7 +415,6 @@ const printUtils = {
     containerHTML = tempDiv.innerHTML;
     
     const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
-    
     this.openPrintWindow(printDocument, title);
   },
 
@@ -520,16 +477,13 @@ const printUtils = {
       const toDate = document.getElementById('summaryToDate')?.value || '';
       const periodInfo = toDate ? `As at: ${toDate}` : '';
       
-      // For summary register, print the table directly
       const summaryTable = document.getElementById('summaryDetailsTable');
       if (!summaryTable) {
-        console.error('summaryDetailsTable not found');
         this.showMessage('Summary table not found. Please generate the report first.', 'error');
         return;
       }
       
       const tableClone = summaryTable.cloneNode(true);
-      // Remove any action buttons from summary table
       tableClone.querySelectorAll('button, .action-btn').forEach(btn => btn.remove());
       const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
       
@@ -550,26 +504,12 @@ const printUtils = {
     printWindow.document.close();
     printWindow.focus();
     
-    // Wait for content to load before printing
     setTimeout(() => {
       printWindow.print();
     }, 500);
   },
 
-  // Export to PDF (opens print dialog - user can choose Save as PDF)
-  exportToPdf: function(tabName, reportType) {
-    this.showMessage('Preparing PDF. In print dialog, choose "Save as PDF" as destination.', 'info');
-    
-    if (reportType === 'investment') {
-      this.printInvestmentReport(tabName);
-    } else if (reportType === 'inventory') {
-      this.printInventoryReport(tabName);
-    } else if (reportType === 'asset') {
-      this.printAssetRegister(tabName);
-    }
-  },
-
-  // Generic print message function
+  // Show message
   showMessage: function(message, type) {
     const types = {
       success: { bg: '#c6f6d5', color: '#22543d', border: '#48bb78' },
@@ -595,53 +535,15 @@ const printUtils = {
       max-width: 400px;
       border-left: 4px solid ${style.border};
       font-size: 13px;
-      animation: slideInRight 0.3s ease-out;
     `;
     alertDiv.textContent = message;
     document.body.appendChild(alertDiv);
 
-    // Add animation style if not exists
-    if (!document.getElementById('print-animation-style')) {
-      const styleSheet = document.createElement('style');
-      styleSheet.id = 'print-animation-style';
-      styleSheet.textContent = `
-        @keyframes slideInRight {
-          from {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-          to {
-            transform: translateX(0);
-            opacity: 1;
-          }
-        }
-        @keyframes slideOutRight {
-          from {
-            transform: translateX(0);
-            opacity: 1;
-          }
-          to {
-            transform: translateX(100%);
-            opacity: 0;
-          }
-        }
-      `;
-      document.head.appendChild(styleSheet);
-    }
-
     setTimeout(() => {
-      alertDiv.style.animation = 'slideOutRight 0.3s ease-in';
-      setTimeout(() => alertDiv.remove(), 300);
+      alertDiv.remove();
     }, 3000);
   }
 };
 
 // Make printUtils available globally
 window.printUtils = printUtils;
-
-// Auto-initialize
-if (typeof document !== 'undefined') {
-  document.addEventListener('DOMContentLoaded', function() {
-    console.log('Print utils initialized - clean print view ready');
-  });
-}
