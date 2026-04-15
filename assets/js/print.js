@@ -1,9 +1,3 @@
-/* ============================================
-   ENHANCED UNIFIED PRINT MODULE
-   COMPLETELY REMOVE browser headers/footers - Consistent margins on ALL pages
-   ============================================ */
-
-// Global print utility with clean formatting
 const printUtils = {
   // Format currency for print
   formatCurrency: function(value) {
@@ -206,31 +200,50 @@ const printUtils = {
         
         /* CRITICAL: Aggressively remove browser headers/footers */
         @media print {
-          /* Remove default browser print header/footer completely */
           @page {
             size: A4 landscape;
             margin: 15mm 12mm;
           }
           
-          /* Hide URL, date, page numbers, and any browser-generated content */
-          @page :header {
-            display: none;
+          /* Hide browser-generated headers and footers */
+          @page :first {
+            margin-top: 15mm;
           }
           
-          @page :footer {
-            display: none;
+          /* Hide URL, date, page numbers */
+          @page {
+            @bottom-left {
+              content: '';
+            }
+            @bottom-center {
+              content: '';
+            }
+            @bottom-right {
+              content: '';
+            }
+            @top-left {
+              content: '';
+            }
+            @top-center {
+              content: '';
+            }
+            @top-right {
+              content: '';
+            }
           }
           
-          /* Reset all margins */
           html, body {
             margin: 0 !important;
             padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
           }
           
           body {
             margin: 0 !important;
             padding: 0 !important;
-            width: 100%;
+            width: 100% !important;
+            background: white !important;
           }
           
           /* Hide any potential browser-generated elements */
@@ -247,7 +260,10 @@ const printUtils = {
           /* Hide action buttons */
           .action-btn, 
           button, 
-          .dropdown-item {
+          .dropdown-item,
+          .btn,
+          [type="button"],
+          [type="submit"] {
             display: none !important;
           }
           
@@ -319,27 +335,6 @@ const printUtils = {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${this.getPrintStyles()}
-        <style>
-          /* Multiple overrides to ensure no browser headers/footers */
-          @media print {
-            @page {
-              margin: 15mm 12mm;
-            }
-            @page :header {
-              display: none;
-            }
-            @page :footer {
-              display: none;
-            }
-            body {
-              margin: 0;
-              padding: 0;
-            }
-            /* Hide any potential print headers */
-              }
-            }
-          }
-        </style>
       </head>
       <body>
         ${headerHtml}
