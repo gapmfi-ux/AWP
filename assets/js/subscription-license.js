@@ -4,8 +4,9 @@
 
 let subscriptionsList = [];
 let currentRenewId = null;
+let currentFilter = { fromDate: '', toDate: '' };
 
-// Category list (same approach as add-inventory bank list)
+// Category list
 const subscriptionCategories = [
   'Software License',
   'SaaS Subscription', 
@@ -23,7 +24,6 @@ const subscriptionCategories = [
 function initSubscriptionAddModule() {
   console.log('Initializing Subscription Add Module');
   
-  // Populate category dropdown
   const categorySelect = document.getElementById('subCategory');
   if (categorySelect) {
     categorySelect.innerHTML = '<option value="">Select Category</option>';
@@ -46,10 +46,7 @@ function initSubscriptionAddModule() {
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
   
-  // Generate license code
   generateLicenseCode();
-  
-  // Load existing data
   loadSubscriptionsFromStorage();
 }
 
@@ -70,6 +67,18 @@ function generateLicenseCode() {
 function initSubscriptionScheduleModule() {
   console.log('Initializing Subscription Schedule Module');
   loadSubscriptionsFromStorage();
+  
+  // Set default date range (current month)
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  document.getElementById('fromDate').value = formatDateForInput(firstDay);
+  document.getElementById('toDate').value = formatDateForInput(lastDay);
+  
+  currentFilter.fromDate = formatDateForInput(firstDay);
+  currentFilter.toDate = formatDateForInput(lastDay);
+  
   renderAllTables();
 }
 
@@ -97,13 +106,56 @@ function getDemoSubscriptions() {
   expired.setDate(today.getDate() - 15);
   const farFuture = new Date(today);
   farFuture.setMonth(today.getMonth() + 8);
+  const twoMonthsLater = new Date(today);
+  twoMonthsLater.setMonth(today.getMonth() + 2);
   
   return [
     { id: '1', code: 'SUB-2024-0001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid' },
     { id: '2', code: 'SUB-2024-0002', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears' },
     { id: '3', code: 'SUB-2024-0003', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid' },
-    { id: '4', code: 'SUB-2024-0004', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid' }
+    { id: '4', code: 'SUB-2024-0004', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid' },
+    { id: '5', code: 'SUB-2024-0005', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears' }
   ];
+}
+
+// ============================================
+// DATE FILTER FUNCTIONS
+// ============================================
+
+function applyDateFilter() {
+  currentFilter.fromDate = document.getElementById('fromDate').value;
+  currentFilter.toDate = document.getElementById('toDate').value;
+  renderAllTables();
+}
+
+function clearDateFilter() {
+  const today = new Date();
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  
+  document.getElementById('fromDate').value = formatDateForInput(firstDay);
+  document.getElementById('toDate').value = formatDateForInput(lastDay);
+  
+  currentFilter.fromDate = formatDateForInput(firstDay);
+  currentFilter.toDate = formatDateForInput(lastDay);
+  renderAllTables();
+}
+
+function isWithinDateRange(expiryDate) {
+  if (!currentFilter.fromDate && !currentFilter.toDate) return true;
+  
+  const expiry = new Date(expiryDate);
+  const from = currentFilter.fromDate ? new Date(currentFilter.fromDate) : null;
+  const to = currentFilter.toDate ? new Date(currentFilter.toDate) : null;
+  
+  if (from && to) {
+    return expiry >= from && expiry <= to;
+  } else if (from) {
+    return expiry >= from;
+  } else if (to) {
+    return expiry <= to;
+  }
+  return true;
 }
 
 // ============================================
@@ -142,7 +194,7 @@ function submitSubscription() {
   
   showToast('Subscription saved successfully!', 'success');
   resetSubscriptionForm();
-  generateLicenseCode(); // Generate new code for next entry
+  generateLicenseCode();
 }
 
 function resetSubscriptionForm() {
@@ -163,46 +215,99 @@ function resetSubscriptionForm() {
 // ============================================
 
 function renderAllTables() {
-  renderScheduleTable();
+  renderAllSchedulesGrouped();
   renderPrepaidTable();
   renderArrearsTable();
   renderExpiredTable();
 }
 
-function renderScheduleTable() {
-  const tbody = document.getElementById('scheduleTableBody');
-  if (!tbody) return;
+function renderAllSchedulesGrouped() {
+  const container = document.getElementById('allScheduleWrapper');
+  if (!container) return;
   
-  if (!subscriptionsList.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">No subscriptions found.</td></tr>';
+  let filteredList = subscriptionsList.filter(sub => isWithinDateRange(sub.expiryDate));
+  
+  // Apply search filter
+  const searchTerm = document.getElementById('scheduleSearch')?.value.toLowerCase() || '';
+  if (searchTerm) {
+    filteredList = filteredList.filter(sub => 
+      sub.name.toLowerCase().includes(searchTerm) || 
+      (sub.vendor && sub.vendor.toLowerCase().includes(searchTerm)) ||
+      sub.code.toLowerCase().includes(searchTerm)
+    );
+  }
+  
+  if (!filteredList.length) {
+    container.innerHTML = '<div class="table-wrapper"><table class="subscription-table"><tbody><tr><td colspan="10" class="loading-cell">No subscriptions found</td></tr></tbody></table></div>';
     return;
   }
   
-  tbody.innerHTML = subscriptionsList.map(sub => {
-    const daysLeft = calculateDaysLeft(sub.expiryDate);
-    const status = getStatusBadge(daysLeft);
-    return `
-      <tr>
-        <td>${escapeHtml(sub.code)}</td>
-        <td><strong>${escapeHtml(sub.name)}</strong></td>
-        <td>${escapeHtml(sub.category)}</td>
-        <td>${escapeHtml(sub.vendor || '-')}</td>
-        <td>${formatDate(sub.startDate)}</td>
-        <td>${formatDate(sub.expiryDate)}</td>
-        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-        <td>${escapeHtml(sub.paymentMode)}</td>
-        <td>${daysLeft}</td>
-        <td>${status}</td>
-      </tr>
-    `;
-  }).join('');
+  // Group by category
+  const grouped = {};
+  filteredList.forEach(sub => {
+    if (!grouped[sub.category]) {
+      grouped[sub.category] = [];
+    }
+    grouped[sub.category].push(sub);
+  });
+  
+  let totalAnnualCost = 0;
+  let html = '<div class="table-wrapper"><table class="subscription-table"><thead><tr>';
+  html += '<th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th>';
+  html += '<th>Expiry Date</th><th>Annual Cost (GH₵)</th><th>Payment Mode</th><th>Days Left</th><th>Status</th>';
+  html += '</tr></thead><tbody>';
+  
+  // Sort categories alphabetically
+  const sortedCategories = Object.keys(grouped).sort();
+  
+  for (const category of sortedCategories) {
+    const items = grouped[category];
+    let categoryTotal = 0;
+    
+    // Add group header
+    html += `<tr class="group-header"><td colspan="10"><strong>${escapeHtml(category)}</strong> (${items.length} items)</td></tr>`;
+    
+    // Add items
+    items.forEach(sub => {
+      const daysLeft = calculateDaysLeft(sub.expiryDate);
+      const status = getStatusBadge(daysLeft);
+      categoryTotal += sub.annualCost;
+      
+      html += `
+        <tr>
+          <td>${escapeHtml(sub.code)}</td>
+          <td><strong>${escapeHtml(sub.name)}</strong></td>
+          <td>${escapeHtml(sub.category)}</td>
+          <td>${escapeHtml(sub.vendor || '-')}</td>
+          <td>${formatDate(sub.startDate)}</td>
+          <td>${formatDate(sub.expiryDate)}</td>
+          <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
+          <td>${escapeHtml(sub.paymentMode)}</td>
+          <td>${daysLeft}</td>
+          <td>${status}</td>
+        </tr>
+      `;
+    });
+    
+    // Add category subtotal
+    html += `<tr class="group-total-row"><td colspan="6"><strong>Category Total</strong></td><td colspan="4"><strong>GH₵ ${formatCurrency(categoryTotal)}</strong></td></tr>`;
+    totalAnnualCost += categoryTotal;
+  }
+  
+  // Add grand total
+  html += `<tr class="grand-total-row"><td colspan="6"><strong>GRAND TOTAL</strong></td><td colspan="4"><strong>GH₵ ${formatCurrency(totalAnnualCost)}</strong></td></tr>`;
+  html += '</tbody></table></div>';
+  
+  container.innerHTML = html;
 }
 
 function renderPrepaidTable() {
   const tbody = document.getElementById('prepaidTableBody');
   if (!tbody) return;
   
-  const prepaidList = subscriptionsList.filter(sub => sub.paymentMode === 'Prepaid');
+  let prepaidList = subscriptionsList.filter(sub => 
+    sub.paymentMode === 'Prepaid' && isWithinDateRange(sub.expiryDate)
+  );
   
   if (!prepaidList.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No prepaid subscriptions</td></tr>';
@@ -210,17 +315,21 @@ function renderPrepaidTable() {
   }
   
   tbody.innerHTML = prepaidList.map(sub => {
+    const monthlyCharge = sub.annualCost / 12;
     const daysLeft = calculateDaysLeft(sub.expiryDate);
+    const monthsLeft = Math.max(0, daysLeft / 30.44);
+    const remainingAmount = monthlyCharge * monthsLeft;
     const status = getStatusBadge(daysLeft);
+    
     return `
       <tr>
         <td>${escapeHtml(sub.code)}</td>
         <td><strong>${escapeHtml(sub.name)}</strong></td>
         <td>${escapeHtml(sub.category)}</td>
-        <td>${escapeHtml(sub.vendor || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-        <td>${daysLeft}</td>
+        <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
+        <td>GH₵ ${formatCurrency(remainingAmount)}</td>
         <td>${status}</td>
       </tr>
     `;
@@ -231,7 +340,9 @@ function renderArrearsTable() {
   const tbody = document.getElementById('arrearsTableBody');
   if (!tbody) return;
   
-  const arrearsList = subscriptionsList.filter(sub => sub.paymentMode === 'In Arrears');
+  let arrearsList = subscriptionsList.filter(sub => 
+    sub.paymentMode === 'In Arrears' && isWithinDateRange(sub.expiryDate)
+  );
   
   if (!arrearsList.length) {
     tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No in-arrears subscriptions</td></tr>';
@@ -240,16 +351,22 @@ function renderArrearsTable() {
   
   tbody.innerHTML = arrearsList.map(sub => {
     const daysLeft = calculateDaysLeft(sub.expiryDate);
+    const totalMonths = 12;
+    const elapsedMonths = Math.max(0, totalMonths - Math.max(0, daysLeft / 30.44));
+    const monthlyCharge = sub.annualCost / 12;
+    const amountPaid = monthlyCharge * elapsedMonths;
+    const remainingAmount = sub.annualCost - amountPaid;
     const status = getStatusBadge(daysLeft);
+    
     return `
       <tr>
         <td>${escapeHtml(sub.code)}</td>
         <td><strong>${escapeHtml(sub.name)}</strong></td>
         <td>${escapeHtml(sub.category)}</td>
-        <td>${escapeHtml(sub.vendor || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-        <td>${daysLeft}</td>
+        <td>GH₵ ${formatCurrency(amountPaid)}</td>
+        <td>GH₵ ${formatCurrency(remainingAmount)}</td>
         <td>${status}</td>
       </tr>
     `;
@@ -285,40 +402,7 @@ function renderExpiredTable() {
 }
 
 function filterScheduleTable() {
-  const searchTerm = document.getElementById('scheduleSearch')?.value.toLowerCase() || '';
-  const tbody = document.getElementById('scheduleTableBody');
-  if (!tbody) return;
-  
-  const filtered = subscriptionsList.filter(sub => 
-    sub.name.toLowerCase().includes(searchTerm) || 
-    (sub.vendor && sub.vendor.toLowerCase().includes(searchTerm)) ||
-    sub.category.toLowerCase().includes(searchTerm) ||
-    sub.code.toLowerCase().includes(searchTerm)
-  );
-  
-  if (!filtered.length) {
-    tbody.innerHTML = '<tr><td colspan="10" class="loading-cell">No matching records</td></tr>';
-    return;
-  }
-  
-  tbody.innerHTML = filtered.map(sub => {
-    const daysLeft = calculateDaysLeft(sub.expiryDate);
-    const status = getStatusBadge(daysLeft);
-    return `
-      <tr>
-        <td>${escapeHtml(sub.code)}</td>
-        <td><strong>${escapeHtml(sub.name)}</strong></td>
-        <td>${escapeHtml(sub.category)}</td>
-        <td>${escapeHtml(sub.vendor || '-')}</td>
-        <td>${formatDate(sub.startDate)}</td>
-        <td>${formatDate(sub.expiryDate)}</td>
-        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-        <td>${escapeHtml(sub.paymentMode)}</td>
-        <td>${daysLeft}</td>
-        <td>${status}</td>
-      </tr>
-    `;
-  }).join('');
+  renderAllSchedulesGrouped();
 }
 
 // ============================================
@@ -338,7 +422,6 @@ function openRenewModal(id) {
   document.getElementById('renewAnnualCost').value = sub.annualCost;
   document.getElementById('renewPaymentMode').value = sub.paymentMode;
   
-  // Set new expiry date to one year from now
   const newExpiry = new Date();
   newExpiry.setFullYear(newExpiry.getFullYear() + 1);
   document.getElementById('renewExpiryDate').value = newExpiry.toISOString().split('T')[0];
@@ -355,14 +438,13 @@ function processRenewal() {
   const newAnnualCost = parseFloat(document.getElementById('renewAnnualCost').value);
   const newPaymentMode = document.getElementById('renewPaymentMode').value;
   
-  // Update the subscription
   subscriptionsList[index] = {
     ...subscriptionsList[index],
     expiryDate: newExpiryDate,
     vendor: newVendor,
     annualCost: newAnnualCost,
     paymentMode: newPaymentMode,
-    startDate: new Date().toISOString().split('T')[0] // Update start date to renewal date
+    startDate: new Date().toISOString().split('T')[0]
   };
   
   saveSubscriptionsToStorage();
@@ -383,8 +465,7 @@ function closeRenewModal() {
 function printSubscriptionSchedule() {
   const printContent = document.querySelector('.subscription-schedule-container').cloneNode(true);
   
-  // Remove buttons and action elements for print
-  printContent.querySelectorAll('.renew-btn, .export-btn, .print-btn, .search-box, .header-actions').forEach(el => {
+  printContent.querySelectorAll('.renew-btn, .export-btn, .print-btn, .search-box, .header-actions, .filter-btn, .clear-btn').forEach(el => {
     if (el) el.remove();
   });
   
@@ -399,10 +480,14 @@ function printSubscriptionSchedule() {
           th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
           th { background-color: #f2f2f2; }
           h1 { color: #333; }
+          .group-header { background-color: #e2e8f0; font-weight: bold; }
+          .group-total-row { background-color: #fef3c7; }
+          .grand-total-row { background-color: #4361ee; color: white; }
         </style>
       </head>
       <body>
         <h1>Subscription & License Schedule</h1>
+        <p>Period: ${document.getElementById('fromDate')?.value || 'All'} to ${document.getElementById('toDate')?.value || 'All'}</p>
         <p>Generated on: ${new Date().toLocaleString()}</p>
         ${printContent.innerHTML}
       </body>
@@ -470,6 +555,13 @@ function formatDate(dateStr) {
   return d.toLocaleDateString('en-GB');
 }
 
+function formatDateForInput(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 function formatCurrency(val) {
   return val.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 }
@@ -513,3 +605,5 @@ window.openRenewModal = openRenewModal;
 window.closeRenewModal = closeRenewModal;
 window.processRenewal = processRenewal;
 window.printSubscriptionSchedule = printSubscriptionSchedule;
+window.applyDateFilter = applyDateFilter;
+window.clearDateFilter = clearDateFilter;
