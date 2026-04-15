@@ -1,139 +1,81 @@
 <div class="subscription-container">
   <div class="subscription-header">
-    <h1><i class="fas fa-calendar-alt"></i> Subscriptions & Licenses Renewals</h1>
-    <p>Track software licenses, domain renewals, SaaS subscriptions, and service contracts</p>
+    <h1><i class="fas fa-plus-circle"></i> Add Subscription / License</h1>
   </div>
 
-  <!-- Tab Navigation -->
-  <div class="sub-tabs">
-    <button class="sub-tab-btn active" onclick="switchSubTab('addSubscription')">
-      <i class="fas fa-plus-circle"></i> Add New
-    </button>
-    <button class="sub-tab-btn" onclick="switchSubTab('viewSchedules')">
-      <i class="fas fa-calendar-week"></i> Renewal Schedules
-    </button>
-    <button class="sub-tab-btn" onclick="switchSubTab('expiringSoon')">
-      <i class="fas fa-hourglass-half"></i> Expiring Soon
-    </button>
-  </div>
-
-  <!-- Tab 1: Add New Subscription/License -->
-  <div class="sub-tab-content active" id="addSubscription">
-    <form id="subscriptionForm" onsubmit="event.preventDefault(); submitSubscription();">
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label><i class="fas fa-tag"></i> Subscription/License Name *</label>
-          <input type="text" id="subName" placeholder="e.g., Microsoft 365 Business Premium" required>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-layer-group"></i> Category *</label>
-          <select id="subCategory" required>
-            <option value="">Select Category</option>
-            <option value="Software License">Software License</option>
-            <option value="SaaS Subscription">SaaS Subscription</option>
-            <option value="Domain Renewal">Domain Renewal</option>
-            <option value="SSL Certificate">SSL Certificate</option>
-            <option value="Maintenance Contract">Maintenance Contract</option>
-            <option value="Cloud Service">Cloud Service</option>
-            <option value="Other">Other</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label><i class="fas fa-building"></i> Vendor/Provider</label>
-          <input type="text" id="vendor" placeholder="e.g., Microsoft, Google, GoDaddy">
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-code-branch"></i> License Key / Reference</label>
-          <input type="text" id="licenseKey" placeholder="Optional">
-        </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label><i class="fas fa-calendar-plus"></i> Purchase/Start Date *</label>
-          <input type="date" id="startDate" required>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-calendar-check"></i> Expiry/Renewal Date *</label>
-          <input type="date" id="expiryDate" required>
-        </div>
-      </div>
-
-      <div class="form-grid-2">
-        <div class="form-group">
-          <label><i class="fas fa-dollar-sign"></i> Annual Cost (GH₵) *</label>
-          <input type="number" id="annualCost" step="0.01" placeholder="0.00" required>
-        </div>
-        <div class="form-group">
-          <label><i class="fas fa-sync-alt"></i> Renewal Type</label>
-          <select id="renewalType">
-            <option value="Auto-renew">Auto-renew</option>
-            <option value="Manual Renewal">Manual Renewal</option>
-            <option value="One-time">One-time (No renewal)</option>
-          </select>
-        </div>
-      </div>
-
+  <form id="subscriptionForm" onsubmit="event.preventDefault(); submitSubscription();">
+    <div class="form-grid-2">
       <div class="form-group">
-        <label><i class="fas fa-users"></i> Assigned To / Department</label>
-        <input type="text" id="assignedTo" placeholder="e.g., IT Dept, Finance, Marketing">
+        <label><i class="fas fa-tag"></i> Subscription/License Name *</label>
+        <input type="text" id="subName" placeholder="e.g., Microsoft 365 Business Premium" required>
       </div>
-
       <div class="form-group">
-        <label><i class="fas fa-sticky-note"></i> Notes</label>
-        <textarea id="notes" rows="2" placeholder="Additional details..."></textarea>
+        <label><i class="fas fa-layer-group"></i> Category *</label>
+        <select id="subCategory" required>
+          <option value="">Select Category</option>
+          <option value="Software License">Software License</option>
+          <option value="SaaS Subscription">SaaS Subscription</option>
+          <option value="Domain Renewal">Domain Renewal</option>
+          <option value="SSL Certificate">SSL Certificate</option>
+          <option value="Maintenance Contract">Maintenance Contract</option>
+          <option value="Cloud Service">Cloud Service</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
+    </div>
 
-      <div class="form-actions">
-        <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Subscription</button>
-        <button type="button" class="reset-btn" onclick="resetSubscriptionForm()"><i class="fas fa-undo"></i> Reset</button>
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label><i class="fas fa-building"></i> Vendor/Provider</label>
+        <input type="text" id="vendor" placeholder="e.g., Microsoft, Google, GoDaddy">
       </div>
-    </form>
-  </div>
-
-  <!-- Tab 2: Renewal Schedules (All records) -->
-  <div class="sub-tab-content" id="viewSchedules">
-    <div class="table-toolbar">
-      <div class="search-box">
-        <i class="fas fa-search"></i>
-        <input type="text" id="scheduleSearch" placeholder="Search by name, vendor..." onkeyup="filterScheduleTable()">
+      <div class="form-group">
+        <label><i class="fas fa-code-branch"></i> License Key / Reference</label>
+        <input type="text" id="licenseKey" placeholder="Optional">
       </div>
-      <button class="export-btn" onclick="exportSubscriptionsToCSV()"><i class="fas fa-download"></i> Export CSV</button>
     </div>
-    <div class="table-wrapper">
-      <table class="subscription-table" id="scheduleTable">
-        <thead>
-          <tr>
-            <th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th><th>Expiry Date</th>
-            <th>Annual Cost</th><th>Days Left</th><th>Status</th><th>Action</th>
-          </tr>
-        </thead>
-        <tbody id="scheduleTableBody">
-          <tr><td colspan="9" class="loading-cell">Loading subscriptions...</td></tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
 
-  <!-- Tab 3: Expiring Soon (30 days window) -->
-  <div class="sub-tab-content" id="expiringSoon">
-    <div class="alert-banner">
-      <i class="fas fa-bell"></i> Showing subscriptions expiring within the next 30 days
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label><i class="fas fa-calendar-plus"></i> Purchase/Start Date *</label>
+        <input type="date" id="startDate" required>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-calendar-check"></i> Expiry/Renewal Date *</label>
+        <input type="date" id="expiryDate" required>
+      </div>
     </div>
-    <div class="table-wrapper">
-      <table class="subscription-table">
-        <thead>
-          <tr><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Renewal Type</th><th>Action</th></tr>
-        </thead>
-        <tbody id="expiringTableBody">
-          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
-        </tbody>
-      </table>
+
+    <div class="form-grid-2">
+      <div class="form-group">
+        <label><i class="fas fa-dollar-sign"></i> Annual Cost (GH₵) *</label>
+        <input type="number" id="annualCost" step="0.01" placeholder="0.00" required>
+      </div>
+      <div class="form-group">
+        <label><i class="fas fa-sync-alt"></i> Renewal Type</label>
+        <select id="renewalType">
+          <option value="Auto-renew">Auto-renew</option>
+          <option value="Manual Renewal">Manual Renewal</option>
+          <option value="One-time">One-time (No renewal)</option>
+        </select>
+      </div>
     </div>
-  </div>
+
+    <div class="form-group">
+      <label><i class="fas fa-users"></i> Assigned To / Department</label>
+      <input type="text" id="assignedTo" placeholder="e.g., IT Dept, Finance, Marketing">
+    </div>
+
+    <div class="form-group">
+      <label><i class="fas fa-sticky-note"></i> Notes</label>
+      <textarea id="notes" rows="2" placeholder="Additional details..."></textarea>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Subscription</button>
+      <button type="button" class="reset-btn" onclick="resetSubscriptionForm()"><i class="fas fa-undo"></i> Reset</button>
+    </div>
+  </form>
 </div>
 
 <!-- Modal for messages -->
@@ -142,17 +84,5 @@
     <i class="fas" id="modalIcon"></i>
     <p id="modalMessageText"></p>
     <button onclick="closeSubModal()" class="modal-ok-btn">OK</button>
-  </div>
-</div>
-
-<!-- Confirmation delete modal -->
-<div id="subConfirmModal" class="sub-modal" style="display: none;">
-  <div class="sub-modal-content">
-    <i class="fas fa-exclamation-triangle" style="color: #ef476f; font-size: 40px;"></i>
-    <p id="confirmMessage">Are you sure you want to delete this subscription?</p>
-    <div style="display: flex; gap: 12px; margin-top: 20px;">
-      <button onclick="closeConfirmModal()" class="modal-cancel-btn">Cancel</button>
-      <button id="confirmDeleteBtn" class="modal-delete-btn">Delete</button>
-    </div>
   </div>
 </div>
