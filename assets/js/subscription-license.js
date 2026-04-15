@@ -1,6 +1,4 @@
-/* ============================================
-   SUBSCRIPTIONS & LICENSES RENEWALS MODULE
-   ============================================ */
+
 
 let subscriptionsList = [];
 let currentRenewId = null;
