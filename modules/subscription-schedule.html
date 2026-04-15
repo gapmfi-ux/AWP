@@ -2,9 +2,23 @@
   <div class="subscription-header">
     <h1>Subscription & License Schedule</h1>
     <div class="header-actions">
-      <button class="print-btn" onclick="printSubscriptionSchedule()">
-        Print
-      </button>
+      <button class="print-btn" onclick="printSubscriptionSchedule()">Print</button>
+    </div>
+  </div>
+
+  <!-- Date Range Filter -->
+  <div class="date-range-section">
+    <div class="date-range-controls">
+      <div class="date-group">
+        <label>FROM:</label>
+        <input type="date" id="fromDate" onchange="applyDateFilter()">
+      </div>
+      <div class="date-group">
+        <label>TO:</label>
+        <input type="date" id="toDate" onchange="applyDateFilter()">
+      </div>
+      <button class="filter-btn" onclick="applyDateFilter()">Apply Filter</button>
+      <button class="clear-btn" onclick="clearDateFilter()">Clear</button>
     </div>
   </div>
 
@@ -23,26 +37,16 @@
     </button>
   </div>
 
-  <!-- All Schedules Tab -->
+  <!-- All Schedules Tab - Grouped by Category -->
   <div class="schedule-tab-content active" id="allSchedule">
     <div class="table-toolbar">
       <div class="search-box">
-        <input type="text" id="scheduleSearch" placeholder="Search by name, vendor, category..." onkeyup="filterScheduleTable()">
+        <input type="text" id="scheduleSearch" placeholder="Search by name, vendor, code..." onkeyup="filterScheduleTable()">
       </div>
       <button class="export-btn" onclick="exportSubscriptionsToCSV()">Export CSV</button>
     </div>
-    <div class="table-wrapper">
-      <table class="subscription-table" id="scheduleTable">
-        <thead>
-          <tr>
-            <th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th>
-            <th>Expiry Date</th><th>Annual Cost</th><th>Payment Mode</th><th>Days Left</th><th>Status</th>
-           </tr>
-        </thead>
-        <tbody id="scheduleTableBody">
-          <tr><td colspan="10" class="loading-cell">Loading subscriptions...</td></tr>
-        </tbody>
-      </table>
+    <div class="table-wrapper" id="allScheduleWrapper">
+      <!-- Grouped table will be rendered here -->
     </div>
   </div>
 
@@ -51,7 +55,16 @@
     <div class="table-wrapper">
       <table class="subscription-table">
         <thead>
-          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Status</th></tr>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Expiry Date</th>
+            <th>Annual Cost (GH₵)</th>
+            <th>Monthly Charge (GH₵)</th>
+            <th>Remaining Amount (GH₵)</th>
+            <th>Status</th>
+           </tr>
         </thead>
         <tbody id="prepaidTableBody">
           <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
@@ -65,7 +78,16 @@
     <div class="table-wrapper">
       <table class="subscription-table">
         <thead>
-          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Status</th></tr>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Expiry Date</th>
+            <th>Annual Cost (GH₵)</th>
+            <th>Amount Paid (GH₵)</th>
+            <th>Remaining Amount (GH₵)</th>
+            <th>Status</th>
+           </tr>
         </thead>
         <tbody id="arrearsTableBody">
           <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
@@ -79,7 +101,16 @@
     <div class="table-wrapper">
       <table class="subscription-table">
         <thead>
-          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Overdue</th><th>Action</th></tr>
+          <tr>
+            <th>Code</th>
+            <th>Name</th>
+            <th>Category</th>
+            <th>Vendor</th>
+            <th>Expiry Date</th>
+            <th>Annual Cost (GH₵)</th>
+            <th>Days Overdue</th>
+            <th>Action</th>
+           </tr>
         </thead>
         <tbody id="expiredTableBody">
           <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
@@ -147,7 +178,7 @@
 }
 
 .subscription-header {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 12px;
   display: flex;
@@ -181,6 +212,70 @@
 .print-btn:hover {
   background: #4361ee;
   color: white;
+}
+
+/* Date Range Section */
+.date-range-section {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.date-range-controls {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.date-group label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #475569;
+}
+
+.date-group input {
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+
+.filter-btn, .clear-btn {
+  padding: 8px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.filter-btn {
+  background: #4361ee;
+  color: white;
+}
+
+.filter-btn:hover {
+  background: #3a56d4;
+}
+
+.clear-btn {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.clear-btn:hover {
+  background: #cbd5e1;
 }
 
 .schedule-tabs {
@@ -353,6 +448,43 @@
   transform: translateY(-1px);
 }
 
+/* Group Header Styles */
+.group-header {
+  background: #e2e8f0;
+  font-weight: 700;
+}
+
+.group-header td {
+  padding: 10px 12px;
+  font-size: 0.85rem;
+  color: #1e293b;
+  border-top: 2px solid #cbd5e0;
+  border-bottom: 1px solid #cbd5e0;
+  background: #f1f5f9;
+}
+
+.group-total-row {
+  background: #fef3c7;
+  font-weight: 600;
+}
+
+.group-total-row td {
+  padding: 8px 12px;
+  border-top: 1px solid #f59e0b;
+  border-bottom: 1px solid #f59e0b;
+}
+
+.grand-total-row {
+  background: #4361ee;
+  color: white;
+  font-weight: 700;
+}
+
+.grand-total-row td {
+  padding: 10px 12px;
+  border-top: 2px solid #2d3748;
+}
+
 /* Renew Modal */
 .renew-modal {
   position: fixed;
@@ -450,6 +582,10 @@
 @media (max-width: 768px) {
   .subscription-schedule-container {
     padding: 16px;
+  }
+  .date-range-controls {
+    flex-direction: column;
+    align-items: stretch;
   }
   .schedule-tabs {
     gap: 4px;
