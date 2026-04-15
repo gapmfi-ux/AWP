@@ -630,6 +630,8 @@ function loadModule(moduleName) {
     'viewAssetRegister': { file: 'modules/asset-register.html', init: 'initAssetRegisterModule' },
     'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
+    'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
+    'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
     'dashboard': null
   };
   
