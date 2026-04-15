@@ -50,7 +50,7 @@
     </div>
   </div>
 
-  <!-- Prepaid Tab -->
+  <!-- Prepaid Tab - Status column removed -->
   <div class="schedule-tab-content" id="prepaid">
     <div class="table-wrapper">
       <table class="subscription-table">
@@ -63,13 +63,12 @@
             <th>Annual Cost (GH₵)</th>
             <th>Monthly Charge (GH₵)</th>
             <th>Remaining Amount (GH₵)</th>
-            <th>Status</th>
-           </tr>
+            </tr>
         </thead>
         <tbody id="prepaidTableBody">
-          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
+          <tr><td colspan="7" class="loading-cell">Loading...</td></tr>
         </tbody>
-      </table>
+       </table>
     </div>
   </div>
 
@@ -86,13 +85,12 @@
             <th>Annual Cost (GH₵)</th>
             <th>Amount Paid (GH₵)</th>
             <th>Remaining Amount (GH₵)</th>
-            <th>Status</th>
-           </tr>
+            </tr>
         </thead>
         <tbody id="arrearsTableBody">
-          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
+          <tr><td colspan="7" class="loading-cell">Loading...</td></tr>
         </tbody>
-      </table>
+       </table>
     </div>
   </div>
 
@@ -110,12 +108,12 @@
             <th>Annual Cost (GH₵)</th>
             <th>Days Overdue</th>
             <th>Action</th>
-           </tr>
+          </tr>
         </thead>
         <tbody id="expiredTableBody">
           <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
         </tbody>
-      </table>
+       </table>
     </div>
   </div>
 </div>
@@ -403,34 +401,6 @@
   color: #94a3b8;
 }
 
-.status-badge {
-  display: inline-block;
-  padding: 4px 10px;
-  border-radius: 30px;
-  font-size: 0.7rem;
-  font-weight: 700;
-}
-
-.status-critical {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.status-warning {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.status-healthy {
-  background: #dcfce7;
-  color: #16a34a;
-}
-
-.status-expired {
-  background: #f1f5f9;
-  color: #64748b;
-}
-
 .renew-btn {
   background: #4361ee;
   color: white;
@@ -483,6 +453,15 @@
 .grand-total-row td {
   padding: 10px 12px;
   border-top: 2px solid #2d3748;
+}
+
+.text-danger {
+  color: #dc2626 !important;
+  font-weight: 600;
+}
+
+.text-warning {
+  color: #d97706 !important;
 }
 
 /* Renew Modal */
