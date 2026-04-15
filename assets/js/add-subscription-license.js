@@ -1,10 +1,4 @@
-// ============================================
-// ADD SUBSCRIPTION MODULE
-// ============================================
 
-// ============================================
-// CATEGORY MANAGEMENT (Like Inventory)
-// ============================================
 
 function loadSubscriptionCategories() {
   console.log('Loading subscription categories via API');
@@ -21,19 +15,29 @@ function loadSubscriptionCategories() {
       const select = document.getElementById('subCategory');
       if (!select) return;
       
-      // Clear existing options except the first one
+      // Clear existing options except the first two (placeholder and add-new)
       while (select.options.length > 2) {
         select.remove(2);
       }
       
-      if (response && Array.isArray(response) && response.length > 0) {
-        response.forEach(function(cat) {
+      // Handle response - could be array or object with data property
+      let categories = [];
+      if (response && Array.isArray(response)) {
+        categories = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        categories = response.data;
+      } else if (response && response.categories && Array.isArray(response.categories)) {
+        categories = response.categories;
+      }
+      
+      if (categories.length > 0) {
+        categories.forEach(function(cat) {
           const option = document.createElement('option');
-          option.value = cat.code;
-          option.textContent = cat.name + ' (' + cat.code + ')';
+          option.value = cat.code || cat;
+          option.textContent = (cat.name || cat) + (cat.code ? ' (' + cat.code + ')' : '');
           select.appendChild(option);
         });
-        console.log('Loaded ' + response.length + ' categories');
+        console.log('Loaded ' + categories.length + ' categories');
       } else {
         // Fallback to default categories
         loadDefaultCategories();
@@ -72,6 +76,7 @@ function handleCategoryChange() {
   const select = document.getElementById('subCategory');
   const addNewFields = document.getElementById('addNewCategoryFields');
   const licenseCodeField = document.getElementById('licenseCode');
+  const codeDisplay = document.getElementById('generatedCodeDisplay');
   
   if (select.value === 'add-new') {
     if (addNewFields) addNewFields.style.display = 'block';
@@ -82,7 +87,6 @@ function handleCategoryChange() {
   } else {
     if (addNewFields) addNewFields.style.display = 'none';
     if (licenseCodeField) licenseCodeField.value = '';
-    const codeDisplay = document.getElementById('generatedCodeDisplay');
     if (codeDisplay) codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
   }
 }
@@ -106,7 +110,12 @@ function generateCategoryCode() {
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
       if (response) {
-        const mainCode = String(response).trim();
+        // Handle different response formats
+        let mainCode = response;
+        if (response.result) mainCode = response.result;
+        if (response.code) mainCode = response.code;
+        
+        mainCode = String(mainCode).trim();
         if (field) field.value = mainCode;
         
         // Display the generated code with 001 suffix (new code, so always 001)
@@ -157,9 +166,9 @@ function generateLicenseCode() {
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       if (response && codeField) {
         let nextCode = response;
-        if (typeof response === 'object' && response.result) {
-          nextCode = response.result;
-        }
+        if (response.result) nextCode = response.result;
+        if (response.code) nextCode = response.code;
+        
         const code = String(nextCode).trim();
         codeField.value = code;
         if (codeDisplay) {
@@ -278,7 +287,7 @@ function submitSubscription() {
     API.addSubscription(subscriptionData)
       .then(function(response) {
         console.log('Subscription saved:', response);
-        if (response && response.success) {
+        if (response && (response.success === true || response.result === 'success')) {
           subscriptionsList.push(subscriptionData);
           saveSubscriptionsToStorage(subscriptionsList);
           showToast('Subscription saved successfully!', 'success');
