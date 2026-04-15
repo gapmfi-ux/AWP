@@ -1,84 +1,139 @@
 <div class="subscription-schedule-container">
   <div class="subscription-header">
-    <h1><i class="fas fa-calendar-week"></i> Subscription & License Schedule</h1>
-    <p>Track renewals, expirations, and manage all subscriptions</p>
+    <h1>Subscription & License Schedule</h1>
+    <div class="header-actions">
+      <button class="print-btn" onclick="printSubscriptionSchedule()">
+        Print
+      </button>
+    </div>
   </div>
 
-  <!-- Tabs for different views -->
   <div class="schedule-tabs">
     <button class="schedule-tab-btn active" onclick="switchScheduleTab('allSchedule')">
-      <i class="fas fa-table"></i> All Schedules
+      All Schedules
     </button>
-    <button class="schedule-tab-btn" onclick="switchScheduleTab('expiringSoon')">
-      <i class="fas fa-hourglass-half"></i> Expiring Soon (30 days)
+    <button class="schedule-tab-btn" onclick="switchScheduleTab('prepaid')">
+      Prepaid
+    </button>
+    <button class="schedule-tab-btn" onclick="switchScheduleTab('arrears')">
+      In Arrears
     </button>
     <button class="schedule-tab-btn" onclick="switchScheduleTab('expired')">
-      <i class="fas fa-exclamation-triangle"></i> Expired
+      Expired
     </button>
   </div>
 
-  <!-- Tab: All Schedules -->
+  <!-- All Schedules Tab -->
   <div class="schedule-tab-content active" id="allSchedule">
     <div class="table-toolbar">
       <div class="search-box">
-        <i class="fas fa-search"></i>
         <input type="text" id="scheduleSearch" placeholder="Search by name, vendor, category..." onkeyup="filterScheduleTable()">
       </div>
-      <button class="export-btn" onclick="exportSubscriptionsToCSV()"><i class="fas fa-download"></i> Export CSV</button>
+      <button class="export-btn" onclick="exportSubscriptionsToCSV()">Export CSV</button>
     </div>
     <div class="table-wrapper">
-      <table class="subscription-table">
+      <table class="subscription-table" id="scheduleTable">
         <thead>
           <tr>
-            <th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th><th>Expiry Date</th>
-            <th>Annual Cost</th><th>Days Left</th><th>Status</th><th>Action</th>
-          </tr>
+            <th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th>
+            <th>Expiry Date</th><th>Annual Cost</th><th>Payment Mode</th><th>Days Left</th><th>Status</th>
+           </tr>
         </thead>
         <tbody id="scheduleTableBody">
-          <tr><td colspan="9" class="loading-cell">Loading subscriptions...</td></tr>
+          <tr><td colspan="10" class="loading-cell">Loading subscriptions...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Tab: Expiring Soon -->
-  <div class="schedule-tab-content" id="expiringSoon">
-    <div class="alert-banner warning">
-      <i class="fas fa-bell"></i> Showing subscriptions expiring within the next 30 days
-    </div>
+  <!-- Prepaid Tab -->
+  <div class="schedule-tab-content" id="prepaid">
     <div class="table-wrapper">
       <table class="subscription-table">
         <thead>
-          <tr><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Renewal Type</th><th>Action</th></tr>
+          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Status</th></tr>
         </thead>
-        <tbody id="expiringTableBody">
+        <tbody id="prepaidTableBody">
           <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- Tab: Expired -->
-  <div class="schedule-tab-content" id="expired">
-    <div class="alert-banner danger">
-      <i class="fas fa-times-circle"></i> Subscriptions that have expired and need attention
-    </div>
+  <!-- In Arrears Tab -->
+  <div class="schedule-tab-content" id="arrears">
     <div class="table-wrapper">
       <table class="subscription-table">
         <thead>
-          <tr><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Overdue</th><th>Action</th></tr>
+          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Left</th><th>Status</th></tr>
+        </thead>
+        <tbody id="arrearsTableBody">
+          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Expired Tab -->
+  <div class="schedule-tab-content" id="expired">
+    <div class="table-wrapper">
+      <table class="subscription-table">
+        <thead>
+          <tr><th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Expiry Date</th><th>Annual Cost</th><th>Days Overdue</th><th>Action</th></tr>
         </thead>
         <tbody id="expiredTableBody">
-          <tr><td colspan="7" class="loading-cell">Loading...</td></tr>
+          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- Toast Message -->
-<div id="subScheduleToast" class="sub-toast" style="display: none;">
-  <span id="subScheduleToastMessage"></span>
+<!-- Renew Modal -->
+<div id="renewModal" class="renew-modal" style="display: none;">
+  <div class="renew-modal-content">
+    <div class="renew-modal-header">
+      <h3>Renew Subscription</h3>
+      <button class="close-modal" onclick="closeRenewModal()">&times;</button>
+    </div>
+    <form id="renewForm" onsubmit="event.preventDefault(); processRenewal();">
+      <div class="form-group">
+        <label>Subscription Code</label>
+        <input type="text" id="renewCode" readonly>
+      </div>
+      <div class="form-group">
+        <label>Subscription Name</label>
+        <input type="text" id="renewName" readonly>
+      </div>
+      <div class="form-group">
+        <label>Category</label>
+        <input type="text" id="renewCategory" readonly>
+      </div>
+      <div class="form-group">
+        <label>Vendor</label>
+        <input type="text" id="renewVendor">
+      </div>
+      <div class="form-group">
+        <label>New Expiry Date</label>
+        <input type="date" id="renewExpiryDate" required>
+      </div>
+      <div class="form-group">
+        <label>Annual Cost (GH₵)</label>
+        <input type="number" id="renewAnnualCost" step="0.01" required>
+      </div>
+      <div class="form-group">
+        <label>Payment Mode</label>
+        <select id="renewPaymentMode">
+          <option value="Prepaid">Prepaid</option>
+          <option value="In Arrears">In Arrears</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="submit" class="submit-btn">Confirm Renewal</button>
+        <button type="button" class="cancel-btn" onclick="closeRenewModal()">Cancel</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <style>
@@ -95,24 +150,37 @@
   margin-bottom: 24px;
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .subscription-header h1 {
   font-size: 1.5rem;
   color: #0f172a;
+  margin: 0;
+}
+
+.header-actions {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
+  gap: 12px;
 }
 
-.subscription-header h1 i {
+.print-btn {
+  background: #eef2ff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
   color: #4361ee;
+  transition: all 0.2s;
 }
 
-.subscription-header p {
-  color: #64748b;
-  font-size: 0.85rem;
+.print-btn:hover {
+  background: #4361ee;
+  color: white;
 }
 
 .schedule-tabs {
@@ -133,9 +201,6 @@
   cursor: pointer;
   border-radius: 8px 8px 0 0;
   transition: all 0.2s;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .schedule-tab-btn:hover {
@@ -172,34 +237,24 @@
   gap: 12px;
 }
 
-.search-box {
-  display: flex;
-  align-items: center;
-  background: #f8fafc;
+.search-box input {
   border: 1px solid #e2e8f0;
   border-radius: 40px;
-  padding: 6px 16px;
-  gap: 8px;
-}
-
-.search-box i {
-  color: #94a3b8;
-}
-
-.search-box input {
-  border: none;
-  background: transparent;
-  padding: 6px 0;
-  width: 240px;
+  padding: 8px 16px;
+  width: 260px;
   font-size: 0.8rem;
   outline: none;
+}
+
+.search-box input:focus {
+  border-color: #4361ee;
 }
 
 .export-btn {
   background: #eef2ff;
   border: none;
   padding: 8px 18px;
-  border-radius: 30px;
+  border-radius: 8px;
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
@@ -227,7 +282,7 @@
 
 .subscription-table th {
   background: #f8fafc;
-  padding: 12px 12px;
+  padding: 12px;
   text-align: left;
   font-weight: 700;
   color: #1e293b;
@@ -238,7 +293,7 @@
 }
 
 .subscription-table td {
-  padding: 12px 12px;
+  padding: 12px;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
 }
@@ -281,70 +336,115 @@
   color: #64748b;
 }
 
-.action-icon-btn {
+.renew-btn {
+  background: #4361ee;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.renew-btn:hover {
+  background: #3a56d4;
+  transform: translateY(-1px);
+}
+
+/* Renew Modal */
+.renew-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.renew-modal-content {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: modalPop 0.2s ease;
+}
+
+@keyframes modalPop {
+  from { transform: scale(0.95); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.renew-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.renew-modal-header h3 {
+  margin: 0;
+  color: #0f172a;
+}
+
+.close-modal {
   background: none;
   border: none;
+  font-size: 24px;
   cursor: pointer;
-  font-size: 1rem;
-  margin: 0 4px;
-  padding: 4px;
-  border-radius: 6px;
-  transition: 0.1s;
+  color: #94a3b8;
 }
 
-.action-icon-btn.edit {
-  color: #4361ee;
-}
-
-.action-icon-btn.edit:hover {
-  background: #eef2ff;
-}
-
-.action-icon-btn.delete {
+.close-modal:hover {
   color: #ef476f;
 }
 
-.action-icon-btn.delete:hover {
-  background: #ffe4e8;
+#renewForm {
+  padding: 20px;
 }
 
-.alert-banner {
-  padding: 12px 20px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
+#renewForm .form-group {
+  margin-bottom: 16px;
+}
+
+#renewForm .form-group label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+  color: #475569;
+}
+
+#renewForm .form-group input,
+#renewForm .form-group select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
   font-size: 0.85rem;
 }
 
-.alert-banner.warning {
-  background: #fffbeb;
-  border-left: 4px solid #f59e0b;
-  color: #b45309;
+#renewForm .form-group input[readonly] {
+  background: #f7fafc;
 }
 
-.alert-banner.danger {
-  background: #fef2f2;
-  border-left: 4px solid #ef476f;
-  color: #dc2626;
-}
-
-.sub-toast {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  background: #4361ee;
-  color: white;
-  padding: 12px 24px;
+.cancel-btn {
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  padding: 8px 20px;
   border-radius: 8px;
-  z-index: 1000;
-  animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
+  font-weight: 600;
+  cursor: pointer;
 }
 
 @media (max-width: 768px) {
@@ -362,9 +462,6 @@
   .subscription-table td {
     padding: 8px 6px;
     font-size: 0.7rem;
-  }
-  .search-box input {
-    width: 160px;
   }
 }
 </style>
