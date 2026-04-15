@@ -1,6 +1,6 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Clean print view - NO browser headers/footers
+   Consistent margins on ALL pages - NO browser headers/footers
    ============================================ */
 
 // Global print utility with clean formatting
@@ -35,7 +35,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - NO browser headers/footers
+  // Get clean print styles - Consistent margins on ALL pages
   getPrintStyles: function() {
     return `
       <style>
@@ -205,47 +205,28 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* CRITICAL: Remove browser headers/footers completely */
+        /* CRITICAL: Consistent margins on ALL pages */
         @media print {
-          /* Remove default browser print header/footer */
+          /* Ensure all pages have the same margins */
           @page {
             size: A4 landscape;
-            margin: 12mm 9.6mm;
+            margin: 15mm 12mm;
           }
           
-          @page :first {
-            margin: 12mm 9.6mm;
-          }
-          
-          /* Hide any browser-generated content */
-          html, body {
+          /* Remove any default browser margins */
+          html {
             margin: 0;
             padding: 0;
           }
           
           body {
             margin: 0;
-            padding: 9.6mm 8mm;
+            padding: 0;
+            width: 100%;
           }
           
-          /* Remove any potential auto-generated text */
-          header, footer, nav, .no-print {
-            display: none !important;
-          }
-          
-          table {
-            page-break-inside: auto;
-          }
-          
-          tr {
-            page-break-inside: avoid;
-            page-break-after: auto;
-          }
-          
-          thead {
-            display: table-header-group;
-          }
-          
+          /* Ensure consistent spacing on all pages */
+          .print-table-wrapper,
           .grouped-report {
             page-break-inside: avoid;
           }
@@ -255,6 +236,15 @@ const printUtils = {
           button, 
           .dropdown-item {
             display: none !important;
+          }
+          
+          /* Prevent orphaned headers */
+          thead {
+            display: table-header-group;
+          }
+          
+          tr {
+            page-break-inside: avoid;
           }
         }
       </style>
@@ -317,14 +307,14 @@ const printUtils = {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${this.getPrintStyles()}
         <style>
-          /* Additional override to ensure no browser header/footer appears */
+          /* Additional override for consistent page margins */
           @media print {
             @page {
-              margin-top: 0;
-              margin-bottom: 0;
+              margin: 15mm 12mm;
             }
             body {
-              margin: 1.2cm 0.96cm;
+              margin: 0;
+              padding: 0;
             }
           }
         </style>
