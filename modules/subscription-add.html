@@ -1,85 +1,65 @@
 <div class="subscription-container">
   <div class="subscription-header">
-    <h1><i class="fas fa-plus-circle"></i> Add New Subscription / License</h1>
-    <p>Register software licenses, SaaS subscriptions, domain renewals, and service contracts</p>
+    <h1>Add New Subscription / License</h1>
   </div>
 
   <form id="subscriptionForm" onsubmit="event.preventDefault(); submitSubscription();">
     <div class="form-grid-2">
       <div class="form-group">
-        <label><i class="fas fa-tag"></i> Subscription/License Name *</label>
+        <label>Subscription/License Name</label>
         <input type="text" id="subName" placeholder="e.g., Microsoft 365 Business Premium" required>
       </div>
       <div class="form-group">
-        <label><i class="fas fa-layer-group"></i> Category *</label>
+        <label>Category</label>
         <select id="subCategory" required>
           <option value="">Select Category</option>
-          <option value="Software License">Software License</option>
-          <option value="SaaS Subscription">SaaS Subscription</option>
-          <option value="Domain Renewal">Domain Renewal</option>
-          <option value="SSL Certificate">SSL Certificate</option>
-          <option value="Maintenance Contract">Maintenance Contract</option>
-          <option value="Cloud Service">Cloud Service</option>
-          <option value="Other">Other</option>
         </select>
       </div>
     </div>
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label><i class="fas fa-building"></i> Vendor/Provider</label>
+        <label>Vendor/Provider</label>
         <input type="text" id="vendor" placeholder="e.g., Microsoft, Google, GoDaddy">
       </div>
       <div class="form-group">
-        <label><i class="fas fa-code-branch"></i> License Key / Reference</label>
-        <input type="text" id="licenseKey" placeholder="Optional">
+        <label>Subscription/License Code</label>
+        <input type="text" id="licenseCode" readonly placeholder="Auto-generated">
       </div>
     </div>
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label><i class="fas fa-calendar-plus"></i> Purchase/Start Date *</label>
+        <label>Purchase/Start Date</label>
         <input type="date" id="startDate" required>
       </div>
       <div class="form-group">
-        <label><i class="fas fa-calendar-check"></i> Expiry/Renewal Date *</label>
+        <label>Expiry/Renewal Date</label>
         <input type="date" id="expiryDate" required>
       </div>
     </div>
 
     <div class="form-grid-2">
       <div class="form-group">
-        <label><i class="fas fa-dollar-sign"></i> Annual Cost (GH₵) *</label>
+        <label>Annual Cost (GH₵)</label>
         <input type="number" id="annualCost" step="0.01" placeholder="0.00" required>
       </div>
       <div class="form-group">
-        <label><i class="fas fa-sync-alt"></i> Renewal Type</label>
-        <select id="renewalType">
-          <option value="Auto-renew">Auto-renew</option>
-          <option value="Manual Renewal">Manual Renewal</option>
-          <option value="One-time">One-time (No renewal)</option>
+        <label>Payment Mode</label>
+        <select id="paymentMode">
+          <option value="Prepaid">Prepaid</option>
+          <option value="In Arrears">In Arrears</option>
         </select>
       </div>
     </div>
 
-    <div class="form-group">
-      <label><i class="fas fa-users"></i> Assigned To / Department</label>
-      <input type="text" id="assignedTo" placeholder="e.g., IT Dept, Finance, Marketing">
-    </div>
-
-    <div class="form-group">
-      <label><i class="fas fa-sticky-note"></i> Notes</label>
-      <textarea id="notes" rows="2" placeholder="Additional details..."></textarea>
-    </div>
-
     <div class="form-actions">
-      <button type="submit" class="submit-btn"><i class="fas fa-save"></i> Save Subscription</button>
-      <button type="button" class="reset-btn" onclick="resetSubscriptionForm()"><i class="fas fa-undo"></i> Reset</button>
+      <button type="submit" class="submit-btn">Save Subscription</button>
+      <button type="button" class="reset-btn" onclick="resetSubscriptionForm()">Reset</button>
     </div>
   </form>
 </div>
 
-<!-- Toast Message Container -->
 <div id="subToast" class="sub-toast" style="display: none;">
   <span id="subToastMessage"></span>
 </div>
@@ -103,19 +83,7 @@
 .subscription-header h1 {
   font-size: 1.5rem;
   color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 6px;
-}
-
-.subscription-header h1 i {
-  color: #4361ee;
-}
-
-.subscription-header p {
-  color: #64748b;
-  font-size: 0.85rem;
+  margin: 0;
 }
 
 .form-grid-2 {
@@ -137,19 +105,10 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #475569;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.form-group label i {
-  color: #4361ee;
-  font-size: 0.75rem;
 }
 
 .form-group input, 
-.form-group select, 
-.form-group textarea {
+.form-group select {
   padding: 10px 12px;
   border: 1px solid #cbd5e1;
   border-radius: 10px;
@@ -160,15 +119,15 @@
 }
 
 .form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
+.form-group select:focus {
   outline: none;
   border-color: #4361ee;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1);
 }
 
-.form-group textarea {
-  resize: vertical;
+.form-group input[readonly] {
+  background: #f7fafc;
+  cursor: not-allowed;
 }
 
 .form-actions {
@@ -186,9 +145,6 @@
   cursor: pointer;
   transition: all 0.2s;
   border: none;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
 }
 
 .submit-btn {
