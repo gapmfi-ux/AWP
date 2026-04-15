@@ -102,7 +102,19 @@ window.google = {
             'addNewInvestment': () => API.addNewInvestment(args[0]),
             'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(args[0], args[1]),
             'getMaturedInvestments': () => API.getMaturedInvestments(args[0]),
-            
+
+     
+'getSubscriptionCategories': () => API.getSubscriptionCategories(),
+'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
+'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
+'addSubscription': () => API.addSubscription(args[0]),
+'getAllSubscriptions': () => API.getAllSubscriptions(),
+'updateSubscription': () => API.updateSubscription(args[0]),
+'deleteSubscription': () => API.deleteSubscription(args[0]),
+'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
+'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
+'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
+             
             // HTML Module Loaders
             'getPVFormHTML': () => loadModuleFile('paymentVoucher'),
             'getAddInventoryHTML': () => loadModuleFile('inventoryAdd'),
@@ -631,7 +643,7 @@ function loadModule(moduleName) {
     'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
-    'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
+  'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
     'dashboard': null
   };
   
