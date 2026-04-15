@@ -1,6 +1,6 @@
 /* ============================================
    ENHANCED UNIFIED PRINT MODULE
-   Clean print view with reduced margins (20% less)
+   Clean print view - NO browser headers/footers
    ============================================ */
 
 // Global print utility with clean formatting
@@ -35,7 +35,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - REDUCED MARGINS (20% less)
+  // Get clean print styles - NO browser headers/footers
   getPrintStyles: function() {
     return `
       <style>
@@ -62,7 +62,7 @@ const printUtils = {
           background: white;
         }
         
-        /* Report Header - Reduced spacing */
+        /* Report Header */
         .print-report-header {
           text-align: center;
           margin-bottom: 16px;
@@ -85,7 +85,7 @@ const printUtils = {
           padding: 0;
         }
         
-        /* Table Styles - Reduced padding */
+        /* Table Styles */
         .print-table-wrapper {
           margin: 0;
           page-break-inside: auto;
@@ -139,7 +139,7 @@ const printUtils = {
           text-align: center !important;
         }
         
-        /* Group Report Styles - Reduced spacing */
+        /* Group Report Styles */
         .grouped-report {
           margin-bottom: 14px;
           page-break-inside: avoid;
@@ -205,8 +205,19 @@ const printUtils = {
           font-weight: 800;
         }
         
-        /* Print-specific optimizations - Reduced margins */
+        /* CRITICAL: Remove browser headers/footers completely */
         @media print {
+          /* Remove default browser print header/footer */
+          @page {
+            size: A4 landscape;
+            margin: 12mm 9.6mm;
+          }
+          
+          @page :first {
+            margin: 12mm 9.6mm;
+          }
+          
+          /* Hide any browser-generated content */
           html, body {
             margin: 0;
             padding: 0;
@@ -215,6 +226,11 @@ const printUtils = {
           body {
             margin: 0;
             padding: 9.6mm 8mm;
+          }
+          
+          /* Remove any potential auto-generated text */
+          header, footer, nav, .no-print {
+            display: none !important;
           }
           
           table {
@@ -237,19 +253,8 @@ const printUtils = {
           /* Hide action buttons */
           .action-btn, 
           button, 
-          .no-print,
           .dropdown-item {
             display: none !important;
-          }
-          
-          /* Page margins - Reduced by 20% (from 15mm to 12mm, from 12mm to 9.6mm) */
-          @page {
-            size: A4 landscape;
-            margin: 12mm 9.6mm;
-          }
-          
-          @page :first {
-            margin-top: 12mm;
           }
         }
       </style>
@@ -292,7 +297,7 @@ const printUtils = {
     return clone;
   },
 
-  // Generate clean print document
+  // Generate clean print document - NO extra headers/footers
   generatePrintDocument: function(title, contentHtml, periodInfo) {
     let headerHtml = '';
     if (title || periodInfo) {
@@ -311,6 +316,18 @@ const printUtils = {
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         ${this.getPrintStyles()}
+        <style>
+          /* Additional override to ensure no browser header/footer appears */
+          @media print {
+            @page {
+              margin-top: 0;
+              margin-bottom: 0;
+            }
+            body {
+              margin: 1.2cm 0.96cm;
+            }
+          }
+        </style>
       </head>
       <body>
         ${headerHtml}
@@ -488,7 +505,7 @@ const printUtils = {
     }
   },
 
-  // Open print window
+  // Open print window with proper handling
   openPrintWindow: function(printContent, title) {
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
