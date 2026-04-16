@@ -222,58 +222,62 @@ class ApiService {
   }
 
   // ============================================
-// SUBSCRIPTION API
-// ============================================
+  // SUBSCRIPTION API
+  // ============================================
 
-async getSubscriptionCategories(options = {}) {
-  this.log('Getting subscription categories');
-  return this.request('getSubscriptionCategories', {}, options);
-}
+  async getSubscriptionCategories(options = {}) {
+    this.log('Getting subscription categories');
+    return this.request('getSubscriptionCategories', {}, options);
+  }
 
-async generateSubscriptionCategoryCode(options = {}) {
-  this.log('Generating subscription category code');
-  return this.request('generateSubscriptionCategoryCode', {}, options);
-}
+  async generateSubscriptionCategoryCode(options = {}) {
+    this.log('Generating subscription category code');
+    return this.request('generateSubscriptionCategoryCode', {}, options);
+  }
 
-async getNextSubscriptionCode(categoryCode, options = {}) {
-  this.log('Getting next subscription code for:', categoryCode);
-  return this.request('getNextSubscriptionCode', { categoryCode }, options);
-}
+  async getNextSubscriptionCode(categoryCode, options = {}) {
+    this.log('Getting next subscription code for:', categoryCode);
+    return this.request('getNextSubscriptionCode', { categoryCode }, options);
+  }
 
-async addSubscription(formData, options = {}) {
-  this.log('Adding subscription:', formData);
-  return this.request('addSubscription', { formData: JSON.stringify(formData) }, options);
-}
+  async addSubscription(formData, options = {}) {
+    this.log('Adding subscription:', formData);
+    return this.request('addSubscription', { formData: JSON.stringify(formData) }, options);
+  }
 
-async getAllSubscriptions(options = {}) {
-  this.log('Getting all subscriptions');
-  return this.request('getAllSubscriptions', {}, options);
-}
+  async getAllSubscriptions(options = {}) {
+    this.log('Getting all subscriptions');
+    return this.request('getAllSubscriptions', {}, options);
+  }
 
-async updateSubscription(formData, options = {}) {
-  this.log('Updating subscription:', formData);
-  return this.request('updateSubscription', { formData: JSON.stringify(formData) }, options);
-}
+  async updateSubscription(formData, options = {}) {
+    this.log('Updating subscription:', formData);
+    return this.request('updateSubscription', { formData: JSON.stringify(formData) }, options);
+  }
 
-async deleteSubscription(subscriptionId, options = {}) {
-  this.log('Deleting subscription:', subscriptionId);
-  return this.request('deleteSubscription', { subscriptionId }, options);
-}
+  async deleteSubscription(subscriptionCode, options = {}) {
+    this.log('Deleting subscription:', subscriptionCode);
+    return this.request('deleteSubscription', { subscriptionCode }, options);
+  }
 
-async getSubscriptionsByDateRange(fromDate, toDate, options = {}) {
-  this.log('Getting subscriptions by date range:', fromDate, toDate);
-  return this.request('getSubscriptionsByDateRange', { fromDate, toDate }, options);
-}
+  async getSubscriptionsByDateRange(fromDate, toDate, options = {}) {
+    this.log('Getting subscriptions by date range:', fromDate, toDate);
+    return this.request('getSubscriptionsByDateRange', { fromDate, toDate }, options);
+  }
 
-async getExpiredSubscriptions(asOfDate, options = {}) {
-  this.log('Getting expired subscriptions as of:', asOfDate);
-  return this.request('getExpiredSubscriptions', { asOfDate }, options);
-}
+  async getExpiredSubscriptions(asOfDate, options = {}) {
+    this.log('Getting expired subscriptions as of:', asOfDate);
+    return this.request('getExpiredSubscriptions', { asOfDate }, options);
+  }
 
-async renewSubscription(subscriptionId, newExpiryDate, newAnnualCost, options = {}) {
-  this.log('Renewing subscription:', subscriptionId);
-  return this.request('renewSubscription', { subscriptionId, newExpiryDate, newAnnualCost }, options);
-}
+  async renewSubscription(subscriptionCode, newExpiryDate, newAnnualCost, options = {}) {
+    this.log('Renewing subscription:', subscriptionCode, newExpiryDate, newAnnualCost);
+    return this.request('renewSubscription', { 
+      subscriptionCode, 
+      newExpiryDate, 
+      newAnnualCost 
+    }, options);
+  }
   
   // ============================================
   // TEST CONNECTION
@@ -345,6 +349,16 @@ window.callGAS = async function(action, data = {}) {
     'getUniqueInvestmentTypes': () => API.getUniqueInvestmentTypes(),
     'getUniqueBanks': () => API.getUniqueBanks(),
     'getAllInvestments': () => API.getAllInvestments(),
+    'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
+    'getSubscriptionCategories': () => API.getSubscriptionCategories(),
+    'getNextSubscriptionCode': () => API.getNextSubscriptionCode(data.categoryCode),
+    'addSubscription': () => API.addSubscription(data),
+    'getAllSubscriptions': () => API.getAllSubscriptions(),
+    'updateSubscription': () => API.updateSubscription(data),
+    'deleteSubscription': () => API.deleteSubscription(data.subscriptionCode),
+    'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(data.fromDate, data.toDate),
+    'getExpiredSubscriptions': () => API.getExpiredSubscriptions(data.asOfDate),
+    'renewSubscription': () => API.renewSubscription(data.subscriptionCode, data.newExpiryDate, data.newAnnualCost),
     'test': () => API.request('test', {})
   };
   
