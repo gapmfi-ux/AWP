@@ -1,6 +1,3 @@
-// ============================================
-// INITIALIZATION
-// ============================================
 
 function initInventoryModule() {
   console.log('Initializing Add Inventory Module');
