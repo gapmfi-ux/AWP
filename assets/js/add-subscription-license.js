@@ -1,4 +1,6 @@
-
+// ============================================
+// INITIALIZATION
+// ============================================
 
 function loadSubscriptionCategories() {
   console.log('Loading subscription categories via API');
@@ -105,6 +107,7 @@ function generateCategoryCode() {
   API.generateSubscriptionCategoryCode()
     .then(function(response) {
       console.log('Category code response:', response);
+      console.log('Response type:', typeof response);
       
       const field = document.getElementById('categoryCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
@@ -112,10 +115,18 @@ function generateCategoryCode() {
       if (response) {
         // Handle different response formats
         let mainCode = response;
-        if (response.result) mainCode = response.result;
-        if (response.code) mainCode = response.code;
+        if (typeof response === 'object' && response.result) {
+          mainCode = response.result;
+        } else if (typeof response === 'object' && response.code) {
+          mainCode = response.code;
+        } else if (typeof response === 'object') {
+          // Try to extract string value from object
+          mainCode = Object.values(response).find(v => typeof v === 'string') || String(response);
+        }
         
         mainCode = String(mainCode).trim();
+        console.log('Extracted main code:', mainCode);
+        
         if (field) field.value = mainCode;
         
         // Display the generated code with 001 suffix (new code, so always 001)
@@ -164,10 +175,16 @@ function generateLicenseCode() {
       console.log('Next subscription code:', response);
       const codeField = document.getElementById('licenseCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
+      
       if (response && codeField) {
         let nextCode = response;
-        if (response.result) nextCode = response.result;
-        if (response.code) nextCode = response.code;
+        if (typeof response === 'object' && response.result) {
+          nextCode = response.result;
+        } else if (typeof response === 'object' && response.code) {
+          nextCode = response.code;
+        } else if (typeof response === 'object') {
+          nextCode = Object.values(response).find(v => typeof v === 'string') || String(response);
+        }
         
         const code = String(nextCode).trim();
         codeField.value = code;
@@ -264,7 +281,6 @@ function submitSubscription() {
   }
   
   const subscriptionData = {
-    id: generateId(),
     code: licenseCode,
     name: name,
     category: category,
@@ -277,9 +293,6 @@ function submitSubscription() {
     paymentMode: paymentMode
   };
   
-  // Get existing subscriptions from storage
-  let subscriptionsList = getSubscriptionsList();
-  
   // If using API, save to backend
   if (typeof API !== 'undefined' && API) {
     showToast('Saving subscription...', 'info');
@@ -287,9 +300,7 @@ function submitSubscription() {
     API.addSubscription(subscriptionData)
       .then(function(response) {
         console.log('Subscription saved:', response);
-        if (response && (response.success === true || response.result === 'success')) {
-          subscriptionsList.push(subscriptionData);
-          saveSubscriptionsToStorage(subscriptionsList);
+        if (response && response.success) {
           showToast('Subscription saved successfully!', 'success');
           resetSubscriptionForm();
           // Refresh the schedule module if it exists
@@ -306,14 +317,8 @@ function submitSubscription() {
       });
   } else {
     // Local storage fallback
-    subscriptionsList.push(subscriptionData);
-    saveSubscriptionsToStorage(subscriptionsList);
-    showToast('Subscription saved successfully!', 'success');
+    showToast('Subscription saved successfully! (Local storage)', 'success');
     resetSubscriptionForm();
-    // Refresh the schedule module if it exists
-    if (typeof refreshSubscriptionSchedule === 'function') {
-      refreshSubscriptionSchedule();
-    }
   }
 }
 
@@ -356,30 +361,28 @@ function resetSubscriptionForm() {
 // UTILITY FUNCTIONS
 // ============================================
 
-function getSubscriptionsList() {
-  const stored = localStorage.getItem('subscriptions_list');
-  return stored ? JSON.parse(stored) : [];
-}
-
-function saveSubscriptionsToStorage(subscriptionsList) {
-  localStorage.setItem('subscriptions_list', JSON.stringify(subscriptionsList));
-}
-
 function showToast(message, type) {
   const toast = document.getElementById('subToast');
-  if (!toast) return;
+  if (!toast) {
+    // Create toast if it doesn't exist
+    const newToast = document.createElement('div');
+    newToast.id = 'subToast';
+    newToast.className = 'sub-toast';
+    newToast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4361ee;color:white;padding:12px 24px;border-radius:8px;z-index:1000;display:none;';
+    newToast.innerHTML = '<span id="subToastMessage"></span>';
+    document.body.appendChild(newToast);
+  }
   
+  const toastEl = document.getElementById('subToast');
   const msgSpan = document.getElementById('subToastMessage');
-  msgSpan.innerText = message;
-  toast.style.backgroundColor = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
-  toast.style.display = 'block';
-  setTimeout(() => {
-    toast.style.display = 'none';
-  }, 3000);
-}
-
-function generateId() {
-  return Date.now().toString() + '-' + Math.random().toString(36).substr(2, 8);
+  if (msgSpan) msgSpan.innerText = message;
+  if (toastEl) {
+    toastEl.style.backgroundColor = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
+    toastEl.style.display = 'block';
+    setTimeout(() => {
+      toastEl.style.display = 'none';
+    }, 3000);
+  }
 }
 
 // Expose global functions for add module
