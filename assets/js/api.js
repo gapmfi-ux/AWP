@@ -17,101 +17,84 @@ class ApiService {
   }
 
   // Generic request method (JSONP)
-async request(action, data = {}, options = {}) {
-  const showLoading = options.showLoading !== false;
-  
-  return new Promise((resolve, reject) => {
-    try {
-      // Generate a unique callback name
-      const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      
-      // Build the URL with parameters
-      const url = new URL(this.BASE_URL);
-      url.searchParams.append('action', action);
-      url.searchParams.append('data', JSON.stringify(data));
-      url.searchParams.append('callback', callbackName);
-      
-      const fullUrl = url.toString();
-      this.log(`Requesting: ${action}`, data);
-      
-      // Set timeout
-      const timeoutId = setTimeout(() => {
-        if (window[callbackName]) {
-          delete window[callbackName];
-          this.error(`Request timeout for ${action}`);
-          reject(new Error('Request timeout after 30 seconds'));
-        }
-      }, 30000);
-      
-      // Create the callback function
-      window[callbackName] = (response) => {
-        clearTimeout(timeoutId);
-        delete window[callbackName];
+  async request(action, data = {}, options = {}) {
+    const showLoading = options.showLoading !== false;
+    
+    return new Promise((resolve, reject) => {
+      try {
+        // Generate a unique callback name
+        const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        if (script.parentNode) {
-          script.parentNode.removeChild(script);
-        }
+        // Build the URL with parameters
+        const url = new URL(this.BASE_URL);
+        url.searchParams.append('action', action);
+        url.searchParams.append('data', JSON.stringify(data));
+        url.searchParams.append('callback', callbackName);
         
-        this.log(`Raw response for ${action}:`, response);
+        const fullUrl = url.toString();
+        this.log(`Requesting: ${action}`, data);
+        this.log(`URL: ${fullUrl.substring(0, 300)}...`);
         
-        // Parse the response if it's a string
-        let parsedResponse = response;
-        if (typeof response === 'string') {
-          try {
-            // Try to parse as JSON
-            parsedResponse = JSON.parse(response);
-            this.log(`Parsed JSON response for ${action}:`, parsedResponse);
-          } catch (e) {
-            // Not JSON, keep as string but log warning
-            this.log(`Response is not JSON, keeping as string:`, response);
-            parsedResponse = response;
+        // Set timeout
+        const timeoutId = setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            this.error(`Request timeout for ${action}`);
+            reject(new Error('Request timeout after 30 seconds'));
           }
-        }
+        }, 30000);
         
-        // Check if response is successful
-        if (parsedResponse && parsedResponse.success !== false) {
-          this.cache.set(`${action}_${JSON.stringify(data)}`, parsedResponse);
+        // Create the callback function
+        window[callbackName] = (response) => {
+          clearTimeout(timeoutId);
+          delete window[callbackName];
           
-          // For getNextInventoryCode, ensure we return a clean object
-          if (action === 'getNextInventoryCode') {
-            let result = parsedResponse;
-            if (typeof parsedResponse === 'string') {
-              result = { result: parsedResponse };
-            } else if (parsedResponse.result) {
-              result = parsedResponse;
-            } else if (typeof parsedResponse === 'object' && !parsedResponse.result) {
-              // If it's an object without result property, wrap it
-              result = { result: parsedResponse };
+          if (script.parentNode) {
+            script.parentNode.removeChild(script);
+          }
+          
+          this.log(`Response for ${action}:`, response);
+          
+          // ✓ FIX: Properly handle response type
+          let result = response;
+          if (typeof response === 'string') {
+            try {
+              result = JSON.parse(response);
+            } catch (e) {
+              // If not JSON, wrap it as a simple response
+              result = { result: response };
             }
+          }
+          
+          if (result && result.success !== false) {
+            const cacheKey = `${action}_${JSON.stringify(data)}`;
+            this.cache.set(cacheKey, result);
             resolve(result);
           } else {
-            resolve(parsedResponse);
+            reject(new Error((result && result.error) || 'API request failed'));
           }
-        } else {
-          reject(new Error((parsedResponse && parsedResponse.error) || 'API request failed'));
-        }
-      };
-      
-      // Create and add the script tag
-      const script = document.createElement('script');
-      script.src = fullUrl;
-      script.onerror = () => {
-        clearTimeout(timeoutId);
-        delete window[callbackName];
-        if (script.parentNode) script.parentNode.removeChild(script);
-        this.error(`Script error for ${action}`);
-        reject(new Error('Network error - failed to connect to server'));
-      };
-      
-      document.head.appendChild(script);
-      this.log(`Script tag added for ${action}`);
-      
-    } catch (error) {
-      this.error(`Request error for ${action}:`, error);
-      reject(error);
-    }
-  });
-}
+        };
+        
+        // Create and add the script tag
+        const script = document.createElement('script');
+        script.src = fullUrl;
+        script.onerror = () => {
+          clearTimeout(timeoutId);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          this.error(`Script error for ${action}`);
+          reject(new Error('Network error - failed to connect to server'));
+        };
+        
+        document.head.appendChild(script);
+        this.log(`Script tag added for ${action}`);
+        
+      } catch (error) {
+        this.error(`Request error for ${action}:`, error);
+        reject(error);
+      }
+    });
+  }
 
   // ============================================
   // USER API
@@ -250,58 +233,58 @@ async request(action, data = {}, options = {}) {
   }
 
   // ============================================
-// SUBSCRIPTION API
-// ============================================
+  // SUBSCRIPTION API
+  // ============================================
 
-async getSubscriptionCategories(options = {}) {
-  this.log('Getting subscription categories');
-  return this.request('getSubscriptionCategories', {}, options);
-}
+  async getSubscriptionCategories(options = {}) {
+    this.log('Getting subscription categories');
+    return this.request('getSubscriptionCategories', {}, options);
+  }
 
-async generateSubscriptionCategoryCode(options = {}) {
-  this.log('Generating subscription category code');
-  return this.request('generateSubscriptionCategoryCode', {}, options);
-}
+  async generateSubscriptionCategoryCode(options = {}) {
+    this.log('Generating subscription category code');
+    return this.request('generateSubscriptionCategoryCode', {}, options);
+  }
 
-async getNextSubscriptionCode(categoryCode, options = {}) {
-  this.log('Getting next subscription code for:', categoryCode);
-  return this.request('getNextSubscriptionCode', { categoryCode }, options);
-}
+  async getNextSubscriptionCode(categoryCode, options = {}) {
+    this.log('Getting next subscription code for:', categoryCode);
+    return this.request('getNextSubscriptionCode', { categoryCode }, options);
+  }
 
-async addSubscription(formData, options = {}) {
-  this.log('Adding subscription:', formData);
-  return this.request('addSubscription', { formData: JSON.stringify(formData) }, options);
-}
+  async addSubscription(formData, options = {}) {
+    this.log('Adding subscription:', formData);
+    return this.request('addSubscription', { formData: JSON.stringify(formData) }, options);
+  }
 
-async getAllSubscriptions(options = {}) {
-  this.log('Getting all subscriptions');
-  return this.request('getAllSubscriptions', {}, options);
-}
+  async getAllSubscriptions(options = {}) {
+    this.log('Getting all subscriptions');
+    return this.request('getAllSubscriptions', {}, options);
+  }
 
-async updateSubscription(formData, options = {}) {
-  this.log('Updating subscription:', formData);
-  return this.request('updateSubscription', { formData: JSON.stringify(formData) }, options);
-}
+  async updateSubscription(formData, options = {}) {
+    this.log('Updating subscription:', formData);
+    return this.request('updateSubscription', { formData: JSON.stringify(formData) }, options);
+  }
 
-async deleteSubscription(subscriptionId, options = {}) {
-  this.log('Deleting subscription:', subscriptionId);
-  return this.request('deleteSubscription', { subscriptionId }, options);
-}
+  async deleteSubscription(subscriptionId, options = {}) {
+    this.log('Deleting subscription:', subscriptionId);
+    return this.request('deleteSubscription', { subscriptionId }, options);
+  }
 
-async getSubscriptionsByDateRange(fromDate, toDate, options = {}) {
-  this.log('Getting subscriptions by date range:', fromDate, toDate);
-  return this.request('getSubscriptionsByDateRange', { fromDate, toDate }, options);
-}
+  async getSubscriptionsByDateRange(fromDate, toDate, options = {}) {
+    this.log('Getting subscriptions by date range:', fromDate, toDate);
+    return this.request('getSubscriptionsByDateRange', { fromDate, toDate }, options);
+  }
 
-async getExpiredSubscriptions(asOfDate, options = {}) {
-  this.log('Getting expired subscriptions as of:', asOfDate);
-  return this.request('getExpiredSubscriptions', { asOfDate }, options);
-}
+  async getExpiredSubscriptions(asOfDate, options = {}) {
+    this.log('Getting expired subscriptions as of:', asOfDate);
+    return this.request('getExpiredSubscriptions', { asOfDate }, options);
+  }
 
-async renewSubscription(subscriptionId, newExpiryDate, newAnnualCost, options = {}) {
-  this.log('Renewing subscription:', subscriptionId);
-  return this.request('renewSubscription', { subscriptionId, newExpiryDate, newAnnualCost }, options);
-}
+  async renewSubscription(subscriptionId, newExpiryDate, newAnnualCost, options = {}) {
+    this.log('Renewing subscription:', subscriptionId);
+    return this.request('renewSubscription', { subscriptionId, newExpiryDate, newAnnualCost }, options);
+  }
   
   // ============================================
   // TEST CONNECTION
