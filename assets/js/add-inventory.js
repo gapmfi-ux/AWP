@@ -33,6 +33,7 @@ function handleNewCategoryChange() {
     addNewFields.style.display = 'block';
     generateCategoryCode();
   } else if (select.value) {
+    // Selected existing category - fetch the next inventory code
     addNewFields.style.display = 'none';
     displayNextInventoryCode(select.value);
   } else {
@@ -56,25 +57,39 @@ function displayNextInventoryCode(mainCode) {
     return;
   }
   
+  // Call API to get the next inventory code
   API.getNextInventoryCode(mainCode)
     .then(function(response) {
-      console.log('Response:', response);
+      console.log('Full response:', response);
+      console.log('Response type:', typeof response);
       
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
-      // Handle the response format: { success: true, result: "INVEN01001" }
-      if (response && response.success === true && response.result) {
-        const nextCode = response.result;
-        console.log('Next code:', nextCode);
+      if (response && codeDisplay) {
+        // Handle both wrapped and unwrapped responses
+        let nextCode = response;
         
-        codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
-        console.log('✓ Updated code display to:', nextCode);
-      } else if (response && response.result) {
-        // Fallback for older format
-        const nextCode = response.result;
-        codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+        // Check if response is wrapped in object
+        if (typeof response === 'object' && response.result) {
+          nextCode = response.result;
+        } else if (typeof response === 'object' && !response.result) {
+          // If it's an object without .result, try to find string value
+          nextCode = Object.values(response).find(v => typeof v === 'string') || String(response);
+        }
+        
+        nextCode = String(nextCode).trim();
+        console.log('Next code to display:', nextCode);
+        
+        // Validate the code
+        if (nextCode && nextCode !== 'undefined' && nextCode !== '' && !nextCode.includes('[object')) {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+          console.log('✓ Updated code display to:', nextCode);
+        } else {
+          console.log('Invalid code response:', nextCode);
+          codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        }
       } else {
-        console.error('Invalid response format:', response);
+        console.log('No response or codeDisplay not found');
         if (codeDisplay) {
           codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
         }
@@ -104,32 +119,33 @@ function generateCategoryCode() {
     .then(function(response) {
       hideInventoryLoadingModal();
       console.log('Category code response:', response);
+      console.log('Response type:', typeof response);
       
       const field = document.getElementById('categoryCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
-      // Handle the response format: { success: true, result: "INVEN01" }
-      if (response && response.success === true && response.result) {
-        const mainCode = response.result;
-        console.log('Main code:', mainCode);
+      if (response) {
+        // Extract the actual code from response
+        let mainCode = response;
+        if (typeof response === 'object' && response.result) {
+          mainCode = response.result;
+        } else if (typeof response === 'object') {
+          mainCode = Object.values(response).find(v => typeof v === 'string') || String(response);
+        }
         
-        if (field) field.value = mainCode;
+        mainCode = String(mainCode).trim();
+        console.log('Extracted main code:', mainCode);
         
+        field.value = mainCode;
+        
+        // Display the generated code with 001 suffix (new code, so always 001)
         const inventoryCode = mainCode + '001';
         if (codeDisplay) {
           codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
           console.log('Updated code display to:', inventoryCode);
         }
-      } else if (response && response.result) {
-        // Fallback for older format
-        const mainCode = response.result;
-        if (field) field.value = mainCode;
-        const inventoryCode = mainCode + '001';
-        if (codeDisplay) {
-          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
-        }
       } else {
-        console.error('Invalid response:', response);
+        console.error('No response for category code');
         showInventoryMessage('Error generating category code', 'error');
       }
     })
@@ -159,24 +175,16 @@ function loadExistingCategories() {
         select.remove(2);
       }
       
-      // Handle response format: { success: true, result: [...] }
-      let categories = [];
-      if (response && response.success === true && response.result) {
-        categories = response.result;
-      } else if (response && Array.isArray(response)) {
-        categories = response;
-      }
-      
-      if (categories && Array.isArray(categories) && categories.length > 0) {
-        categories.forEach(function(cat) {
+      if (response && Array.isArray(response)) {
+        response.forEach(function(cat) {
           const option = document.createElement('option');
           option.value = cat.code;
           option.textContent = cat.name + ' (' + cat.code + ')';
           select.appendChild(option);
         });
-        console.log('Loaded ' + categories.length + ' categories');
+        console.log('Loaded ' + response.length + ' categories');
       } else {
-        console.log('No categories found or invalid format');
+        console.error('Unexpected response format:', response);
       }
     })
     .catch(function(error) {
@@ -197,7 +205,7 @@ function calculateUnitPrice() {
 }
 
 // ============================================
-// SUBMIT NEW INVENTORY
+// SUBMIT NEW INVENTORY - USING API WRAPPER
 // ============================================
 
 function submitNewInventory() {
@@ -254,25 +262,20 @@ function submitNewInventory() {
     return;
   }
 
+  // Use API wrapper
   API.addNewInventory(formData)
     .then(function(response) {
       console.log('Success response:', response);
       hideInventoryLoadingModal();
       
-      if (response && response.success === true) {
+      if (response && response.success) {
         let message = '✓ Inventory Added Successfully\n\n';
-        
-        if (response.result && response.result.fullCode) {
-          message += 'Code: ' + response.result.fullCode + '\n';
-        }
+        message += 'Code: ' + response.fullCode + '\n';
         message += 'Category: ' + categoryName + '\n';
         message += 'Quantity: ' + quantity;
         
-        if (response.result && response.result.wasMerged) {
-          message = '✓ Inventory Restocked Successfully\n\n';
-          if (response.result.fullCode) {
-            message += 'Code: ' + response.result.fullCode + '\n';
-          }
+        if (response.wasMerged) {
+          message = '✓ ' + response.fullCode + ' Restocked\n\n';
           message += 'Category: ' + categoryName + '\n';
           message += 'Additional Qty: ' + quantity;
         }
@@ -307,6 +310,7 @@ function resetInventoryForm() {
   document.getElementById('newUnitPrice').value = '';
   document.getElementById('generatedCodeDisplay').innerHTML = '<span class="code-placeholder">-</span>';
   
+  // Reload categories to include newly added one
   loadExistingCategories();
 }
 
@@ -362,6 +366,7 @@ function showSuccessModal(message, callback) {
   
   modal.style.display = 'flex';
   
+  // Store callback for later
   window._successCallback = callback;
 }
 
@@ -402,6 +407,7 @@ function showInventoryMessage(message, type) {
   messageDiv.innerHTML = '<div class="' + (types[type] || types.info) + '">' + escapeHtml(message) + '</div>';
   modal.style.display = 'flex';
   
+  // Auto-hide after 3 seconds for non-error messages
   if (type !== 'error') {
     setTimeout(function() {
       const modalElem = document.getElementById('messageModal');
@@ -447,7 +453,7 @@ window.submitNewInventory = submitNewInventory;
 window.closeInventoryModal = closeInventoryModal;
 window.closeSuccessModal = closeSuccessModal;
 
-// Add CSS for success modal
+/* Add CSS for success modal */
 const style = document.createElement('style');
 style.textContent = `
   .success-modal {
