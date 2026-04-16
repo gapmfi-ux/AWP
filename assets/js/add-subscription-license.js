@@ -1,5 +1,5 @@
 // ============================================
-// INITIALIZATION
+// SUBSCRIPTION MODULE
 // ============================================
 
 function loadSubscriptionCategories() {
@@ -74,7 +74,7 @@ function loadDefaultCategories() {
   }
 }
 
-function handleCategoryChange() {
+function handleSubscriptionCategoryChange() {
   const select = document.getElementById('subCategory');
   const addNewFields = document.getElementById('addNewCategoryFields');
   const licenseCodeField = document.getElementById('licenseCode');
@@ -82,10 +82,10 @@ function handleCategoryChange() {
   
   if (select.value === 'add-new') {
     if (addNewFields) addNewFields.style.display = 'block';
-    generateCategoryCode();
+    generateSubscriptionCategoryCode();
   } else if (select.value && select.value !== 'add-new' && select.value !== '') {
     if (addNewFields) addNewFields.style.display = 'none';
-    generateLicenseCode();
+    generateSubscriptionLicenseCode();
   } else {
     if (addNewFields) addNewFields.style.display = 'none';
     if (licenseCodeField) licenseCodeField.value = '';
@@ -93,16 +93,16 @@ function handleCategoryChange() {
   }
 }
 
-function generateCategoryCode() {
+function generateSubscriptionCategoryCode() {
   console.log('Generating subscription category code via API');
   
   if (typeof API === 'undefined' || !API) {
     console.error('API not available');
-    showToast('API not available', 'error');
+    showSubscriptionToast('API not available', 'error');
     return;
   }
   
-  showToast('Generating code...', 'info');
+  showSubscriptionToast('Generating code...', 'info');
   
   API.generateSubscriptionCategoryCode()
     .then(function(response) {
@@ -139,16 +139,16 @@ function generateCategoryCode() {
         }
       } else {
         console.error('No response for category code');
-        showToast('Error generating category code', 'error');
+        showSubscriptionToast('Error generating category code', 'error');
       }
     })
     .catch(function(error) {
       console.error('Error generating category code:', error);
-      showToast('Error generating category code: ' + (error.message || error), 'error');
+      showSubscriptionToast('Error generating category code: ' + (error.message || error), 'error');
     });
 }
 
-function generateLicenseCode() {
+function generateSubscriptionLicenseCode() {
   const categorySelect = document.getElementById('subCategory');
   const selectedCategory = categorySelect.value;
   
@@ -250,7 +250,7 @@ function submitSubscription() {
     categoryDescription = document.getElementById('categoryDescription').value;
     
     if (!category || !categoryCode) {
-      showToast('Please fill in all category fields', 'error');
+      showSubscriptionToast('Please fill in all category fields', 'error');
       return;
     }
   } else if (categoryValue && categoryValue !== '') {
@@ -258,7 +258,7 @@ function submitSubscription() {
     categoryCode = categoryValue;
     categoryDescription = '';
   } else {
-    showToast('Please select a category', 'error');
+    showSubscriptionToast('Please select a category', 'error');
     return;
   }
   
@@ -271,12 +271,12 @@ function submitSubscription() {
   const paymentMode = document.getElementById('paymentMode').value;
   
   if (!name || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
-    showToast('Please fill all required fields', 'error');
+    showSubscriptionToast('Please fill all required fields', 'error');
     return;
   }
   
   if (new Date(expiryDate) <= new Date(startDate)) {
-    showToast('Expiry date must be after start date', 'error');
+    showSubscriptionToast('Expiry date must be after start date', 'error');
     return;
   }
   
@@ -295,29 +295,29 @@ function submitSubscription() {
   
   // If using API, save to backend
   if (typeof API !== 'undefined' && API) {
-    showToast('Saving subscription...', 'info');
+    showSubscriptionToast('Saving subscription...', 'info');
     
     API.addSubscription(subscriptionData)
       .then(function(response) {
         console.log('Subscription saved:', response);
         if (response && response.success) {
-          showToast('Subscription saved successfully!', 'success');
+          showSubscriptionToast('Subscription saved successfully!', 'success');
           resetSubscriptionForm();
           // Refresh the schedule module if it exists
           if (typeof refreshSubscriptionSchedule === 'function') {
             refreshSubscriptionSchedule();
           }
         } else {
-          showToast('Error: ' + (response?.error || 'Unknown error'), 'error');
+          showSubscriptionToast('Error: ' + (response?.error || 'Unknown error'), 'error');
         }
       })
       .catch(function(error) {
         console.error('Error saving subscription:', error);
-        showToast('Error saving subscription: ' + (error.message || error), 'error');
+        showSubscriptionToast('Error saving subscription: ' + (error.message || error), 'error');
       });
   } else {
     // Local storage fallback
-    showToast('Subscription saved successfully! (Local storage)', 'success');
+    showSubscriptionToast('Subscription saved successfully! (Local storage)', 'success');
     resetSubscriptionForm();
   }
 }
@@ -361,8 +361,8 @@ function resetSubscriptionForm() {
 // UTILITY FUNCTIONS
 // ============================================
 
-function showToast(message, type) {
-  const toast = document.getElementById('subToast');
+function showSubscriptionToast(message, type) {
+  let toast = document.getElementById('subToast');
   if (!toast) {
     // Create toast if it doesn't exist
     const newToast = document.createElement('div');
@@ -371,6 +371,7 @@ function showToast(message, type) {
     newToast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4361ee;color:white;padding:12px 24px;border-radius:8px;z-index:1000;display:none;';
     newToast.innerHTML = '<span id="subToastMessage"></span>';
     document.body.appendChild(newToast);
+    toast = newToast;
   }
   
   const toastEl = document.getElementById('subToast');
@@ -389,4 +390,4 @@ function showToast(message, type) {
 window.initSubscriptionAddModule = initSubscriptionAddModule;
 window.submitSubscription = submitSubscription;
 window.resetSubscriptionForm = resetSubscriptionForm;
-window.handleCategoryChange = handleCategoryChange;
+window.handleSubscriptionCategoryChange = handleSubscriptionCategoryChange;
