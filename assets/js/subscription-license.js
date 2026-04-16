@@ -17,7 +17,7 @@ let arrearsFilter = { fromDate: '', toDate: '' };
 
 function initSubscriptionScheduleModule() {
   console.log('Initializing Subscription Schedule Module');
-  loadSubscriptionsFromStorage();
+  loadSubscriptionsFromAPI();
   
   // Set default date range (current month)
   const today = new Date();
@@ -44,40 +44,70 @@ function initSubscriptionScheduleModule() {
   prepaidFilter.toDate = formatDateForInput(lastDay);
   arrearsFilter.fromDate = formatDateForInput(firstDay);
   arrearsFilter.toDate = formatDateForInput(lastDay);
+}
+
+// ============================================
+// LOAD FROM API
+// ============================================
+
+function loadSubscriptionsFromAPI() {
+  console.log('Loading subscriptions from API...');
   
-  renderAllTables();
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available, trying localStorage');
+    loadSubscriptionsFromStorage();
+    return;
+  }
+  
+  API.getAllSubscriptions()
+    .then(function(response) {
+      console.log('API Response:', response);
+      
+      if (response && Array.isArray(response)) {
+        subscriptionsList = response;
+        console.log('Loaded ' + subscriptionsList.length + ' subscriptions from API');
+      } else if (response && response.data && Array.isArray(response.data)) {
+        subscriptionsList = response.data;
+        console.log('Loaded ' + subscriptionsList.length + ' subscriptions from API (data property)');
+      } else if (response && response.success === false) {
+        console.error('API error:', response.error);
+        loadSubscriptionsFromStorage();
+        return;
+      } else {
+        console.error('Unexpected response format:', response);
+        loadSubscriptionsFromStorage();
+        return;
+      }
+      
+      // Save to localStorage as cache
+      saveSubscriptionsToStorage();
+      renderAllTables();
+    })
+    .catch(function(error) {
+      console.error('Error loading from API:', error);
+      console.log('Falling back to localStorage');
+      loadSubscriptionsFromStorage();
+    });
 }
 
 function loadSubscriptionsFromStorage() {
+  console.log('Loading subscriptions from localStorage...');
+  
   const stored = localStorage.getItem('subscriptions_list');
   if (stored) {
-    subscriptionsList = JSON.parse(stored);
-  } else {
-    // Try to load from API first
-    if (typeof API !== 'undefined' && API) {
-      API.getAllSubscriptions()
-        .then(function(response) {
-          if (response && response.data && Array.isArray(response.data)) {
-            subscriptionsList = response.data;
-            saveSubscriptionsToStorage();
-            renderAllTables();
-          } else {
-            subscriptionsList = getDemoSubscriptions();
-            saveSubscriptionsToStorage();
-            renderAllTables();
-          }
-        })
-        .catch(function(error) {
-          console.error('Error loading subscriptions from API:', error);
-          subscriptionsList = getDemoSubscriptions();
-          saveSubscriptionsToStorage();
-          renderAllTables();
-        });
-    } else {
+    try {
+      subscriptionsList = JSON.parse(stored);
+      console.log('Loaded ' + subscriptionsList.length + ' subscriptions from localStorage');
+    } catch (e) {
+      console.error('Error parsing localStorage:', e);
       subscriptionsList = getDemoSubscriptions();
-      saveSubscriptionsToStorage();
     }
+  } else {
+    console.log('No localStorage data, using demo subscriptions');
+    subscriptionsList = getDemoSubscriptions();
   }
+  
+  renderAllTables();
 }
 
 function saveSubscriptionsToStorage() {
@@ -85,8 +115,8 @@ function saveSubscriptionsToStorage() {
 }
 
 function refreshSubscriptionSchedule() {
-  loadSubscriptionsFromStorage();
-  renderAllTables();
+  console.log('Refreshing subscription schedule...');
+  loadSubscriptionsFromAPI();
 }
 
 function getDemoSubscriptions() {
@@ -103,11 +133,11 @@ function getDemoSubscriptions() {
   twoMonthsLater.setMonth(today.getMonth() + 2);
   
   return [
-    { id: '1', code: 'SUB-2024-0001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid' },
-    { id: '2', code: 'SUB-2024-0002', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears' },
-    { id: '3', code: 'SUB-2024-0003', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid' },
-    { id: '4', code: 'SUB-2024-0004', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid' },
-    { id: '5', code: 'SUB-2024-0005', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears' }
+    { code: 'SUB01001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid' },
+    { code: 'SUB02001', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears' },
+    { code: 'SUB03001', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid' },
+    { code: 'SUB04001', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid' },
+    { code: 'SUB05001', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears' }
   ];
 }
 
@@ -121,12 +151,17 @@ function applyDateFilter() {
   renderAllSchedulesGrouped();
 }
 
-function isWithinDateRange(expiryDate) {
-  if (!currentFilter.fromDate && !currentFilter.toDate) return true;
+function isWithinDateRange(expiryDate, filterObj) {
+  if (!filterObj || (!filterObj.fromDate && !filterObj.toDate)) return true;
   
   const expiry = new Date(expiryDate);
-  const from = currentFilter.fromDate ? new Date(currentFilter.fromDate) : null;
-  const to = currentFilter.toDate ? new Date(currentFilter.toDate) : null;
+  expiry.setHours(0, 0, 0, 0);
+  
+  const from = filterObj.fromDate ? new Date(filterObj.fromDate) : null;
+  const to = filterObj.toDate ? new Date(filterObj.toDate) : null;
+  
+  if (from) from.setHours(0, 0, 0, 0);
+  if (to) to.setHours(23, 59, 59, 999);
   
   if (from && to) {
     return expiry >= from && expiry <= to;
@@ -165,20 +200,26 @@ function renderAllSchedulesGrouped() {
   const container = document.getElementById('allScheduleWrapper');
   if (!container) return;
   
-  let filteredList = subscriptionsList.filter(sub => isWithinDateRange(sub.expiryDate));
+  if (!subscriptionsList || subscriptionsList.length === 0) {
+    container.innerHTML = '<div class="report-table-wrapper"><table class="report-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions found</td></tr></tbody></table></div>';
+    return;
+  }
+  
+  let filteredList = subscriptionsList.filter(sub => isWithinDateRange(sub.expiryDate, currentFilter));
   
   if (!filteredList.length) {
-    container.innerHTML = '<div class="report-table-wrapper"><table class="report-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions found</td></tr></tbody></table></div>';
+    container.innerHTML = '<div class="report-table-wrapper"><table class="report-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions in selected date range</td></tr></tbody></table></div>';
     return;
   }
   
   // Group by category
   const grouped = {};
   filteredList.forEach(sub => {
-    if (!grouped[sub.category]) {
-      grouped[sub.category] = [];
+    const cat = sub.category || 'Uncategorized';
+    if (!grouped[cat]) {
+      grouped[cat] = [];
     }
-    grouped[sub.category].push(sub);
+    grouped[cat].push(sub);
   });
   
   let totalAnnualCost = 0;
@@ -200,18 +241,18 @@ function renderAllSchedulesGrouped() {
     // Add items
     items.forEach(sub => {
       const daysLeft = calculateDaysLeft(sub.expiryDate);
-      categoryTotal += sub.annualCost;
+      categoryTotal += sub.annualCost || 0;
       
       html += `
         <tr>
-          <td>${escapeHtml(sub.code)}</td>
-          <td><strong>${escapeHtml(sub.name)}</strong></td>
-          <td>${escapeHtml(sub.category)}</td>
+          <td>${escapeHtml(sub.code || '-')}</td>
+          <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
+          <td>${escapeHtml(sub.category || '-')}</td>
           <td>${escapeHtml(sub.vendor || '-')}</td>
           <td>${formatDate(sub.startDate)}</td>
           <td>${formatDate(sub.expiryDate)}</td>
-          <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
-          <td>${escapeHtml(sub.paymentMode)}</td>
+          <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
+          <td>${escapeHtml(sub.paymentMode || '-')}</td>
           <td class="${daysLeft < 0 ? 'text-danger' : (daysLeft <= 7 ? 'text-warning' : '')}">${daysLeft}</td>
         </tr>
       `;
@@ -234,15 +275,16 @@ function renderPrepaidTableEnhanced() {
   const tfoot = document.getElementById('prepaidTableFooter');
   if (!tbody) return;
   
+  if (!subscriptionsList || subscriptionsList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No subscriptions found</td></tr>';
+    if (tfoot) tfoot.innerHTML = '';
+    return;
+  }
+  
   let prepaidList = subscriptionsList.filter(sub => sub.paymentMode === 'Prepaid');
   
   // Apply date filter
-  if (prepaidFilter.fromDate) {
-    prepaidList = prepaidList.filter(sub => sub.expiryDate >= prepaidFilter.fromDate);
-  }
-  if (prepaidFilter.toDate) {
-    prepaidList = prepaidList.filter(sub => sub.expiryDate <= prepaidFilter.toDate);
-  }
+  prepaidList = prepaidList.filter(sub => isWithinDateRange(sub.expiryDate, prepaidFilter));
   
   if (!prepaidList.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No prepaid subscriptions found</td></tr>';
@@ -254,7 +296,7 @@ function renderPrepaidTableEnhanced() {
   let rows = '';
   
   prepaidList.forEach(sub => {
-    const monthlyCharge = sub.annualCost / 12;
+    const monthlyCharge = (sub.annualCost || 0) / 12;
     const daysLeft = calculateDaysLeft(sub.expiryDate);
     const monthsLeft = Math.max(0, daysLeft / 30.44);
     const remainingAmount = monthlyCharge * monthsLeft;
@@ -262,11 +304,11 @@ function renderPrepaidTableEnhanced() {
     
     rows += `
       <tr>
-        <td>${escapeHtml(sub.code)}</td>
-        <td><strong>${escapeHtml(sub.name)}</strong></td>
-        <td>${escapeHtml(sub.category)}</td>
+        <td>${escapeHtml(sub.code || '-')}</td>
+        <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
+        <td>${escapeHtml(sub.category || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
-        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
+        <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
         <td>GH₵ ${formatCurrency(remainingAmount)}</td>
       </tr>
@@ -290,15 +332,16 @@ function renderArrearsTableEnhanced() {
   const tfoot = document.getElementById('arrearsTableFooter');
   if (!tbody) return;
   
+  if (!subscriptionsList || subscriptionsList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No subscriptions found</td></tr>';
+    if (tfoot) tfoot.innerHTML = '';
+    return;
+  }
+  
   let arrearsList = subscriptionsList.filter(sub => sub.paymentMode === 'In Arrears');
   
   // Apply date filter
-  if (arrearsFilter.fromDate) {
-    arrearsList = arrearsList.filter(sub => sub.expiryDate >= arrearsFilter.fromDate);
-  }
-  if (arrearsFilter.toDate) {
-    arrearsList = arrearsList.filter(sub => sub.expiryDate <= arrearsFilter.toDate);
-  }
+  arrearsList = arrearsList.filter(sub => isWithinDateRange(sub.expiryDate, arrearsFilter));
   
   if (!arrearsList.length) {
     tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No in-arrears subscriptions found</td></tr>';
@@ -313,18 +356,18 @@ function renderArrearsTableEnhanced() {
     const daysLeft = calculateDaysLeft(sub.expiryDate);
     const totalMonths = 12;
     const elapsedMonths = Math.max(0, totalMonths - Math.max(0, daysLeft / 30.44));
-    const monthlyCharge = sub.annualCost / 12;
+    const monthlyCharge = (sub.annualCost || 0) / 12;
     const amountPaid = monthlyCharge * elapsedMonths;
-    const remainingAmount = sub.annualCost - amountPaid;
+    const remainingAmount = (sub.annualCost || 0) - amountPaid;
     totalRemainingAmount += remainingAmount;
     
     rows += `
       <tr>
-        <td>${escapeHtml(sub.code)}</td>
-        <td><strong>${escapeHtml(sub.name)}</strong></td>
-        <td>${escapeHtml(sub.category)}</td>
+        <td>${escapeHtml(sub.code || '-')}</td>
+        <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
+        <td>${escapeHtml(sub.category || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
-        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
+        <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td>GH₵ ${formatCurrency(amountPaid)}</td>
         <td>GH₵ ${formatCurrency(remainingAmount)}</td>
       </tr>
@@ -347,6 +390,11 @@ function renderExpiredTableEnhanced() {
   const tbody = document.getElementById('expiredTableBody');
   if (!tbody) return;
   
+  if (!subscriptionsList || subscriptionsList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No subscriptions found</td></tr>';
+    return;
+  }
+  
   let expiredList = subscriptionsList.filter(sub => calculateDaysLeft(sub.expiryDate) < 0);
   
   if (!expiredList.length) {
@@ -358,16 +406,17 @@ function renderExpiredTableEnhanced() {
   
   expiredList.forEach(sub => {
     const daysOverdue = Math.abs(calculateDaysLeft(sub.expiryDate));
+    const subCode = escapeHtml(sub.code || '-');
     rows += `
       <tr style="background:#fff5f5;">
-        <td>${escapeHtml(sub.code)}</td>
-        <td><strong>${escapeHtml(sub.name)}</strong></td>
-        <td>${escapeHtml(sub.category)}</td>
+        <td>${subCode}</td>
+        <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
+        <td>${escapeHtml(sub.category || '-')}</td>
         <td>${escapeHtml(sub.vendor || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
-        <td>GH₵ ${formatCurrency(sub.annualCost)}</td>
+        <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td class="text-danger"><strong>${daysOverdue} days overdue</strong></td>
-        <td><button class="renew-btn" onclick="openRenewModal('${sub.id}')">Renew</button></td>
+        <td><button class="renew-btn" onclick="openRenewModalByCode('${subCode}')">Renew</button></td>
       </tr>
     `;
   });
@@ -376,7 +425,7 @@ function renderExpiredTableEnhanced() {
 }
 
 // ============================================
-// TAB SWITCHING (Like Inventory Report)
+// TAB SWITCHING
 // ============================================
 
 function switchSubscriptionTab(tabName) {
@@ -430,18 +479,26 @@ function switchSubscriptionTab(tabName) {
 // RENEWAL FUNCTIONS
 // ============================================
 
-function openRenewModal(id) {
-  const sub = subscriptionsList.find(s => s.id === id);
+function openRenewModalByCode(code) {
+  const sub = subscriptionsList.find(s => s.code === code);
+  if (!sub) {
+    console.error('Subscription not found:', code);
+    return;
+  }
+  openRenewModal(sub);
+}
+
+function openRenewModal(sub) {
   if (!sub) return;
   
-  currentRenewId = id;
+  currentRenewId = sub.code;
   
-  document.getElementById('renewCode').value = sub.code;
-  document.getElementById('renewName').value = sub.name;
-  document.getElementById('renewCategory').value = sub.category;
+  document.getElementById('renewCode').value = sub.code || '';
+  document.getElementById('renewName').value = sub.name || '';
+  document.getElementById('renewCategory').value = sub.category || '';
   document.getElementById('renewVendor').value = sub.vendor || '';
-  document.getElementById('renewAnnualCost').value = sub.annualCost;
-  document.getElementById('renewPaymentMode').value = sub.paymentMode;
+  document.getElementById('renewAnnualCost').value = sub.annualCost || 0;
+  document.getElementById('renewPaymentMode').value = sub.paymentMode || 'Prepaid';
   
   const newExpiry = new Date();
   newExpiry.setFullYear(newExpiry.getFullYear() + 1);
@@ -451,14 +508,23 @@ function openRenewModal(id) {
 }
 
 function processRenewal() {
-  const index = subscriptionsList.findIndex(s => s.id === currentRenewId);
-  if (index === -1) return;
+  const index = subscriptionsList.findIndex(s => s.code === currentRenewId);
+  if (index === -1) {
+    showScheduleToast('Subscription not found', 'error');
+    return;
+  }
   
   const newExpiryDate = document.getElementById('renewExpiryDate').value;
   const newVendor = document.getElementById('renewVendor').value;
-  const newAnnualCost = parseFloat(document.getElementById('renewAnnualCost').value);
+  const newAnnualCost = parseFloat(document.getElementById('renewAnnualCost').value) || 0;
   const newPaymentMode = document.getElementById('renewPaymentMode').value;
   
+  if (!newExpiryDate) {
+    showScheduleToast('Please select an expiry date', 'error');
+    return;
+  }
+  
+  // Update locally
   subscriptionsList[index] = {
     ...subscriptionsList[index],
     expiryDate: newExpiryDate,
@@ -468,10 +534,33 @@ function processRenewal() {
     startDate: new Date().toISOString().split('T')[0]
   };
   
-  saveSubscriptionsToStorage();
-  renderAllTables();
-  closeRenewModal();
-  showToast('Subscription renewed successfully!', 'success');
+  // If API available, sync to backend
+  if (typeof API !== 'undefined' && API) {
+    const renewalData = {
+      subscriptionCode: currentRenewId,
+      newExpiryDate: newExpiryDate,
+      newAnnualCost: newAnnualCost
+    };
+    
+    API.renewSubscription(renewalData.subscriptionCode, renewalData.newExpiryDate, renewalData.newAnnualCost)
+      .then(function(response) {
+        console.log('Renewal successful:', response);
+        saveSubscriptionsToStorage();
+        renderAllTables();
+        closeRenewModal();
+        showScheduleToast('Subscription renewed successfully!', 'success');
+      })
+      .catch(function(error) {
+        console.error('Error renewing subscription:', error);
+        showScheduleToast('Error renewing subscription', 'error');
+      });
+  } else {
+    // Local only
+    saveSubscriptionsToStorage();
+    renderAllTables();
+    closeRenewModal();
+    showScheduleToast('Subscription renewed successfully! (Local)', 'success');
+  }
 }
 
 function closeRenewModal() {
@@ -500,7 +589,13 @@ function printExpiredReport() {
 }
 
 function printReportTable(tabId, title) {
-  const tableContent = document.querySelector(`#${tabId} .report-table-wrapper`).cloneNode(true);
+  const tableWrapper = document.querySelector(`#${tabId} .report-table-wrapper`);
+  if (!tableWrapper) {
+    showScheduleToast('Table not found', 'error');
+    return;
+  }
+  
+  const tableContent = tableWrapper.cloneNode(true);
   
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
@@ -531,7 +626,6 @@ function printReportTable(tabId, title) {
   `);
   printWindow.document.close();
   printWindow.print();
-  printWindow.close();
 }
 
 // ============================================
@@ -539,18 +633,24 @@ function printReportTable(tabId, title) {
 // ============================================
 
 function calculateDaysLeft(expiryDateStr) {
+  if (!expiryDateStr) return 0;
   const today = new Date();
-  today.setHours(0,0,0,0);
+  today.setHours(0, 0, 0, 0);
   const expiry = new Date(expiryDateStr);
-  expiry.setHours(0,0,0,0);
+  expiry.setHours(0, 0, 0, 0);
   const diffTime = expiry - today;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('en-GB');
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    return d.toLocaleDateString('en-GB');
+  } catch (e) {
+    return '-';
+  }
 }
 
 function formatDateForInput(date) {
@@ -572,30 +672,21 @@ function formatCurrency(val) {
 
 function escapeHtml(str) {
   if (!str) return '';
-  return str.replace(/[&<>]/g, function(m) {
-    if (m === '&') return '&amp;';
-    if (m === '<') return '&lt;';
-    if (m === '>') return '&gt;';
-    return m;
-  });
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
 }
 
-function showToast(message, type) {
-  // Try to use the global toast from main if available
-  if (window.printUtils && window.printUtils.showMessage) {
-    window.printUtils.showMessage(message, type);
-    return;
-  }
-  
-  const toast = document.getElementById('subToast');
+function showScheduleToast(message, type) {
+  let toast = document.getElementById('subToast');
   if (!toast) {
-    // Create toast if it doesn't exist
     const newToast = document.createElement('div');
     newToast.id = 'subToast';
     newToast.className = 'sub-toast';
     newToast.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#4361ee;color:white;padding:12px 24px;border-radius:8px;z-index:1000;display:none;';
     newToast.innerHTML = '<span id="subToastMessage"></span>';
     document.body.appendChild(newToast);
+    toast = newToast;
   }
   
   const toastEl = document.getElementById('subToast');
@@ -610,7 +701,7 @@ function showToast(message, type) {
   }
 }
 
-// Expose global functions for schedule module
+// Expose global functions
 window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
 window.switchSubscriptionTab = switchSubscriptionTab;
 window.openRenewModal = openRenewModal;
