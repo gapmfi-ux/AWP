@@ -17,73 +17,101 @@ class ApiService {
   }
 
   // Generic request method (JSONP)
-  async request(action, data = {}, options = {}) {
-    const showLoading = options.showLoading !== false;
-    
-    return new Promise((resolve, reject) => {
-      try {
-        // Generate a unique callback name
-        const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        // Build the URL with parameters
-        const url = new URL(this.BASE_URL);
-        url.searchParams.append('action', action);
-        url.searchParams.append('data', JSON.stringify(data));
-        url.searchParams.append('callback', callbackName);
-        
-        const fullUrl = url.toString();
-        this.log(`Requesting: ${action}`, data);
-        this.log(`URL: ${fullUrl.substring(0, 300)}...`);
-        
-        // Set timeout
-        const timeoutId = setTimeout(() => {
-          if (window[callbackName]) {
-            delete window[callbackName];
-            this.error(`Request timeout for ${action}`);
-            reject(new Error('Request timeout after 30 seconds'));
-          }
-        }, 30000);
-        
-        // Create the callback function
-        window[callbackName] = (response) => {
-          clearTimeout(timeoutId);
+async request(action, data = {}, options = {}) {
+  const showLoading = options.showLoading !== false;
+  
+  return new Promise((resolve, reject) => {
+    try {
+      // Generate a unique callback name
+      const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      
+      // Build the URL with parameters
+      const url = new URL(this.BASE_URL);
+      url.searchParams.append('action', action);
+      url.searchParams.append('data', JSON.stringify(data));
+      url.searchParams.append('callback', callbackName);
+      
+      const fullUrl = url.toString();
+      this.log(`Requesting: ${action}`, data);
+      
+      // Set timeout
+      const timeoutId = setTimeout(() => {
+        if (window[callbackName]) {
           delete window[callbackName];
-          
-          if (script.parentNode) {
-            script.parentNode.removeChild(script);
+          this.error(`Request timeout for ${action}`);
+          reject(new Error('Request timeout after 30 seconds'));
+        }
+      }, 30000);
+      
+      // Create the callback function
+      window[callbackName] = (response) => {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        
+        if (script.parentNode) {
+          script.parentNode.removeChild(script);
+        }
+        
+        this.log(`Raw response for ${action}:`, response);
+        
+        // Parse the response if it's a string
+        let parsedResponse = response;
+        if (typeof response === 'string') {
+          try {
+            // Try to parse as JSON
+            parsedResponse = JSON.parse(response);
+            this.log(`Parsed JSON response for ${action}:`, parsedResponse);
+          } catch (e) {
+            // Not JSON, keep as string but log warning
+            this.log(`Response is not JSON, keeping as string:`, response);
+            parsedResponse = response;
           }
+        }
+        
+        // Check if response is successful
+        if (parsedResponse && parsedResponse.success !== false) {
+          this.cache.set(`${action}_${JSON.stringify(data)}`, parsedResponse);
           
-          this.log(`Response for ${action}:`, response);
-          
-          if (response && response.success !== false) {
-            const cacheKey = `${action}_${JSON.stringify(data)}`;
-            this.cache.set(cacheKey, response);
-            resolve(response);
+          // For getNextInventoryCode, ensure we return a clean object
+          if (action === 'getNextInventoryCode') {
+            let result = parsedResponse;
+            if (typeof parsedResponse === 'string') {
+              result = { result: parsedResponse };
+            } else if (parsedResponse.result) {
+              result = parsedResponse;
+            } else if (typeof parsedResponse === 'object' && !parsedResponse.result) {
+              // If it's an object without result property, wrap it
+              result = { result: parsedResponse };
+            }
+            resolve(result);
           } else {
-            reject(new Error((response && response.error) || 'API request failed'));
+            resolve(parsedResponse);
           }
-        };
-        
-        // Create and add the script tag
-        const script = document.createElement('script');
-        script.src = fullUrl;
-        script.onerror = () => {
-          clearTimeout(timeoutId);
-          delete window[callbackName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-          this.error(`Script error for ${action}`);
-          reject(new Error('Network error - failed to connect to server'));
-        };
-        
-        document.head.appendChild(script);
-        this.log(`Script tag added for ${action}`);
-        
-      } catch (error) {
-        this.error(`Request error for ${action}:`, error);
-        reject(error);
-      }
-    });
-  }
+        } else {
+          reject(new Error((parsedResponse && parsedResponse.error) || 'API request failed'));
+        }
+      };
+      
+      // Create and add the script tag
+      const script = document.createElement('script');
+      script.src = fullUrl;
+      script.onerror = () => {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        this.error(`Script error for ${action}`);
+        reject(new Error('Network error - failed to connect to server'));
+      };
+      
+      document.head.appendChild(script);
+      this.log(`Script tag added for ${action}`);
+      
+    } catch (error) {
+      this.error(`Request error for ${action}:`, error);
+      reject(error);
+    }
+  });
+}
 
   // ============================================
   // USER API
