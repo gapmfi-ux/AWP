@@ -66,39 +66,21 @@ function displayNextInventoryCode(mainCode) {
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
       if (response && codeDisplay) {
-        let nextCode = null;
+        // ✓ FIX: Properly extract code from response
+        let nextCode = response;
         
-        // Handle different response formats
-        if (typeof response === 'string') {
-          // Try to parse if it's JSON
-          try {
-            const parsed = JSON.parse(response);
-            nextCode = parsed.result || parsed;
-          } catch (e) {
-            // If not JSON, use as is
-            nextCode = response;
-          }
-        } else if (typeof response === 'object') {
-          nextCode = response.result || response;
+        // If response is an object, get the result property
+        if (typeof response === 'object') {
+          nextCode = response.result || response.fullCode || response;
         }
         
-        // Ensure we have a string
-        nextCode = String(nextCode || '').trim();
-        console.log('Extracted next code:', nextCode);
+        // Convert to string and clean up
+        nextCode = String(nextCode).trim();
+        console.log('Next code to display:', nextCode);
         
-        // Remove any object string artifacts
-        if (nextCode.includes('[object Object]')) {
-          // Try to extract just the code part (last part after the object string)
-          const match = nextCode.match(/(INVEN\d+)/);
-          if (match) {
-            nextCode = match[1];
-          } else {
-            nextCode = '';
-          }
-        }
-        
-        if (nextCode && nextCode !== 'undefined' && nextCode !== '' && !nextCode.includes('[object Object]')) {
-          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+        // ✓ FIX: Better validation - check for actual invalid strings
+        if (nextCode && nextCode !== 'undefined' && nextCode !== '' && !nextCode.includes('[object')) {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + escapeHtml(nextCode) + '</span>';
           console.log('✓ Updated code display to:', nextCode);
         } else {
           console.log('Invalid code response:', nextCode);
@@ -119,6 +101,7 @@ function displayNextInventoryCode(mainCode) {
       }
     });
 }
+
 function generateCategoryCode() {
   console.log('Generating inventory category code via API');
   
@@ -134,45 +117,30 @@ function generateCategoryCode() {
     .then(function(response) {
       hideInventoryLoadingModal();
       console.log('Category code response:', response);
+      console.log('Response type:', typeof response);
       
       const field = document.getElementById('categoryCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
       
       if (response) {
-        let mainCode = null;
+        // ✓ FIX: Properly extract code from response
+        let mainCode = response;
         
-        // Handle different response formats
-        if (typeof response === 'string') {
-          try {
-            const parsed = JSON.parse(response);
-            mainCode = parsed.result || parsed;
-          } catch (e) {
-            mainCode = response;
-          }
-        } else if (typeof response === 'object') {
-          mainCode = response.result || response;
+        // If response is an object, get the result property
+        if (typeof response === 'object') {
+          mainCode = response.result || response.fullCode || response;
         }
         
-        mainCode = String(mainCode || '').trim();
+        mainCode = String(mainCode).trim();
         console.log('Extracted main code:', mainCode);
         
-        // Clean up if it contains object string
-        if (mainCode.includes('[object Object]')) {
-          const match = mainCode.match(/(INVEN\d+)/);
-          if (match) {
-            mainCode = match[1];
-          }
-        }
+        field.value = mainCode;
         
-        if (field) field.value = mainCode;
-        
-        // Display the generated code with 001 suffix
+        // Display the generated code with 001 suffix (new code, so always 001)
         const inventoryCode = mainCode + '001';
-        if (codeDisplay && mainCode && !mainCode.includes('[object Object]')) {
-          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + inventoryCode + '</span>';
+        if (codeDisplay) {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + escapeHtml(inventoryCode) + '</span>';
           console.log('Updated code display to:', inventoryCode);
-        } else {
-          codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
         }
       } else {
         console.error('No response for category code');
