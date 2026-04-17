@@ -35,10 +35,10 @@ function loadSubscriptionCategories() {
       if (categories.length > 0) {
         categories.forEach(function(cat) {
           const option = document.createElement('option');
-          option.value = cat.code; // Store code as value
-          option.textContent = cat.name + ' (' + cat.code + ')'; // Display name and code
-          option.dataset.categoryName = cat.name; // Store name in dataset
-          option.dataset.categoryDescription = cat.description || ''; // Store description
+          option.value = cat.code;
+          option.textContent = cat.name + ' (' + cat.code + ')';
+          option.dataset.categoryName = cat.name;
+          option.dataset.categoryDescription = cat.description || '';
           select.appendChild(option);
         });
         console.log('Loaded ' + categories.length + ' categories');
@@ -232,10 +232,6 @@ function initSubscriptionAddModule() {
   // Hide add-new category fields initially
   const addNewFields = document.getElementById('addNewCategoryFields');
   if (addNewFields) addNewFields.style.display = 'none';
-  
-  // Hide payment frequency initially
-  const frequencyGroup = document.getElementById('paymentFrequencyGroup');
-  if (frequencyGroup) frequencyGroup.style.display = 'none';
 }
 
 // ============================================
@@ -291,7 +287,7 @@ function submitSubscription() {
   const subscriptionData = {
     code: licenseCode,
     name: name,
-    category: category, // Now this is the category NAME
+    category: category,
     categoryCode: categoryCode,
     categoryDescription: categoryDescription,
     vendor: vendor,
@@ -299,7 +295,7 @@ function submitSubscription() {
     expiryDate: expiryDate,
     annualCost: annualCost,
     paymentMode: paymentMode,
-    paymentFrequency: paymentFrequency || 'Yearly'
+    paymentFrequency: paymentFrequency || 'Annually'
   };
   
   console.log('Subscription data:', subscriptionData);
@@ -347,15 +343,11 @@ function resetSubscriptionForm() {
   if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
   
   document.getElementById('paymentMode').value = 'Prepaid';
-  document.getElementById('paymentFrequency').value = 'Yearly';
+  document.getElementById('paymentFrequency').value = 'Annually';
   
   // Hide add-new category fields
   const addNewFields = document.getElementById('addNewCategoryFields');
   if (addNewFields) addNewFields.style.display = 'none';
-  
-  // Hide payment frequency initially
-  const frequencyGroup = document.getElementById('paymentFrequencyGroup');
-  if (frequencyGroup) frequencyGroup.style.display = 'none';
   
   // Clear category selection
   const categorySelect = document.getElementById('subCategory');
@@ -401,20 +393,8 @@ function showSubscriptionToast(message, type) {
   }
 }
 
-function handlePaymentModeChange() {
-  const paymentMode = document.getElementById('paymentMode').value;
-  const frequencyGroup = document.getElementById('paymentFrequencyGroup');
-  
-  if (paymentMode === 'In Arrears') {
-    frequencyGroup.style.display = 'block';
-  } else {
-    frequencyGroup.style.display = 'none';
-  }
-}
-
 // Expose global functions for add module
 window.initSubscriptionAddModule = initSubscriptionAddModule;
 window.submitSubscription = submitSubscription;
 window.resetSubscriptionForm = resetSubscriptionForm;
 window.handleSubscriptionCategoryChange = handleSubscriptionCategoryChange;
-window.handlePaymentModeChange = handlePaymentModeChange;
