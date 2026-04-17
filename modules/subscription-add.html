@@ -70,18 +70,21 @@
       </div>
       <div class="form-group">
         <label>Payment Mode:</label>
-        <select id="paymentMode" onchange="handlePaymentModeChange()">
+        <select id="paymentMode">
           <option value="Prepaid">Prepaid</option>
           <option value="In Arrears">In Arrears</option>
         </select>
       </div>
-      <div class="form-group" id="paymentFrequencyGroup" style="display: none;">
+      <div class="form-group">
         <label>Payment Frequency:</label>
         <select id="paymentFrequency">
           <option value="Monthly">Monthly</option>
           <option value="Quarterly">Quarterly</option>
-          <option value="Half Yearly">Half Yearly</option>
-          <option value="Yearly">Yearly</option>
+          <option value="Semi-Annually">Semi-Annually (6 months)</option>
+          <option value="Annually">Annually (1 Year)</option>
+          <option value="2 Years">Bi-Annually (2 Years)</option>
+          <option value="3 Years">Tri-Annually (3 Years)</option>
+          <option value="5 Years">5 Years</option>
         </select>
       </div>
     </div>
