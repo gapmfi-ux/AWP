@@ -5,6 +5,7 @@
 
 let subscriptionsList = [];
 let currentRenewId = null;
+let currentPaymentId = null;
 let currentFilter = { fromDate: '', toDate: '' };
 
 // Separate filter variables for each tab
@@ -79,7 +80,6 @@ function loadSubscriptionsFromAPI() {
         return;
       }
       
-      // Save to localStorage as cache
       saveSubscriptionsToStorage();
       renderAllTables();
     })
@@ -142,6 +142,63 @@ function getDemoSubscriptions() {
 }
 
 // ============================================
+// DATE CALCULATIONS
+// ============================================
+
+function calculateMonthsBetween(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  
+  let months = 0;
+  const startMonth = start.getMonth();
+  const startYear = start.getFullYear();
+  const endMonth = end.getMonth();
+  const endYear = end.getFullYear();
+  
+  months = (endYear - startYear) * 12 + (endMonth - startMonth);
+  
+  if (end.getDate() < start.getDate()) {
+    months -= 1;
+  }
+  
+  return Math.max(0, months);
+}
+
+function calculateChargeForPeriod(subscription, filterObj) {
+  if (!filterObj || !filterObj.toDate || !filterObj.fromDate) return 0;
+  
+  const fromDate = new Date(filterObj.fromDate);
+  const toDate = new Date(filterObj.toDate);
+  const startDate = new Date(subscription.startDate);
+  const expiryDate = new Date(subscription.expiryDate);
+  
+  fromDate.setHours(0, 0, 0, 0);
+  toDate.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
+  expiryDate.setHours(0, 0, 0, 0);
+  
+  // Calculate the active period within the filter range
+  const periodStart = new Date(Math.max(fromDate.getTime(), startDate.getTime()));
+  const periodEnd = new Date(Math.min(toDate.getTime(), expiryDate.getTime()));
+  
+  if (periodStart > periodEnd) return 0;
+  
+  // Get months in the period
+  const monthsInPeriod = calculateMonthsBetween(periodStart, periodEnd) + 1; // +1 to include both start and end month
+  const monthlyCharge = (subscription.annualCost || 0) / 12;
+  
+  console.log('Period: ' + periodStart.toDateString() + ' to ' + periodEnd.toDateString());
+  console.log('Months in period: ' + monthsInPeriod);
+  console.log('Monthly charge: ' + monthlyCharge);
+  console.log('Total for period: ' + (monthlyCharge * monthsInPeriod));
+  
+  return monthlyCharge * monthsInPeriod;
+}
+
+// ============================================
 // DATE FILTER FUNCTIONS
 // ============================================
 
@@ -151,7 +208,6 @@ function applyDateFilter() {
   renderAllSchedulesGrouped();
 }
 
-// Check if subscription is ACTIVE during the selected period
 function isActiveWithinDateRange(subscription, filterObj) {
   if (!filterObj || (!filterObj.fromDate && !filterObj.toDate)) return true;
   
@@ -170,43 +226,6 @@ function isActiveWithinDateRange(subscription, filterObj) {
   subExpiry.setHours(0, 0, 0, 0);
   
   return subStart <= filterTo && subExpiry >= filterFrom;
-}
-
-// Calculate months between two dates
-function calculateMonthsBetween(startDate, endDate) {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  
-  let months = 0;
-  const startMonth = start.getMonth();
-  const startYear = start.getFullYear();
-  const endMonth = end.getMonth();
-  const endYear = end.getFullYear();
-  
-  months = (endYear - startYear) * 12 + (endMonth - startMonth);
-  
-  // Account for partial months
-  if (end.getDate() < start.getDate()) {
-    months -= 1;
-  }
-  
-  return Math.max(0, months);
-}
-
-// Calculate charge for period (from filter TO date to expiry date)
-function calculateChargeForPeriod(subscription, filterObj) {
-  if (!filterObj || !filterObj.toDate) return 0;
-  
-  const toDate = new Date(filterObj.toDate);
-  const expiryDate = new Date(subscription.expiryDate);
-  toDate.setHours(0, 0, 0, 0);
-  expiryDate.setHours(0, 0, 0, 0);
-  
-  // Get months from TO date to expiry
-  const monthsInPeriod = calculateMonthsBetween(toDate, expiryDate);
-  const monthlyCharge = (subscription.annualCost || 0) / 12;
-  
-  return monthlyCharge * monthsInPeriod;
 }
 
 function applyPrepaidDateFilter() {
@@ -248,7 +267,6 @@ function renderAllSchedulesGrouped() {
     return;
   }
   
-  // Group by category
   const grouped = {};
   filteredList.forEach(sub => {
     const cat = sub.category || 'Uncategorized';
@@ -358,7 +376,7 @@ function renderArrearsTableEnhanced() {
   if (!tbody) return;
   
   if (!subscriptionsList || subscriptionsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No subscriptions found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No subscriptions found</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -368,7 +386,7 @@ function renderArrearsTableEnhanced() {
   );
   
   if (!arrearsList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No in-arrears subscriptions active in selected date range</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No in-arrears subscriptions active in selected date range</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -379,16 +397,18 @@ function renderArrearsTableEnhanced() {
   arrearsList.forEach(sub => {
     const chargeForPeriod = calculateChargeForPeriod(sub, arrearsFilter);
     totalChargeForPeriod += chargeForPeriod;
+    const subCode = escapeHtml(sub.code || '-');
     
     rows += `
       <tr>
-        <td>${escapeHtml(sub.code || '-')}</td>
+        <td>${subCode}</td>
         <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
         <td>${escapeHtml(sub.category || '-')}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td>GH₵ ${formatCurrency((sub.annualCost || 0) / 12)}</td>
         <td>GH₵ ${formatCurrency(chargeForPeriod)}</td>
+        <td><button class="pay-btn" onclick="openPaymentModal('${subCode}')">Pay</button></td>
       </tr>
     `;
   });
@@ -398,7 +418,7 @@ function renderArrearsTableEnhanced() {
   if (tfoot) {
     tfoot.innerHTML = `
       <tr class="total-row">
-        <td colspan="6" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
+        <td colspan="7" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
         <td class="total-cell">GH₵ ${formatCurrency(totalChargeForPeriod)}</td>
       </tr>
     `;
@@ -490,7 +510,77 @@ function switchSubscriptionTab(tabName) {
 }
 
 // ============================================
-// RENEWAL FUNCTIONS
+// PAYMENT MODAL FUNCTIONS
+// ============================================
+
+function openPaymentModal(code) {
+  const sub = subscriptionsList.find(s => s.code === code);
+  if (!sub) {
+    showScheduleToast('Subscription not found', 'error');
+    return;
+  }
+  
+  currentPaymentId = code;
+  
+  const chargeForPeriod = calculateChargeForPeriod(sub, arrearsFilter);
+  const frequencyMultiplier = getFrequencyMultiplier(sub.paymentFrequency);
+  const expectedPayment = (sub.annualCost / 12) * frequencyMultiplier;
+  
+  document.getElementById('paymentCode').value = sub.code || '';
+  document.getElementById('paymentName').value = sub.name || '';
+  document.getElementById('paymentVendor').value = sub.vendor || '';
+  document.getElementById('paymentFrequency').value = sub.paymentFrequency || 'Yearly';
+  document.getElementById('paymentExpected').value = expectedPayment.toFixed(2);
+  document.getElementById('paymentAmount').value = expectedPayment.toFixed(2);
+  document.getElementById('paymentDate').value = formatDateForInput(new Date());
+  
+  document.getElementById('paymentModal').style.display = 'flex';
+}
+
+function getFrequencyMultiplier(frequency) {
+  const multipliers = {
+    'Monthly': 1,
+    'Quarterly': 3,
+    'Half Yearly': 6,
+    'Yearly': 12
+  };
+  return multipliers[frequency] || 1;
+}
+
+function processPayment() {
+  const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
+  const paymentDate = document.getElementById('paymentDate').value;
+  
+  if (!paymentAmount || paymentAmount <= 0) {
+    showScheduleToast('Please enter a valid payment amount', 'error');
+    return;
+  }
+  
+  if (!paymentDate) {
+    showScheduleToast('Please select a payment date', 'error');
+    return;
+  }
+  
+  // Generate payment reference code
+  const paymentRefCode = 'PAY-' + currentPaymentId + '-' + Date.now().toString().slice(-6);
+  
+  console.log('Payment Processed:');
+  console.log('Reference: ' + paymentRefCode);
+  console.log('Amount: GH₵ ' + paymentAmount.toFixed(2));
+  console.log('Date: ' + paymentDate);
+  
+  showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+  closePaymentModal();
+  renderArrearsTableEnhanced();
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').style.display = 'none';
+  currentPaymentId = null;
+}
+
+// ============================================
+// RENEWAL MODAL FUNCTIONS
 // ============================================
 
 function openRenewModalByCode(code) {
@@ -718,6 +808,9 @@ window.switchSubscriptionTab = switchSubscriptionTab;
 window.openRenewModal = openRenewModal;
 window.closeRenewModal = closeRenewModal;
 window.processRenewal = processRenewal;
+window.openPaymentModal = openPaymentModal;
+window.closePaymentModal = closePaymentModal;
+window.processPayment = processPayment;
 window.applyDateFilter = applyDateFilter;
 window.applyPrepaidDateFilter = applyPrepaidDateFilter;
 window.applyArrearsDateFilter = applyArrearsDateFilter;
