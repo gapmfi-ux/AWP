@@ -59,6 +59,48 @@
       </div>
     </div>
 
+    <!-- Expired Subscriptions Alert -->
+    <div class="alert-card danger" id="expiredSubscriptionsAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-calendar-times"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Expired Subscriptions</div>
+        <div class="alert-message" id="expiredSubscriptionsMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">Renew Now</button>
+      </div>
+    </div>
+
+    <!-- Expiring Subscriptions Alert -->
+    <div class="alert-card warning" id="expiringSubscriptionsAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-exclamation-circle"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Subscriptions Expiring Soon</div>
+        <div class="alert-message" id="expiringSubscriptionsMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">View Schedule</button>
+      </div>
+    </div>
+
+    <!-- Due Payments Alert -->
+    <div class="alert-card danger" id="duePaymentsAlert" style="display: none;">
+      <div class="alert-icon">
+        <i class="fas fa-credit-card"></i>
+      </div>
+      <div class="alert-content">
+        <div class="alert-title">Subscription Payments Due</div>
+        <div class="alert-message" id="duePaymentsMessage"></div>
+      </div>
+      <div class="alert-action">
+        <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">Make Payment</button>
+      </div>
+    </div>
+
     <!-- No Alerts Message -->
     <div class="no-alerts" id="noAlerts">
       <i class="fas fa-check-circle"></i>
@@ -166,6 +208,10 @@
     margin: 3px 0;
   }
 
+  .alert-action {
+    flex-shrink: 0;
+  }
+
   .alert-btn {
     background: #4361ee;
     color: white;
@@ -176,6 +222,7 @@
     cursor: pointer;
     transition: all 0.2s;
     white-space: nowrap;
+    font-weight: 600;
   }
 
   .alert-btn:hover {
