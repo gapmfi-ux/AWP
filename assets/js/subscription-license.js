@@ -1,7 +1,7 @@
 // ============================================
 // SUBSCRIPTION SCHEDULE MODULE
 // Integrated with main API service
-// ============================================ 
+// ============================================
 
 let subscriptionsList = [];
 let currentRenewId = null;
@@ -267,6 +267,7 @@ function renderAllSchedulesGrouped() {
     return;
   }
   
+  // Group by category only
   const grouped = {};
   filteredList.forEach(sub => {
     const cat = sub.category || 'Uncategorized';
@@ -278,8 +279,8 @@ function renderAllSchedulesGrouped() {
   
   let totalAnnualCost = 0;
   let html = '<div class="report-table-wrapper"><table class="report-table"><thead><tr>';
-  html += '<th>Code</th><th>Name</th><th>Category</th><th>Vendor</th><th>Start Date</th>';
-  html += '<th>Expiry Date</th><th>Annual Cost (GH₵)</th><th>Payment Mode</th>';
+  html += '<th>Code</th><th>Name</th><th>Vendor</th><th>Start Date</th><th>Expiry Date</th>';
+  html += '<th>Annual Cost (GH₵)</th><th>Payment Mode</th><th>Frequency</th>';
   html += '</tr></thead><tbody>';
   
   const sortedCategories = Object.keys(grouped).sort();
@@ -297,21 +298,21 @@ function renderAllSchedulesGrouped() {
         <tr>
           <td>${escapeHtml(sub.code || '-')}</td>
           <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
-          <td>${escapeHtml(sub.category || '-')}</td>
           <td>${escapeHtml(sub.vendor || '-')}</td>
           <td>${formatDate(sub.startDate)}</td>
           <td>${formatDate(sub.expiryDate)}</td>
           <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
           <td>${escapeHtml(sub.paymentMode || '-')}</td>
+          <td>${escapeHtml(sub.paymentFrequency || '-')}</td>
         </tr>
       `;
     });
     
-    html += `<tr class="group-total-row"><td colspan="6"><strong>Category Total</strong></td><td colspan="2"><strong>GH₵ ${formatCurrency(categoryTotal)}</strong></td></tr>`;
+    html += `<tr class="group-total-row"><td colspan="5"><strong>Category Total</strong></td><td colspan="3"><strong>GH₵ ${formatCurrency(categoryTotal)}</strong></td></tr>`;
     totalAnnualCost += categoryTotal;
   }
   
-  html += `<tr class="grand-total-row"><td colspan="6"><strong>GRAND TOTAL</strong></td><td colspan="2"><strong>GH₵ ${formatCurrency(totalAnnualCost)}</strong></td></tr>`;
+  html += `<tr class="grand-total-row"><td colspan="5"><strong>GRAND TOTAL</strong></td><td colspan="3"><strong>GH₵ ${formatCurrency(totalAnnualCost)}</strong></td></tr>`;
   html += '</tbody></table></div>';
   
   container.innerHTML = html;
@@ -323,7 +324,7 @@ function renderPrepaidTableEnhanced() {
   if (!tbody) return;
   
   if (!subscriptionsList || subscriptionsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No subscriptions found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No subscriptions found</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -333,7 +334,7 @@ function renderPrepaidTableEnhanced() {
   );
   
   if (!prepaidList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No prepaid subscriptions active in selected date range</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No prepaid subscriptions active in selected date range</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -349,8 +350,9 @@ function renderPrepaidTableEnhanced() {
       <tr>
         <td>${escapeHtml(sub.code || '-')}</td>
         <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
-        <td>${escapeHtml(sub.category || '-')}</td>
+        <td>${formatDate(sub.startDate)}</td>
         <td>${formatDate(sub.expiryDate)}</td>
+        <td>${escapeHtml(sub.category || '-')}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td>GH₵ ${formatCurrency((sub.annualCost || 0) / 12)}</td>
         <td>GH₵ ${formatCurrency(chargeForPeriod)}</td>
@@ -363,7 +365,7 @@ function renderPrepaidTableEnhanced() {
   if (tfoot) {
     tfoot.innerHTML = `
       <tr class="total-row">
-        <td colspan="6" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
+        <td colspan="7" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
         <td class="total-cell">GH₵ ${formatCurrency(totalChargeForPeriod)}</td>
       </tr>
     `;
@@ -376,7 +378,7 @@ function renderArrearsTableEnhanced() {
   if (!tbody) return;
   
   if (!subscriptionsList || subscriptionsList.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No subscriptions found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No subscriptions found</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -386,17 +388,17 @@ function renderArrearsTableEnhanced() {
   );
   
   if (!arrearsList.length) {
-    tbody.innerHTML = '<tr><td colspan="8" class="loading-cell">No in-arrears subscriptions active in selected date range</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="loading-cell">No in-arrears subscriptions active in selected date range</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
   
-  let totalChargeForPeriod = 0;
+  let totalAnnualCost = 0;
   let rows = '';
   
   arrearsList.forEach(sub => {
-    const chargeForPeriod = calculateChargeForPeriod(sub, arrearsFilter);
-    totalChargeForPeriod += chargeForPeriod;
+    const monthlyCharge = (sub.annualCost || 0) / 12;
+    totalAnnualCost += sub.annualCost || 0;
     const subCode = escapeHtml(sub.code || '-');
     
     rows += `
@@ -404,10 +406,11 @@ function renderArrearsTableEnhanced() {
         <td>${subCode}</td>
         <td><strong>${escapeHtml(sub.name || '-')}</strong></td>
         <td>${escapeHtml(sub.category || '-')}</td>
+        <td>${formatDate(sub.startDate)}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
-        <td>GH₵ ${formatCurrency((sub.annualCost || 0) / 12)}</td>
-        <td>GH₵ ${formatCurrency(chargeForPeriod)}</td>
+        <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
+        <td>${escapeHtml(sub.paymentFrequency || '-')}</td>
         <td><button class="pay-btn" onclick="openPaymentModal('${subCode}')">Pay</button></td>
       </tr>
     `;
@@ -418,8 +421,8 @@ function renderArrearsTableEnhanced() {
   if (tfoot) {
     tfoot.innerHTML = `
       <tr class="total-row">
-        <td colspan="7" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
-        <td class="total-cell">GH₵ ${formatCurrency(totalChargeForPeriod)}</td>
+        <td colspan="5" style="text-align: right; font-weight: 700;">Total Annual Cost:</td>
+        <td class="total-cell" colspan="4">GH₵ ${formatCurrency(totalAnnualCost)}</td>
       </tr>
     `;
   }
@@ -522,7 +525,6 @@ function openPaymentModal(code) {
   
   currentPaymentId = code;
   
-  const chargeForPeriod = calculateChargeForPeriod(sub, arrearsFilter);
   const frequencyMultiplier = getFrequencyMultiplier(sub.paymentFrequency);
   const expectedPayment = (sub.annualCost / 12) * frequencyMultiplier;
   
