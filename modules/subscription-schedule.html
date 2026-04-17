@@ -84,7 +84,7 @@
     </div>
   </div>
 
-  <!-- Prepaid Tab -->
+ <!-- Prepaid Tab -->
   <div class="tab-content" id="prepaid">
     <div class="report-table-wrapper">
       <table class="report-table">
@@ -97,7 +97,7 @@
             <th>Category</th>
             <th>Annual Cost (GH₵)</th>
             <th>Monthly Charge (GH₵)</th>
-            <th>Charge for Period (GH₵)</th>
+            <th>Remaining Balance (GH₵)</th>
           </tr>
         </thead>
         <tbody id="prepaidTableBody">
@@ -120,8 +120,8 @@
             <th>Start Date</th>
             <th>Expiry Date</th>
             <th>Annual Cost (GH₵)</th>
-            <th>Monthly Charge (GH₵)</th>
-            <th>Payment Frequency</th>
+            <th>Amount Paid (GH₵)</th>
+            <th>Remaining Amount (GH₵)</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -132,6 +132,7 @@
       </table>
     </div>
   </div>
+
 
   <!-- Expired Tab -->
   <div class="tab-content" id="expired">
@@ -184,6 +185,10 @@
       <div class="modal-field">
         <label>Expected Amount (GH₵):</label>
         <input type="number" id="paymentExpected" step="0.01" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Remaining Amount (GH₵):</label>
+        <input type="number" id="paymentRemaining" step="0.01" readonly>
       </div>
       <div class="modal-field">
         <label>Amount to Pay (GH₵):</label>
