@@ -1,4 +1,50 @@
+// ============================================
+// SUBSCRIPTION MODULE - FAST AUTO-POPULATION
+// ============================================
 
+function loadSubscriptionCategories() {
+  console.log('Loading subscription categories via API');
+  
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    return;
+  }
+  
+  API.getSubscriptionCategories()
+    .then(function(response) {
+      console.log('Categories response:', response);
+      const select = document.getElementById('subCategory');
+      if (!select) return;
+      
+      // Clear existing options except the first two (placeholder and add-new)
+      while (select.options.length > 2) {
+        select.remove(2);
+      }
+      
+      // Handle response - could be array or object with data property
+      let categories = [];
+      if (response && Array.isArray(response)) {
+        categories = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        categories = response.data;
+      } else if (response && response.categories && Array.isArray(response.categories)) {
+        categories = response.categories;
+      }
+      
+      if (categories.length > 0) {
+        categories.forEach(function(cat) {
+          const option = document.createElement('option');
+          option.value = cat.code || cat;
+          option.textContent = (cat.name || cat) + (cat.code ? ' (' + cat.code + ')' : '');
+          select.appendChild(option);
+        });
+        console.log('Loaded ' + categories.length + ' categories');
+      }
+    })
+    .catch(function(error) {
+      console.error('Error loading categories:', error);
+    });
+}
 
 function handleSubscriptionCategoryChange() {
   const select = document.getElementById('subCategory');
@@ -148,6 +194,9 @@ function initSubscriptionAddModule() {
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
   
+  // Load categories from sheet
+  loadSubscriptionCategories();
+  
   // Hide add-new category fields initially
   const addNewFields = document.getElementById('addNewCategoryFields');
   if (addNewFields) addNewFields.style.display = 'none';
@@ -222,6 +271,10 @@ function submitSubscription() {
         console.log('Subscription saved:', response);
         if (response && response.success) {
           showSubscriptionToast('Subscription saved successfully!', 'success');
+          
+          // Reload categories to include newly added one
+          loadSubscriptionCategories();
+          
           resetSubscriptionForm();
           // Refresh the schedule module if it exists
           if (typeof refreshSubscriptionSchedule === 'function') {
