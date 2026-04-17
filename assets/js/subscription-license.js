@@ -1,4 +1,7 @@
-
+// ============================================
+// SUBSCRIPTION SCHEDULE MODULE
+// Integrated with main API service
+// ============================================
 
 let subscriptionsList = [];
 let currentRenewId = null;
@@ -130,11 +133,11 @@ function getDemoSubscriptions() {
   twoMonthsLater.setMonth(today.getMonth() + 2);
   
   return [
-    { code: 'SUB01001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid', paymentFrequency: 'Yearly' },
-    { code: 'SUB02001', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears', paymentFrequency: 'Monthly' },
-    { code: 'SUB03001', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid', paymentFrequency: 'Yearly' },
-    { code: 'SUB04001', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid', paymentFrequency: 'Monthly' },
-    { code: 'SUB05001', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears', paymentFrequency: 'Quarterly' }
+    { code: 'SUB01001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid', paymentFrequency: 'Yearly', amountPaid: 0 },
+    { code: 'SUB02001', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears', paymentFrequency: 'Monthly', amountPaid: 240 },
+    { code: 'SUB03001', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid', paymentFrequency: 'Yearly', amountPaid: 0 },
+    { code: 'SUB04001', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid', paymentFrequency: 'Monthly', amountPaid: 0 },
+    { code: 'SUB05001', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears', paymentFrequency: 'Quarterly', amountPaid: 600 }
   ];
 }
 
@@ -184,15 +187,28 @@ function calculateChargeForPeriod(subscription, filterObj) {
   if (periodStart > periodEnd) return 0;
   
   // Get months in the period
-  const monthsInPeriod = calculateMonthsBetween(periodStart, periodEnd) + 1; // +1 to include both start and end month
+  const monthsInPeriod = calculateMonthsBetween(periodStart, periodEnd) + 1;
   const monthlyCharge = (subscription.annualCost || 0) / 12;
   
-  console.log('Period: ' + periodStart.toDateString() + ' to ' + periodEnd.toDateString());
-  console.log('Months in period: ' + monthsInPeriod);
-  console.log('Monthly charge: ' + monthlyCharge);
-  console.log('Total for period: ' + (monthlyCharge * monthsInPeriod));
-  
   return monthlyCharge * monthsInPeriod;
+}
+
+// Calculate remaining balance for prepaid (total - charge from start to TO date)
+function calculateRemainingBalance(subscription, filterObj) {
+  if (!filterObj || !filterObj.toDate) return subscription.annualCost || 0;
+  
+  const toDate = new Date(filterObj.toDate);
+  const startDate = new Date(subscription.startDate);
+  
+  toDate.setHours(0, 0, 0, 0);
+  startDate.setHours(0, 0, 0, 0);
+  
+  // Calculate months from start to TO date
+  const monthsUsed = calculateMonthsBetween(startDate, toDate) + 1;
+  const monthlyCharge = (subscription.annualCost || 0) / 12;
+  const chargeUsed = monthlyCharge * monthsUsed;
+  
+  return Math.max(0, (subscription.annualCost || 0) - chargeUsed);
 }
 
 // ============================================
@@ -336,12 +352,12 @@ function renderPrepaidTableEnhanced() {
     return;
   }
   
-  let totalChargeForPeriod = 0;
+  let totalRemainingBalance = 0;
   let rows = '';
   
   prepaidList.forEach(sub => {
-    const chargeForPeriod = calculateChargeForPeriod(sub, prepaidFilter);
-    totalChargeForPeriod += chargeForPeriod;
+    const remainingBalance = calculateRemainingBalance(sub, prepaidFilter);
+    totalRemainingBalance += remainingBalance;
     
     rows += `
       <tr>
@@ -352,7 +368,7 @@ function renderPrepaidTableEnhanced() {
         <td>${escapeHtml(sub.category || '-')}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
         <td>GH₵ ${formatCurrency((sub.annualCost || 0) / 12)}</td>
-        <td>GH₵ ${formatCurrency(chargeForPeriod)}</td>
+        <td>GH₵ ${formatCurrency(remainingBalance)}</td>
       </tr>
     `;
   });
@@ -362,8 +378,8 @@ function renderPrepaidTableEnhanced() {
   if (tfoot) {
     tfoot.innerHTML = `
       <tr class="total-row">
-        <td colspan="7" style="text-align: right; font-weight: 700;">Total Charge for Period:</td>
-        <td class="total-cell">GH₵ ${formatCurrency(totalChargeForPeriod)}</td>
+        <td colspan="7" style="text-align: right; font-weight: 700;">Remaining Balance:</td>
+        <td class="total-cell">GH₵ ${formatCurrency(totalRemainingBalance)}</td>
       </tr>
     `;
   }
@@ -391,11 +407,18 @@ function renderArrearsTableEnhanced() {
   }
   
   let totalAnnualCost = 0;
+  let totalPaid = 0;
+  let totalRemaining = 0;
   let rows = '';
   
   arrearsList.forEach(sub => {
-    const monthlyCharge = (sub.annualCost || 0) / 12;
+    const amountPaid = sub.amountPaid || 0;
+    const remaining = (sub.annualCost || 0) - amountPaid;
+    
     totalAnnualCost += sub.annualCost || 0;
+    totalPaid += amountPaid;
+    totalRemaining += remaining;
+    
     const subCode = escapeHtml(sub.code || '-');
     
     rows += `
@@ -406,8 +429,8 @@ function renderArrearsTableEnhanced() {
         <td>${formatDate(sub.startDate)}</td>
         <td>${formatDate(sub.expiryDate)}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
-        <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
-        <td>${escapeHtml(sub.paymentFrequency || '-')}</td>
+        <td>GH₵ ${formatCurrency(amountPaid)}</td>
+        <td>GH₵ ${formatCurrency(remaining)}</td>
         <td><button class="pay-btn" onclick="openPaymentModal('${subCode}')">Pay</button></td>
       </tr>
     `;
@@ -418,8 +441,10 @@ function renderArrearsTableEnhanced() {
   if (tfoot) {
     tfoot.innerHTML = `
       <tr class="total-row">
-        <td colspan="5" style="text-align: right; font-weight: 700;">Total Annual Cost:</td>
-        <td class="total-cell" colspan="4">GH₵ ${formatCurrency(totalAnnualCost)}</td>
+        <td colspan="5" style="text-align: right; font-weight: 700;">TOTAL</td>
+        <td>GH₵ ${formatCurrency(totalAnnualCost)}</td>
+        <td>GH₵ ${formatCurrency(totalPaid)}</td>
+        <td colspan="2">GH₵ ${formatCurrency(totalRemaining)}</td>
       </tr>
     `;
   }
@@ -524,6 +549,7 @@ function openPaymentModal(code) {
   
   const frequencyMultiplier = getFrequencyMultiplier(sub.paymentFrequency);
   const expectedPayment = (sub.annualCost / 12) * frequencyMultiplier;
+  const remaining = (sub.annualCost || 0) - (sub.amountPaid || 0);
   
   document.getElementById('paymentCode').value = sub.code || '';
   document.getElementById('paymentName').value = sub.name || '';
@@ -531,6 +557,7 @@ function openPaymentModal(code) {
   document.getElementById('paymentFrequency').value = sub.paymentFrequency || 'Yearly';
   document.getElementById('paymentExpected').value = expectedPayment.toFixed(2);
   document.getElementById('paymentAmount').value = expectedPayment.toFixed(2);
+  document.getElementById('paymentRemaining').value = remaining.toFixed(2);
   document.getElementById('paymentDate').value = formatDateForInput(new Date());
   
   document.getElementById('paymentModal').style.display = 'flex';
@@ -560,17 +587,28 @@ function processPayment() {
     return;
   }
   
-  // Generate payment reference code
-  const paymentRefCode = 'PAY-' + currentPaymentId + '-' + Date.now().toString().slice(-6);
-  
-  console.log('Payment Processed:');
-  console.log('Reference: ' + paymentRefCode);
-  console.log('Amount: GH₵ ' + paymentAmount.toFixed(2));
-  console.log('Date: ' + paymentDate);
-  
-  showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
-  closePaymentModal();
-  renderArrearsTableEnhanced();
+  // Find and update the subscription with the payment
+  const subIndex = subscriptionsList.findIndex(s => s.code === currentPaymentId);
+  if (subIndex !== -1) {
+    const sub = subscriptionsList[subIndex];
+    sub.amountPaid = (sub.amountPaid || 0) + paymentAmount;
+    
+    // Generate payment reference code
+    const paymentRefCode = 'PAY-' + currentPaymentId + '-' + Date.now().toString().slice(-6);
+    
+    console.log('Payment Processed:');
+    console.log('Reference: ' + paymentRefCode);
+    console.log('Amount: GH₵ ' + paymentAmount.toFixed(2));
+    console.log('Date: ' + paymentDate);
+    console.log('Total Paid: GH₵ ' + sub.amountPaid.toFixed(2));
+    
+    // Save to storage
+    saveSubscriptionsToStorage();
+    
+    showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+    closePaymentModal();
+    renderArrearsTableEnhanced();
+  }
 }
 
 function closePaymentModal() {
@@ -633,7 +671,8 @@ function processRenewal() {
     vendor: newVendor,
     annualCost: newAnnualCost,
     paymentMode: newPaymentMode,
-    startDate: new Date().toISOString().split('T')[0]
+    startDate: new Date().toISOString().split('T')[0],
+    amountPaid: 0 // Reset amount paid on renewal
   };
   
   if (typeof API !== 'undefined' && API) {
