@@ -526,6 +526,7 @@ function previewVoucherFromLast() {
   showVoucherPreview(lastSubmittedVoucherData);
 }
 
+// UPDATED: printVoucherPerfect with 25% increased spacing between rows
 function printVoucherPerfect() {
   const originalContent = document.getElementById('voucher-print');
   const cloneContent = originalContent.cloneNode(true);
@@ -562,7 +563,7 @@ function printVoucherPerfect() {
             }
             .voucher-header { 
                 text-align: center; 
-                margin-bottom: 20px; 
+                margin-bottom: 25px; 
             }
             .voucher-title { 
                 font-size: 20px; 
@@ -583,13 +584,13 @@ function printVoucherPerfect() {
             .voucher-row { 
                 display: flex; 
                 flex-wrap: wrap; 
-                margin-bottom: 20px;
+                margin-bottom: 25px;
                 align-items: baseline; 
                 width: 100%;
                 gap: 8px;
             }
             .voucher-row-account-amount { 
-                margin-bottom: 30px; 
+                margin-bottom: 37.5px; 
             }
             .half-width { 
                 flex: 0 1 calc(50% - 4px);
@@ -622,14 +623,14 @@ function printVoucherPerfect() {
                 word-break: break-word;
             }
             .signature-section { 
-                margin-top: 32px; 
+                margin-top: 40px; 
                 border-top: 1px dashed #b9d0e5; 
-                padding-top: 20px; 
+                padding-top: 25px; 
             }
             .sig-headers { 
                 display: flex; 
                 justify-content: space-between; 
-                margin-bottom: 16px; 
+                margin-bottom: 20px; 
                 padding-bottom: 8px; 
                 border-bottom: 1px solid #cbdde9; 
             }
@@ -656,7 +657,7 @@ function printVoucherPerfect() {
             .sig-row-item { 
                 display: flex; 
                 align-items: center; 
-                margin-bottom: 22px;
+                margin-bottom: 27.5px;
                 gap: 12px; 
                 flex-wrap: wrap; 
             }
@@ -719,6 +720,8 @@ function printVoucherPerfect() {
     printWindow.close();
   }, 500);
 }
+
+
 function convertNumberToWords(amount) {
   if (!amount || isNaN(amount)) return '';
   var amt = parseFloat(amount).toFixed(2);
