@@ -62,17 +62,26 @@
       </div>
     </div>
 
-    <!-- Third Row: Annual Cost, Payment Mode -->
-    <div class="form-row-two">
+    <!-- Third Row: Annual Cost, Payment Mode, Payment Frequency -->
+    <div class="form-row-three">
       <div class="form-group">
         <label>Annual Cost (GH₵):</label>
         <input type="number" id="annualCost" step="0.01" placeholder="0.00" required>
       </div>
       <div class="form-group">
         <label>Payment Mode:</label>
-        <select id="paymentMode">
+        <select id="paymentMode" onchange="handlePaymentModeChange()">
           <option value="Prepaid">Prepaid</option>
           <option value="In Arrears">In Arrears</option>
+        </select>
+      </div>
+      <div class="form-group" id="paymentFrequencyGroup" style="display: none;">
+        <label>Payment Frequency:</label>
+        <select id="paymentFrequency">
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Half Yearly">Half Yearly</option>
+          <option value="Yearly">Yearly</option>
         </select>
       </div>
     </div>
@@ -263,5 +272,4 @@
     gap: 12px;
   }
 }
-  
 </style>
