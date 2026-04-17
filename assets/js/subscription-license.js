@@ -66,9 +66,16 @@ function loadSubscriptionsFromAPI() {
       
       if (response && Array.isArray(response)) {
         subscriptionsList = response;
+        // Ensure amountPaid is set for each subscription
+        subscriptionsList.forEach(sub => {
+          if (!sub.amountPaid) sub.amountPaid = 0;
+        });
         console.log('Loaded ' + subscriptionsList.length + ' subscriptions from API');
       } else if (response && response.data && Array.isArray(response.data)) {
         subscriptionsList = response.data;
+        subscriptionsList.forEach(sub => {
+          if (!sub.amountPaid) sub.amountPaid = 0;
+        });
         console.log('Loaded ' + subscriptionsList.length + ' subscriptions from API (data property)');
       } else if (response && response.success === false) {
         console.error('API error:', response.error);
@@ -89,7 +96,6 @@ function loadSubscriptionsFromAPI() {
       loadSubscriptionsFromStorage();
     });
 }
-
 function loadSubscriptionsFromStorage() {
   console.log('Loading subscriptions from localStorage...');
   
@@ -623,7 +629,7 @@ function processPayment() {
   const subIndex = subscriptionsList.findIndex(s => s.code === currentPaymentId);
   if (subIndex !== -1) {
     const sub = subscriptionsList[subIndex];
-    sub.amountPaid = (sub.amountPaid || 0) + paymentAmount;
+    const newAmountPaid = (sub.amountPaid || 0) + paymentAmount;
     
     // Generate payment reference code
     const paymentRefCode = 'PAY-' + currentPaymentId + '-' + Date.now().toString().slice(-6);
@@ -632,17 +638,106 @@ function processPayment() {
     console.log('Reference: ' + paymentRefCode);
     console.log('Amount: GH₵ ' + paymentAmount.toFixed(2));
     console.log('Date: ' + paymentDate);
-    console.log('Total Paid: GH₵ ' + sub.amountPaid.toFixed(2));
+    console.log('Total Paid: GH₵ ' + newAmountPaid.toFixed(2));
+    
+    // Update locally
+    sub.amountPaid = newAmountPaid;
     
     // Save to storage
     saveSubscriptionsToStorage();
     
-    showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
-    closePaymentModal();
-    renderArrearsTableEnhanced();
+    // If API available, sync to backend
+    if (typeof API !== 'undefined' && API) {
+      API.request('updateSubscriptionPayment', {
+        subscriptionCode: currentPaymentId,
+        amountPaid: newAmountPaid
+      })
+      .then(function(response) {
+        console.log('Payment saved to sheet:', response);
+        if (response && response.success) {
+          showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+        } else {
+          showScheduleToast('Payment recorded locally (sheet sync failed)', 'warning');
+        }
+        closePaymentModal();
+        renderArrearsTableEnhanced();
+      })
+      .catch(function(error) {
+        console.error('Error saving payment to sheet:', error);
+        showScheduleToast('Payment recorded locally (sheet sync failed)', 'warning');
+        closePaymentModal();
+        renderArrearsTableEnhanced();
+      });
+    } else {
+      showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+      closePaymentModal();
+      renderArrearsTableEnhanced();
+    }
+  }
+}function processPayment() {
+  const paymentAmount = parseFloat(document.getElementById('paymentAmount').value);
+  const paymentDate = document.getElementById('paymentDate').value;
+  
+  if (!paymentAmount || paymentAmount <= 0) {
+    showScheduleToast('Please enter a valid payment amount', 'error');
+    return;
+  }
+  
+  if (!paymentDate) {
+    showScheduleToast('Please select a payment date', 'error');
+    return;
+  }
+  
+  // Find and update the subscription with the payment
+  const subIndex = subscriptionsList.findIndex(s => s.code === currentPaymentId);
+  if (subIndex !== -1) {
+    const sub = subscriptionsList[subIndex];
+    const newAmountPaid = (sub.amountPaid || 0) + paymentAmount;
+    
+    // Generate payment reference code
+    const paymentRefCode = 'PAY-' + currentPaymentId + '-' + Date.now().toString().slice(-6);
+    
+    console.log('Payment Processed:');
+    console.log('Reference: ' + paymentRefCode);
+    console.log('Amount: GH₵ ' + paymentAmount.toFixed(2));
+    console.log('Date: ' + paymentDate);
+    console.log('Total Paid: GH₵ ' + newAmountPaid.toFixed(2));
+    
+    // Update locally
+    sub.amountPaid = newAmountPaid;
+    
+    // Save to storage
+    saveSubscriptionsToStorage();
+    
+    // If API available, sync to backend
+    if (typeof API !== 'undefined' && API) {
+      API.request('updateSubscriptionPayment', {
+        subscriptionCode: currentPaymentId,
+        amountPaid: newAmountPaid
+      })
+      .then(function(response) {
+        console.log('Payment saved to sheet:', response);
+        if (response && response.success) {
+          showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+        } else {
+          showScheduleToast('Payment recorded locally (sheet sync failed)', 'warning');
+        }
+        closePaymentModal();
+        renderArrearsTableEnhanced();
+      })
+      .catch(function(error) {
+        console.error('Error saving payment to sheet:', error);
+        showScheduleToast('Payment recorded locally (sheet sync failed)', 'warning');
+        closePaymentModal();
+        renderArrearsTableEnhanced();
+      });
+    } else {
+      showScheduleToast('Payment recorded: ' + paymentRefCode, 'success');
+      closePaymentModal();
+      renderArrearsTableEnhanced();
+    }
   }
 }
-
 function closePaymentModal() {
   document.getElementById('paymentModal').style.display = 'none';
   currentPaymentId = null;
