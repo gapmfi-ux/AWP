@@ -23,7 +23,7 @@ function updateVoucherTypeFields() {
     if (chequeInput) chequeInput.value = '';
   }
   
-  fetchNextPVNumber(voucherType);
+  fetchNextPVNumberOptimized(voucherType);
 }
 
 function showModal(html) {
@@ -56,11 +56,14 @@ function showSuccess(action = 'created') {
   
   setTimeout(function() {
     var voucherType = document.getElementById('voucherType');
-    if (voucherType) fetchNextPVNumber(voucherType.value);
+    if (voucherType) {
+      // Fetch next number and refresh list
+      fetchNextPVNumberOptimized(voucherType.value);
+      fetchPVTableOptimized();
+    }
     if (action === 'created') {
       clearFormExceptPVDateType();
     }
-    fetchPVTable();
   }, 500);
 }
 
@@ -120,27 +123,26 @@ function submitForm() {
   };
   formObject.amountInWords = convertNumberToWords(formObject.amount);
   lastSubmittedVoucherData = formObject;
-  google.script.run
-    .withSuccessHandler(function() { 
-      showSuccess(); 
+  
+  API.processForm(formObject)
+    .then(function(response) {
+      showSuccess();
     })
-    .withFailureHandler(function(error) { 
-      showError(error); 
-    })
-    .processForm(formObject);
+    .catch(function(error) {
+      showError(error);
+    });
 }
 
-function fetchPVTable() {
-  google.script.run
-    .withSuccessHandler(function(data) {
+function fetchPVTableOptimized() {
+  API.getPVNumbersByType()
+    .then(function(data) {
       renderPVList('cash-payment-list', data['Cash Payment Voucher']);
       renderPVList('cheque-list', data['Cheque Payment Voucher']);
       renderPVList('payment-list', data['Payment Voucher']);
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       console.error('Error fetching PV table:', error);
-    })
-    .getPVNumbersByType();
+    });
 }
 
 function renderPVList(elementId, pvList) {
@@ -151,7 +153,6 @@ function renderPVList(elementId, pvList) {
     return;
   }
   
-  // Show ALL vouchers (removed the .slice(-5) limit)
   const items = pvList.map(item => {
     const match = item.pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
     let formattedPV = item.pvNumber;
@@ -167,6 +168,7 @@ function renderPVList(elementId, pvList) {
   
   el.innerHTML = items;
 }
+
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
   const rect = btn.getBoundingClientRect();
@@ -202,8 +204,9 @@ function closeDropdownPortal() {
 function viewVoucher(pvNumber, voucherType) {
   closeDropdownPortal();
   showLoading();
-  google.script.run
-    .withSuccessHandler(function(voucherData) {
+  
+  API.getVoucherByNumber(pvNumber, voucherType)
+    .then(function(voucherData) {
       hideModal();
       if (!voucherData || !voucherData.pvNumber) {
         alert('No voucher data found for PV Number: ' + pvNumber);
@@ -211,11 +214,10 @@ function viewVoucher(pvNumber, voucherType) {
       }
       showVoucherPreview(voucherData);
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       hideModal();
       alert('Error loading voucher: ' + (error.message || error));
-    })
-    .getVoucherByNumber(pvNumber, voucherType);
+    });
 }
 
 function editVoucher(pvNumber, voucherType) {
@@ -227,22 +229,21 @@ function editVoucher(pvNumber, voucherType) {
   var pvDisplay = document.getElementById('pvNumberDisplay');
   if (pvDisplay) pvDisplay.textContent = pvNumber;
   
-  google.script.run
-    .withSuccessHandler(function(voucherData) {
+  API.getVoucherByNumber(pvNumber, voucherType)
+    .then(function(voucherData) {
       if (!voucherData || !voucherData.pvNumber) {
         hideModal();
         alert('No voucher data found for PV Number: ' + pvNumber);
         return;
       }
       populateFormForEditing(voucherData);
-      fetchNextPVNumber(voucherData.voucherType);
+      fetchNextPVNumberOptimized(voucherData.voucherType);
       hideModal();
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       hideModal();
       alert('Error loading voucher for editing: ' + (error.message || error));
-    })
-    .getVoucherByNumber(pvNumber, voucherType);
+    });
 }
 
 function populateFormForEditing(voucherData) {
@@ -338,15 +339,14 @@ function updateForm() {
   formObject.amountInWords = convertNumberToWords(formObject.amount);
   lastSubmittedVoucherData = formObject;
   
-  google.script.run
-    .withSuccessHandler(function() {
+  API.updateVoucher(formObject)
+    .then(function(response) {
       showSuccess('updated');
-      fetchPVTable();
+      fetchPVTableOptimized();
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       showError(error);
-    })
-    .updateVoucher(formObject);
+    });
 }
 
 function resetFormAfterUpdate() {
@@ -368,28 +368,30 @@ function resetFormAfterUpdate() {
   if (dateContainer) dateContainer.style.display = 'none';
 }
 
-function fetchNextPVNumber(voucherType) {
-  google.script.run
-    .withSuccessHandler(function(pvNumber) {
+// OPTIMIZED: Fast next PV number fetching with instant display
+function fetchNextPVNumberOptimized(voucherType) {
+  var pvField = document.getElementById('pvNumber');
+  var pvDisplay = document.getElementById('pvNumberDisplay');
+  
+  // Show loading state
+  if (pvDisplay) pvDisplay.textContent = '⏳ Loading...';
+  
+  API.getNextPVNumber(voucherType)
+    .then(function(pvNumber) {
       nextPvNumber = pvNumber;
       if (!currentlyEditingPvNumber) {
-        var pvField = document.getElementById('pvNumber');
-        var pvDisplay = document.getElementById('pvNumberDisplay');
         if (pvField) pvField.value = pvNumber;
         if (pvDisplay) pvDisplay.textContent = pvNumber;
       }
     })
-    .withFailureHandler(function(error) {
+    .catch(function(error) {
       console.error('Error fetching next PV number:', error);
       const fallbackNumber = generateFallbackPVNumber(voucherType);
       if (!currentlyEditingPvNumber) {
-        var pvField = document.getElementById('pvNumber');
-        var pvDisplay = document.getElementById('pvNumberDisplay');
         if (pvField) pvField.value = fallbackNumber;
         if (pvDisplay) pvDisplay.textContent = fallbackNumber;
       }
-    })
-    .getNextPVNumber(voucherType);
+    });
 }
 
 function generateFallbackPVNumber(voucherType) {
@@ -403,7 +405,6 @@ function generateFallbackPVNumber(voucherType) {
   return prefix + timestamp.padStart(5, '0');
 }
 
-// UPDATED: showVoucherPreview with swapped positions (ACCOUNT CODE now with INVOICE NO., INVOICE DATE below)
 function showVoucherPreview(voucherData) {
   if (!voucherData || typeof voucherData !== 'object') {
     console.error('Invalid voucher data received:', voucherData);
@@ -721,7 +722,6 @@ function printVoucherPerfect() {
   }, 500);
 }
 
-
 function convertNumberToWords(amount) {
   if (!amount || isNaN(amount)) return '';
   var amt = parseFloat(amount).toFixed(2);
@@ -802,7 +802,7 @@ function initPVModule() {
   var dateField = document.getElementById('date');
   if (dateField) dateField.value = today;
   updateVoucherTypeFields();
-  fetchPVTable();
+  fetchPVTableOptimized();
 }
 
 // Event Listeners for PV Module
