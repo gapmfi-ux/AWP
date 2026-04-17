@@ -1,96 +1,79 @@
 // ============================================
-// SUBSCRIPTION MODULE
+// SUBSCRIPTION MODULE - FAST AUTO-POPULATION
 // ============================================
-
-function loadSubscriptionCategories() {
-  console.log('Loading subscription categories via API');
-  
-  if (typeof API === 'undefined' || !API) {
-    console.error('API not available, using default categories');
-    loadDefaultCategories();
-    return;
-  }
-  
-  API.getSubscriptionCategories()
-    .then(function(response) {
-      console.log('Categories response:', response);
-      const select = document.getElementById('subCategory');
-      if (!select) return;
-      
-      // Clear existing options except the first two (placeholder and add-new)
-      while (select.options.length > 2) {
-        select.remove(2);
-      }
-      
-      // Handle response - could be array or object with data property
-      let categories = [];
-      if (response && Array.isArray(response)) {
-        categories = response;
-      } else if (response && response.data && Array.isArray(response.data)) {
-        categories = response.data;
-      } else if (response && response.categories && Array.isArray(response.categories)) {
-        categories = response.categories;
-      }
-      
-      if (categories.length > 0) {
-        categories.forEach(function(cat) {
-          const option = document.createElement('option');
-          option.value = cat.code || cat;
-          option.textContent = (cat.name || cat) + (cat.code ? ' (' + cat.code + ')' : '');
-          select.appendChild(option);
-        });
-        console.log('Loaded ' + categories.length + ' categories');
-      } else {
-        // Fallback to default categories
-        loadDefaultCategories();
-      }
-    })
-    .catch(function(error) {
-      console.error('Error loading categories:', error);
-      loadDefaultCategories();
-    });
-}
-
-function loadDefaultCategories() {
-  const categorySelect = document.getElementById('subCategory');
-  if (categorySelect) {
-    const defaultCategories = [
-      'Software License',
-      'SaaS Subscription', 
-      'Domain Renewal',
-      'SSL Certificate',
-      'Maintenance Contract',
-      'Cloud Service',
-      'Other'
-    ];
-    
-    categorySelect.innerHTML = '<option value="">Select Category</option><option value="add-new">+ Add New Category</option>';
-    defaultCategories.forEach(cat => {
-      const option = document.createElement('option');
-      option.value = cat;
-      option.textContent = cat;
-      categorySelect.appendChild(option);
-    });
-  }
-}
 
 function handleSubscriptionCategoryChange() {
   const select = document.getElementById('subCategory');
   const addNewFields = document.getElementById('addNewCategoryFields');
-  const licenseCodeField = document.getElementById('licenseCode');
   const codeDisplay = document.getElementById('generatedCodeDisplay');
-  
+
   if (select.value === 'add-new') {
-    if (addNewFields) addNewFields.style.display = 'block';
+    addNewFields.style.display = 'block';
     generateSubscriptionCategoryCode();
-  } else if (select.value && select.value !== 'add-new' && select.value !== '') {
-    if (addNewFields) addNewFields.style.display = 'none';
-    generateSubscriptionLicenseCode();
+  } else if (select.value) {
+    // Selected existing category - fetch the next subscription code
+    addNewFields.style.display = 'none';
+    displayNextSubscriptionCode(select.value);
   } else {
-    if (addNewFields) addNewFields.style.display = 'none';
-    if (licenseCodeField) licenseCodeField.value = '';
-    if (codeDisplay) codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+    addNewFields.style.display = 'none';
+    codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+    document.getElementById('categoryName').value = '';
+    document.getElementById('categoryCode').value = '';
+    document.getElementById('categoryDescription').value = '';
   }
+}
+
+function displayNextSubscriptionCode(categoryCode) {
+  console.log('Fetching next subscription code for category:', categoryCode);
+  
+  if (typeof API === 'undefined' || !API) {
+    console.error('API not available');
+    const codeDisplay = document.getElementById('generatedCodeDisplay');
+    if (codeDisplay) {
+      codeDisplay.innerHTML = '<span class="code-placeholder">Error loading code</span>';
+    }
+    return;
+  }
+  
+  // Call API to get the next subscription code
+  API.getNextSubscriptionCode(categoryCode)
+    .then(function(response) {
+      console.log('Full response:', response);
+      
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      const licenseCodeField = document.getElementById('licenseCode');
+      
+      if (response && codeDisplay) {
+        // Handle different response formats
+        let nextCode = response;
+        if (typeof response === 'object' && response.result) {
+          nextCode = response.result;
+        } else if (typeof response === 'object' && response.code) {
+          nextCode = response.code;
+        } else if (typeof response === 'object') {
+          nextCode = Object.values(response).find(v => typeof v === 'string') || String(response);
+        }
+        
+        nextCode = String(nextCode).trim();
+        console.log('Next code to display:', nextCode);
+        
+        if (nextCode && nextCode !== 'undefined' && nextCode !== '') {
+          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + nextCode + '</span>';
+          if (licenseCodeField) licenseCodeField.value = nextCode;
+          console.log('✓ Updated code display to:', nextCode);
+        } else {
+          console.log('Invalid code response:', nextCode);
+          codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+        }
+      }
+    })
+    .catch(function(error) {
+      console.error('Error fetching next subscription code:', error);
+      const codeDisplay = document.getElementById('generatedCodeDisplay');
+      if (codeDisplay) {
+        codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+      }
+    });
 }
 
 function generateSubscriptionCategoryCode() {
@@ -107,10 +90,10 @@ function generateSubscriptionCategoryCode() {
   API.generateSubscriptionCategoryCode()
     .then(function(response) {
       console.log('Category code response:', response);
-      console.log('Response type:', typeof response);
       
       const field = document.getElementById('categoryCode');
       const codeDisplay = document.getElementById('generatedCodeDisplay');
+      const licenseCodeField = document.getElementById('licenseCode');
       
       if (response) {
         // Handle different response formats
@@ -120,22 +103,22 @@ function generateSubscriptionCategoryCode() {
         } else if (typeof response === 'object' && response.code) {
           mainCode = response.code;
         } else if (typeof response === 'object') {
-          // Try to extract string value from object
           mainCode = Object.values(response).find(v => typeof v === 'string') || String(response);
         }
         
         mainCode = String(mainCode).trim();
         console.log('Extracted main code:', mainCode);
         
-        if (field) field.value = mainCode;
+        field.value = mainCode;
         
         // Display the generated code with 001 suffix (new code, so always 001)
         const licenseCode = mainCode + '001';
         if (codeDisplay) {
           codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + licenseCode + '</span>';
+          console.log('Updated code display to:', licenseCode);
         }
-        if (document.getElementById('licenseCode')) {
-          document.getElementById('licenseCode').value = licenseCode;
+        if (licenseCodeField) {
+          licenseCodeField.value = licenseCode;
         }
       } else {
         console.error('No response for category code');
@@ -145,64 +128,6 @@ function generateSubscriptionCategoryCode() {
     .catch(function(error) {
       console.error('Error generating category code:', error);
       showSubscriptionToast('Error generating category code: ' + (error.message || error), 'error');
-    });
-}
-
-function generateSubscriptionLicenseCode() {
-  const categorySelect = document.getElementById('subCategory');
-  const selectedCategory = categorySelect.value;
-  
-  if (!selectedCategory || selectedCategory === '' || selectedCategory === 'add-new') {
-    return;
-  }
-  
-  console.log('Generating license code for category:', selectedCategory);
-  
-  if (typeof API === 'undefined' || !API) {
-    // Fallback: generate local code
-    const prefix = selectedCategory.substring(0, 3).toUpperCase();
-    const year = new Date().getFullYear();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    const code = `${prefix}-${year}-${random}`;
-    document.getElementById('licenseCode').value = code;
-    const codeDisplay = document.getElementById('generatedCodeDisplay');
-    if (codeDisplay) codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + code + '</span>';
-    return;
-  }
-  
-  API.getNextSubscriptionCode(selectedCategory)
-    .then(function(response) {
-      console.log('Next subscription code:', response);
-      const codeField = document.getElementById('licenseCode');
-      const codeDisplay = document.getElementById('generatedCodeDisplay');
-      
-      if (response && codeField) {
-        let nextCode = response;
-        if (typeof response === 'object' && response.result) {
-          nextCode = response.result;
-        } else if (typeof response === 'object' && response.code) {
-          nextCode = response.code;
-        } else if (typeof response === 'object') {
-          nextCode = Object.values(response).find(v => typeof v === 'string') || String(response);
-        }
-        
-        const code = String(nextCode).trim();
-        codeField.value = code;
-        if (codeDisplay) {
-          codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + code + '</span>';
-        }
-      }
-    })
-    .catch(function(error) {
-      console.error('Error generating license code:', error);
-      // Fallback
-      const prefix = selectedCategory.substring(0, 3).toUpperCase();
-      const year = new Date().getFullYear();
-      const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-      const code = `${prefix}-${year}-${random}`;
-      document.getElementById('licenseCode').value = code;
-      const codeDisplay = document.getElementById('generatedCodeDisplay');
-      if (codeDisplay) codeDisplay.innerHTML = '<span style="font-family: \'Courier New\', monospace; letter-spacing: 2px; color: #4361ee;">' + code + '</span>';
     });
 }
 
@@ -224,9 +149,6 @@ function initSubscriptionAddModule() {
     nextYear.setFullYear(nextYear.getFullYear() + 1);
     expiryDateField.value = nextYear.toISOString().split('T')[0];
   }
-  
-  // Load categories from API or default
-  loadSubscriptionCategories();
   
   // Hide add-new category fields initially
   const addNewFields = document.getElementById('addNewCategoryFields');
@@ -352,9 +274,6 @@ function resetSubscriptionForm() {
   // Clear code display
   const codeDisplay = document.getElementById('generatedCodeDisplay');
   if (codeDisplay) codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
-  
-  // Reload categories
-  loadSubscriptionCategories();
 }
 
 // ============================================
@@ -364,7 +283,6 @@ function resetSubscriptionForm() {
 function showSubscriptionToast(message, type) {
   let toast = document.getElementById('subToast');
   if (!toast) {
-    // Create toast if it doesn't exist
     const newToast = document.createElement('div');
     newToast.id = 'subToast';
     newToast.className = 'sub-toast';
