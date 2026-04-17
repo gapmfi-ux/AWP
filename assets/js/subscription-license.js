@@ -151,26 +151,31 @@ function applyDateFilter() {
   renderAllSchedulesGrouped();
 }
 
-function isWithinDateRange(expiryDate, filterObj) {
+// Check if subscription is ACTIVE during the selected period
+// A subscription is active during a period if it started on or before the period ends 
+// AND it expires on or after the period starts
+function isActiveWithinDateRange(subscription, filterObj) {
   if (!filterObj || (!filterObj.fromDate && !filterObj.toDate)) return true;
   
-  const expiry = new Date(expiryDate);
-  expiry.setHours(0, 0, 0, 0);
+  const filterFrom = filterObj.fromDate ? new Date(filterObj.fromDate) : null;
+  const filterTo = filterObj.toDate ? new Date(filterObj.toDate) : null;
   
-  const from = filterObj.fromDate ? new Date(filterObj.fromDate) : null;
-  const to = filterObj.toDate ? new Date(filterObj.toDate) : null;
+  const subStart = subscription.startDate ? new Date(subscription.startDate) : null;
+  const subExpiry = subscription.expiryDate ? new Date(subscription.expiryDate) : null;
   
-  if (from) from.setHours(0, 0, 0, 0);
-  if (to) to.setHours(23, 59, 59, 999);
+  if (!filterFrom && !filterTo) return true;
+  if (!subStart || !subExpiry) return false;
   
-  if (from && to) {
-    return expiry >= from && expiry <= to;
-  } else if (from) {
-    return expiry >= from;
-  } else if (to) {
-    return expiry <= to;
-  }
-  return true;
+  // Normalize times for comparison
+  if (filterFrom) filterFrom.setHours(0, 0, 0, 0);
+  if (filterTo) filterTo.setHours(23, 59, 59, 999);
+  subStart.setHours(0, 0, 0, 0);
+  subExpiry.setHours(0, 0, 0, 0);
+  
+  // Subscription is active during period if:
+  // - It started on or before the period ends
+  // - AND it expires on or after the period starts
+  return subStart <= filterTo && subExpiry >= filterFrom;
 }
 
 function applyPrepaidDateFilter() {
@@ -205,10 +210,11 @@ function renderAllSchedulesGrouped() {
     return;
   }
   
-  let filteredList = subscriptionsList.filter(sub => isWithinDateRange(sub.expiryDate, currentFilter));
+  // Filter subscriptions ACTIVE during the selected period
+  let filteredList = subscriptionsList.filter(sub => isActiveWithinDateRange(sub, currentFilter));
   
   if (!filteredList.length) {
-    container.innerHTML = '<div class="report-table-wrapper"><table class="report-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions in selected date range</td></tr></tbody></table></div>';
+    container.innerHTML = '<div class="report-table-wrapper"><table class="report-table"><tbody><tr><td colspan="9" class="loading-cell">No subscriptions active in selected date range</td></tr></tbody></table></div>';
     return;
   }
   
@@ -281,13 +287,13 @@ function renderPrepaidTableEnhanced() {
     return;
   }
   
-  let prepaidList = subscriptionsList.filter(sub => sub.paymentMode === 'Prepaid');
-  
-  // Apply date filter
-  prepaidList = prepaidList.filter(sub => isWithinDateRange(sub.expiryDate, prepaidFilter));
+  // Filter: Prepaid subscriptions ACTIVE during the period
+  let prepaidList = subscriptionsList.filter(sub => 
+    sub.paymentMode === 'Prepaid' && isActiveWithinDateRange(sub, prepaidFilter)
+  );
   
   if (!prepaidList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No prepaid subscriptions found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No prepaid subscriptions active in selected date range</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -338,13 +344,13 @@ function renderArrearsTableEnhanced() {
     return;
   }
   
-  let arrearsList = subscriptionsList.filter(sub => sub.paymentMode === 'In Arrears');
-  
-  // Apply date filter
-  arrearsList = arrearsList.filter(sub => isWithinDateRange(sub.expiryDate, arrearsFilter));
+  // Filter: In Arrears subscriptions ACTIVE during the period
+  let arrearsList = subscriptionsList.filter(sub => 
+    sub.paymentMode === 'In Arrears' && isActiveWithinDateRange(sub, arrearsFilter)
+  );
   
   if (!arrearsList.length) {
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No in-arrears subscriptions found</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No in-arrears subscriptions active in selected date range</td></tr>';
     if (tfoot) tfoot.innerHTML = '';
     return;
   }
@@ -395,6 +401,7 @@ function renderExpiredTableEnhanced() {
     return;
   }
   
+  // Show ALL expired subscriptions (not filtered by date range)
   let expiredList = subscriptionsList.filter(sub => calculateDaysLeft(sub.expiryDate) < 0);
   
   if (!expiredList.length) {
