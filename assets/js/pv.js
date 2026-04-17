@@ -167,6 +167,7 @@ function renderPVList(elementId, pvList) {
   
   el.innerHTML = items;
 }
+
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
   const rect = btn.getBoundingClientRect();
@@ -403,7 +404,6 @@ function generateFallbackPVNumber(voucherType) {
   return prefix + timestamp.padStart(5, '0');
 }
 
-// UPDATED: showVoucherPreview with swapped positions (ACCOUNT CODE now with INVOICE NO., INVOICE DATE below)
 function showVoucherPreview(voucherData) {
   if (!voucherData || typeof voucherData !== 'object') {
     console.error('Invalid voucher data received:', voucherData);
@@ -526,7 +526,7 @@ function previewVoucherFromLast() {
   showVoucherPreview(lastSubmittedVoucherData);
 }
 
-// REFERENCE PRINT APPROACH - Clean A4 print without headers/footers
+// UPDATED: printVoucherPerfect with increased spacing between rows and proper A4 formatting
 function printVoucherPerfect() {
   const originalContent = document.getElementById('voucher-print');
   const cloneContent = originalContent.cloneNode(true);
@@ -543,9 +543,15 @@ function printVoucherPerfect() {
                 size: A4; 
                 margin: 0mm;
             }
+            html, body { 
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
             body { 
                 font-family: 'Inter', 'Segoe UI', Arial, sans-serif; 
-                background: white; 
+                background: white;
                 margin: 0;
                 padding: 0;
             }
@@ -555,28 +561,153 @@ function printVoucherPerfect() {
                 padding: 12mm 10mm;
                 border: none;
             }
-            .voucher-header { text-align: center; margin-bottom: 18px; }
-            .voucher-title { font-size: 20px; font-weight: 800; color: #0b3b5f; }
-            .voucher-type { font-size: 12px; font-weight: 800; background: #e9f1f9; display: inline-block; padding: 4px 24px; border-radius: 40px; margin-top: 6px; }
-            .voucher-row { display: flex; flex-wrap: wrap; margin-bottom: 14px; align-items: baseline; width: 100%; }
-            .voucher-row-account-amount { margin-bottom: 28px; }
-            .half-width { width: 48%; min-width: 200px; }
-            .full-width { width: 100%; }
-            .label-text { font-weight: 700; min-width: 120px; font-size: 11px; color: #1f3a4b; }
-            .dots-line { flex: 1; border-bottom: 1px dotted #2c3e50; margin: 0 8px; height: 1.2em; }
-            .input-value { font-size: 11px; font-weight: 500; color: #000; border-bottom: 1px dotted #2c3e50; padding-bottom: 2px; display: inline-block; min-width: 120px; }
-            .signature-section { margin-top: 28px; border-top: 1px dashed #b9d0e5; padding-top: 16px; }
-            .sig-headers { display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 6px; border-bottom: 1px solid #cbdde9; }
-            .sig-header-name, .sig-header-signature, .sig-header-date { font-weight: 800; font-size: 10px; text-transform: uppercase; color: #2c5282; }
-            .sig-header-name { flex: 1; text-align: left; margin-left: 115px; }
-            .sig-header-signature { flex: 1; text-align: center; }
-            .sig-header-date { flex: 1; text-align: center; }
-            .sig-row-item { display: flex; align-items: center; margin-bottom: 18px; gap: 12px; flex-wrap: wrap; }
-            .sig-role { min-width: 115px; font-weight: 800; font-size: 10px; color: #1e3a5f; }
-            .sig-name-field { flex: 1; border-bottom: 1px dotted #2d3748; min-height: 24px; position: relative; }
-            .sig-name-text { position: absolute; bottom: 2px; left: 5px; font-size: 10px; font-weight: 500; }
-            .sig-dotted-col { flex: 1; border-bottom: 1px dotted #2d3748; margin: 0 4px; min-height: 24px; position: relative; }
-            .placeholder-text { position: absolute; bottom: 2px; left: 6px; font-size: 8px; color: #94a3b8; font-style: italic; }
+            .voucher-header { 
+                text-align: center; 
+                margin-bottom: 20px; 
+            }
+            .voucher-title { 
+                font-size: 20px; 
+                font-weight: 800; 
+                color: #0b3b5f;
+                letter-spacing: 1px;
+            }
+            .voucher-type { 
+                font-size: 12px; 
+                font-weight: 800; 
+                background: #e9f1f9; 
+                display: inline-block; 
+                padding: 4px 24px; 
+                border-radius: 40px; 
+                margin-top: 6px;
+                color: #0b3b5f;
+            }
+            .voucher-row { 
+                display: flex; 
+                flex-wrap: wrap; 
+                margin-bottom: 20px;
+                align-items: baseline; 
+                width: 100%;
+                gap: 8px;
+            }
+            .voucher-row-account-amount { 
+                margin-bottom: 30px; 
+            }
+            .half-width { 
+                flex: 0 1 calc(50% - 4px);
+                min-width: 200px; 
+            }
+            .full-width { 
+                width: 100%; 
+            }
+            .label-text { 
+                font-weight: 700; 
+                min-width: 120px; 
+                font-size: 11px; 
+                color: #1f3a4b;
+                letter-spacing: 0.3px;
+            }
+            .dots-line { 
+                flex: 1; 
+                border-bottom: 1.2px dotted #2c3e50; 
+                margin: 0 8px; 
+                height: 1.2em; 
+            }
+            .input-value { 
+                font-size: 11px; 
+                font-weight: 500; 
+                color: #000; 
+                border-bottom: 1.2px dotted #2c3e50; 
+                padding-bottom: 2px; 
+                display: inline-block; 
+                min-width: 120px;
+                word-break: break-word;
+            }
+            .signature-section { 
+                margin-top: 32px; 
+                border-top: 1px dashed #b9d0e5; 
+                padding-top: 20px; 
+            }
+            .sig-headers { 
+                display: flex; 
+                justify-content: space-between; 
+                margin-bottom: 16px; 
+                padding-bottom: 8px; 
+                border-bottom: 1px solid #cbdde9; 
+            }
+            .sig-header-name, .sig-header-signature, .sig-header-date { 
+                font-weight: 800; 
+                font-size: 10px; 
+                text-transform: uppercase; 
+                color: #2c5282;
+                letter-spacing: 0.4px;
+            }
+            .sig-header-name { 
+                flex: 1; 
+                text-align: left; 
+                margin-left: 115px; 
+            }
+            .sig-header-signature { 
+                flex: 1; 
+                text-align: center; 
+            }
+            .sig-header-date { 
+                flex: 1; 
+                text-align: center; 
+            }
+            .sig-row-item { 
+                display: flex; 
+                align-items: center; 
+                margin-bottom: 22px;
+                gap: 12px; 
+                flex-wrap: wrap; 
+            }
+            .sig-role { 
+                min-width: 115px; 
+                font-weight: 800; 
+                font-size: 10px; 
+                color: #1e3a5f;
+                letter-spacing: 0.3px;
+            }
+            .sig-name-field { 
+                flex: 1; 
+                border-bottom: 1px dotted #2d3748; 
+                min-height: 26px; 
+                position: relative; 
+            }
+            .sig-name-text { 
+                position: absolute; 
+                bottom: 2px; 
+                left: 5px; 
+                font-size: 10px; 
+                font-weight: 500;
+                color: #000;
+            }
+            .sig-dotted-col { 
+                flex: 1; 
+                border-bottom: 1px dotted #2d3748; 
+                margin: 0 4px; 
+                min-height: 26px; 
+                position: relative; 
+            }
+            .placeholder-text { 
+                position: absolute; 
+                bottom: 2px; 
+                left: 6px; 
+                font-size: 8px; 
+                color: #94a3b8; 
+                font-style: italic; 
+            }
+            @media print {
+                body { background: white; }
+                .voucher-page { 
+                    margin: 0;
+                    padding: 12mm 10mm;
+                }
+                @page {
+                    size: A4;
+                    margin: 0;
+                }
+            }
         </style>
     </head>
     <body>${cloneContent.outerHTML}</body>
@@ -584,8 +715,10 @@ function printVoucherPerfect() {
   `);
   printWindow.document.close();
   printWindow.focus();
-  printWindow.print();
-  printWindow.close();
+  setTimeout(function() {
+    printWindow.print();
+    printWindow.close();
+  }, 500);
 }
 
 function convertNumberToWords(amount) {
