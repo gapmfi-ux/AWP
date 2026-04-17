@@ -1,6 +1,4 @@
-// ============================================
-// SUBSCRIPTION MODULE - FAST AUTO-POPULATION
-// ============================================
+
 
 function handleSubscriptionCategoryChange() {
   const select = document.getElementById('subCategory');
