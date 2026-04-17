@@ -99,7 +99,8 @@ class ApiService {
   
   async processForm(formData, options = {}) {
     this.log('processForm called with:', formData);
-    return this.request('processForm', { formData: JSON.stringify(formData) }, options);
+    // Send formData directly, not wrapped in another object
+    return this.request('processForm', formData, options);
   }
   
   async getNextPVNumber(voucherType, options = {}) {
@@ -115,7 +116,9 @@ class ApiService {
   }
   
   async updateVoucher(formData, options = {}) {
-    return this.request('updateVoucher', { formData: JSON.stringify(formData) }, options);
+    this.log('updateVoucher called with:', formData);
+    // Send formData directly, not wrapped in another object
+    return this.request('updateVoucher', formData, options);
   }
 
   // ============================================
@@ -136,7 +139,7 @@ class ApiService {
   }
   
   async addNewInventory(formData, options = {}) {
-    return this.request('addNewInventory', { formData: JSON.stringify(formData) }, options);
+    return this.request('addNewInventory', formData, options);
   }
   
   async getPurchaseReportData(fromDate, toDate, options = {}) {
@@ -152,7 +155,7 @@ class ApiService {
   }
   
   async recordInventoryUsage(formData, options = {}) {
-    return this.request('recordInventoryUsage', { formData: JSON.stringify(formData) }, options);
+    return this.request('recordInventoryUsage', formData, options);
   }
   
   async removeInventory(inventoryCode, options = {}) {
@@ -168,7 +171,7 @@ class ApiService {
   }
   
   async addNewAsset(formData, options = {}) {
-    return this.request('addNewAsset', { formData: JSON.stringify(formData) }, options);
+    return this.request('addNewAsset', formData, options);
   }
   
   async getDetailedRegister(options = {}) {
@@ -198,7 +201,7 @@ class ApiService {
   }
   
   async addNewInvestment(formData, options = {}) {
-    return this.request('addNewInvestment', { formData: JSON.stringify(formData) }, options);
+    return this.request('addNewInvestment', formData, options);
   }
   
   async getInvestmentsByDateRange(fromDate, toDate, options = {}) {
@@ -242,7 +245,7 @@ class ApiService {
 
   async addSubscription(formData, options = {}) {
     this.log('Adding subscription:', formData);
-    return this.request('addSubscription', { formData: JSON.stringify(formData) }, options);
+    return this.request('addSubscription', formData, options);
   }
 
   async getAllSubscriptions(options = {}) {
@@ -252,7 +255,7 @@ class ApiService {
 
   async updateSubscription(formData, options = {}) {
     this.log('Updating subscription:', formData);
-    return this.request('updateSubscription', { formData: JSON.stringify(formData) }, options);
+    return this.request('updateSubscription', formData, options);
   }
 
   async deleteSubscription(subscriptionCode, options = {}) {
