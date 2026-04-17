@@ -202,9 +202,17 @@ function initSubscriptionAddModule() {
   if (addNewFields) addNewFields.style.display = 'none';
 }
 
-// ============================================
-// SUBMIT NEW SUBSCRIPTION
-// ============================================
+
+function handlePaymentModeChange() {
+  const paymentMode = document.getElementById('paymentMode').value;
+  const frequencyGroup = document.getElementById('paymentFrequencyGroup');
+  
+  if (paymentMode === 'In Arrears') {
+    frequencyGroup.style.display = 'block';
+  } else {
+    frequencyGroup.style.display = 'none';
+  }
+}
 
 function submitSubscription() {
   const categorySelect = document.getElementById('subCategory');
@@ -238,6 +246,7 @@ function submitSubscription() {
   const expiryDate = document.getElementById('expiryDate').value;
   const annualCost = parseFloat(document.getElementById('annualCost').value);
   const paymentMode = document.getElementById('paymentMode').value;
+  const paymentFrequency = document.getElementById('paymentFrequency').value;
   
   if (!name || !startDate || !expiryDate || isNaN(annualCost) || annualCost <= 0) {
     showSubscriptionToast('Please fill all required fields', 'error');
@@ -259,7 +268,8 @@ function submitSubscription() {
     startDate: startDate,
     expiryDate: expiryDate,
     annualCost: annualCost,
-    paymentMode: paymentMode
+    paymentMode: paymentMode,
+    paymentFrequency: paymentFrequency || 'Yearly'
   };
   
   // If using API, save to backend
@@ -271,10 +281,6 @@ function submitSubscription() {
         console.log('Subscription saved:', response);
         if (response && response.success) {
           showSubscriptionToast('Subscription saved successfully!', 'success');
-          
-          // Reload categories to include newly added one
-          loadSubscriptionCategories();
-          
           resetSubscriptionForm();
           // Refresh the schedule module if it exists
           if (typeof refreshSubscriptionSchedule === 'function') {
@@ -309,10 +315,15 @@ function resetSubscriptionForm() {
   if (expiryField) expiryField.value = nextYear.toISOString().split('T')[0];
   
   document.getElementById('paymentMode').value = 'Prepaid';
+  document.getElementById('paymentFrequency').value = 'Yearly';
   
   // Hide add-new category fields
   const addNewFields = document.getElementById('addNewCategoryFields');
   if (addNewFields) addNewFields.style.display = 'none';
+  
+  // Hide payment frequency initially
+  const frequencyGroup = document.getElementById('paymentFrequencyGroup');
+  if (frequencyGroup) frequencyGroup.style.display = 'none';
   
   // Clear category selection
   const categorySelect = document.getElementById('subCategory');
@@ -325,6 +336,9 @@ function resetSubscriptionForm() {
   // Clear code display
   const codeDisplay = document.getElementById('generatedCodeDisplay');
   if (codeDisplay) codeDisplay.innerHTML = '<span class="code-placeholder">-</span>';
+  
+  // Reload categories
+  loadSubscriptionCategories();
 }
 
 // ============================================
