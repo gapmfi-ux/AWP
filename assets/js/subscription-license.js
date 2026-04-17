@@ -133,9 +133,9 @@ function getDemoSubscriptions() {
   twoMonthsLater.setMonth(today.getMonth() + 2);
   
   return [
-    { code: 'SUB01001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid', paymentFrequency: 'Yearly', amountPaid: 0 },
+    { code: 'SUB01001', name: 'Microsoft 365 Business', category: 'Software License', vendor: 'Microsoft', startDate: '2024-01-01', expiryDate: nextWeek.toISOString().split('T')[0], annualCost: 750, paymentMode: 'Prepaid', paymentFrequency: 'Annually', amountPaid: 0 },
     { code: 'SUB02001', name: 'QuickBooks Online', category: 'SaaS Subscription', vendor: 'Intuit', startDate: '2024-03-10', expiryDate: nextMonth.toISOString().split('T')[0], annualCost: 480, paymentMode: 'In Arrears', paymentFrequency: 'Monthly', amountPaid: 240 },
-    { code: 'SUB03001', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid', paymentFrequency: 'Yearly', amountPaid: 0 },
+    { code: 'SUB03001', name: 'Company Domain (.com)', category: 'Domain Renewal', vendor: 'GoDaddy', startDate: '2024-02-01', expiryDate: expired.toISOString().split('T')[0], annualCost: 18, paymentMode: 'Prepaid', paymentFrequency: 'Annually', amountPaid: 0 },
     { code: 'SUB04001', name: 'Adobe Creative Cloud', category: 'SaaS Subscription', vendor: 'Adobe', startDate: '2024-05-01', expiryDate: farFuture.toISOString().split('T')[0], annualCost: 600, paymentMode: 'Prepaid', paymentFrequency: 'Monthly', amountPaid: 0 },
     { code: 'SUB05001', name: 'AWS Cloud Services', category: 'Cloud Service', vendor: 'Amazon', startDate: '2024-01-15', expiryDate: twoMonthsLater.toISOString().split('T')[0], annualCost: 1200, paymentMode: 'In Arrears', paymentFrequency: 'Quarterly', amountPaid: 600 }
   ];
@@ -167,6 +167,27 @@ function calculateMonthsBetween(startDate, endDate) {
   return Math.max(0, months);
 }
 
+// Calculate monthly charge based on subscription duration (start to end date)
+function calculateMonthlyCharge(subscription) {
+  const startDate = new Date(subscription.startDate);
+  const expiryDate = new Date(subscription.expiryDate);
+  
+  startDate.setHours(0, 0, 0, 0);
+  expiryDate.setHours(0, 0, 0, 0);
+  
+  // Get total months of subscription duration
+  const totalMonths = calculateMonthsBetween(startDate, expiryDate) + 1;
+  
+  if (totalMonths <= 0) return 0;
+  
+  // Monthly charge = Annual Cost / Total Months of Subscription
+  const monthlyCharge = (subscription.annualCost || 0) / totalMonths;
+  
+  console.log(`Subscription ${subscription.code}: ${totalMonths} months duration, monthly charge: ${monthlyCharge}`);
+  
+  return monthlyCharge;
+}
+
 function calculateChargeForPeriod(subscription, filterObj) {
   if (!filterObj || !filterObj.toDate || !filterObj.fromDate) return 0;
   
@@ -188,7 +209,12 @@ function calculateChargeForPeriod(subscription, filterObj) {
   
   // Get months in the period
   const monthsInPeriod = calculateMonthsBetween(periodStart, periodEnd) + 1;
-  const monthlyCharge = (subscription.annualCost || 0) / 12;
+  const monthlyCharge = calculateMonthlyCharge(subscription);
+  
+  console.log('Period: ' + periodStart.toDateString() + ' to ' + periodEnd.toDateString());
+  console.log('Months in period: ' + monthsInPeriod);
+  console.log('Monthly charge: ' + monthlyCharge);
+  console.log('Total for period: ' + (monthlyCharge * monthsInPeriod));
   
   return monthlyCharge * monthsInPeriod;
 }
@@ -205,7 +231,7 @@ function calculateRemainingBalance(subscription, filterObj) {
   
   // Calculate months from start to TO date
   const monthsUsed = calculateMonthsBetween(startDate, toDate) + 1;
-  const monthlyCharge = (subscription.annualCost || 0) / 12;
+  const monthlyCharge = calculateMonthlyCharge(subscription);
   const chargeUsed = monthlyCharge * monthsUsed;
   
   return Math.max(0, (subscription.annualCost || 0) - chargeUsed);
@@ -356,6 +382,7 @@ function renderPrepaidTableEnhanced() {
   let rows = '';
   
   prepaidList.forEach(sub => {
+    const monthlyCharge = calculateMonthlyCharge(sub);
     const remainingBalance = calculateRemainingBalance(sub, prepaidFilter);
     totalRemainingBalance += remainingBalance;
     
@@ -367,7 +394,7 @@ function renderPrepaidTableEnhanced() {
         <td>${formatDate(sub.expiryDate)}</td>
         <td>${escapeHtml(sub.category || '-')}</td>
         <td>GH₵ ${formatCurrency(sub.annualCost || 0)}</td>
-        <td>GH₵ ${formatCurrency((sub.annualCost || 0) / 12)}</td>
+        <td>GH₵ ${formatCurrency(monthlyCharge)}</td>
         <td>GH₵ ${formatCurrency(remainingBalance)}</td>
       </tr>
     `;
@@ -412,6 +439,7 @@ function renderArrearsTableEnhanced() {
   let rows = '';
   
   arrearsList.forEach(sub => {
+    const monthlyCharge = calculateMonthlyCharge(sub);
     const amountPaid = sub.amountPaid || 0;
     const remaining = (sub.annualCost || 0) - amountPaid;
     
@@ -548,13 +576,14 @@ function openPaymentModal(code) {
   currentPaymentId = code;
   
   const frequencyMultiplier = getFrequencyMultiplier(sub.paymentFrequency);
-  const expectedPayment = (sub.annualCost / 12) * frequencyMultiplier;
+  const monthlyCharge = calculateMonthlyCharge(sub);
+  const expectedPayment = monthlyCharge * frequencyMultiplier;
   const remaining = (sub.annualCost || 0) - (sub.amountPaid || 0);
   
   document.getElementById('paymentCode').value = sub.code || '';
   document.getElementById('paymentName').value = sub.name || '';
   document.getElementById('paymentVendor').value = sub.vendor || '';
-  document.getElementById('paymentFrequency').value = sub.paymentFrequency || 'Yearly';
+  document.getElementById('paymentFrequency').value = sub.paymentFrequency || 'Annually';
   document.getElementById('paymentExpected').value = expectedPayment.toFixed(2);
   document.getElementById('paymentAmount').value = expectedPayment.toFixed(2);
   document.getElementById('paymentRemaining').value = remaining.toFixed(2);
@@ -567,10 +596,13 @@ function getFrequencyMultiplier(frequency) {
   const multipliers = {
     'Monthly': 1,
     'Quarterly': 3,
-    'Half Yearly': 6,
-    'Yearly': 12
+    'Semi-Annually': 6,
+    'Annually': 12,
+    '2 Years': 24,
+    '3 Years': 36,
+    '5 Years': 60
   };
-  return multipliers[frequency] || 1;
+  return multipliers[frequency] || 12;
 }
 
 function processPayment() {
@@ -672,7 +704,7 @@ function processRenewal() {
     annualCost: newAnnualCost,
     paymentMode: newPaymentMode,
     startDate: new Date().toISOString().split('T')[0],
-    amountPaid: 0 // Reset amount paid on renewal
+    amountPaid: 0
   };
   
   if (typeof API !== 'undefined' && API) {
