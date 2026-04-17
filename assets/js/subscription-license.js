@@ -1,7 +1,4 @@
-// ============================================
-// SUBSCRIPTION SCHEDULE MODULE
-// Integrated with main API service
-// ============================================
+
 
 let subscriptionsList = [];
 let currentRenewId = null;
