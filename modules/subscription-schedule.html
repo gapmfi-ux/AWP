@@ -3,7 +3,7 @@
     <h1>Subscription & License Schedule</h1>
   </div>
 
-  <!-- Tabs and Controls Row (Like Inventory Report) -->
+  <!-- Tabs and Controls Row -->
   <div class="report-controls-row">
     <!-- Tabs on the left -->
     <div class="report-tabs">
@@ -96,7 +96,7 @@
             <th>Expiry Date</th>
             <th>Annual Cost (GH₵)</th>
             <th>Monthly Charge (GH₵)</th>
-            <th>Remaining Amount (GH₵)</th>
+            <th>Charge for Period (GH₵)</th>
           </tr>
         </thead>
         <tbody id="prepaidTableBody">
@@ -118,12 +118,13 @@
             <th>Category</th>
             <th>Expiry Date</th>
             <th>Annual Cost (GH₵)</th>
-            <th>Amount Paid (GH₵)</th>
-            <th>Remaining Amount (GH₵)</th>
+            <th>Monthly Charge (GH₵)</th>
+            <th>Charge for Period (GH₵)</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="arrearsTableBody">
-          <tr><td colspan="7" class="loading-cell">Loading...</td></tr>
+          <tr><td colspan="8" class="loading-cell">Loading...</td></tr>
         </tbody>
         <tfoot id="arrearsTableFooter"></tfoot>
       </table>
@@ -151,6 +152,50 @@
         </tbody>
       </table>
     </div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div id="paymentModal" class="subscription-modal" style="display: none;">
+  <div class="subscription-modal-content">
+    <div class="subscription-modal-header">
+      <h3>Process Payment</h3>
+      <button class="subscription-modal-close" onclick="closePaymentModal()">&times;</button>
+    </div>
+    <form id="paymentForm" onsubmit="event.preventDefault(); processPayment();">
+      <div class="modal-field">
+        <label>Subscription Code:</label>
+        <input type="text" id="paymentCode" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Subscription Name:</label>
+        <input type="text" id="paymentName" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Vendor:</label>
+        <input type="text" id="paymentVendor" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Payment Frequency:</label>
+        <input type="text" id="paymentFrequency" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Expected Amount (GH₵):</label>
+        <input type="number" id="paymentExpected" step="0.01" readonly>
+      </div>
+      <div class="modal-field">
+        <label>Amount to Pay (GH₵):</label>
+        <input type="number" id="paymentAmount" step="0.01" required>
+      </div>
+      <div class="modal-field">
+        <label>Payment Date:</label>
+        <input type="date" id="paymentDate" required>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="modal-btn-cancel" onclick="closePaymentModal()">Cancel</button>
+        <button type="submit" class="modal-btn-save">Pay</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -225,7 +270,6 @@
   font-weight: 600;
 }
 
-/* Controls Row - Compact */
 .report-controls-row {
   display: flex;
   justify-content: space-between;
@@ -352,7 +396,6 @@
   to { opacity: 1; }
 }
 
-/* Report Table Styles */
 .report-table-wrapper {
   overflow-x: auto;
   margin-bottom: 12px;
@@ -404,7 +447,6 @@
   background: #f9fafb;
 }
 
-/* Group Header Styles for All Schedules */
 .group-header {
   background: #e2e8f0;
   font-weight: 700;
@@ -481,22 +523,23 @@
   color: #d97706 !important;
 }
 
-/* Renew Button */
-.renew-btn {
+/* Action Buttons */
+.pay-btn, .renew-btn {
   background: #4361ee;
   color: white;
   border: none;
-  padding: 4px 10px;
+  padding: 4px 12px;
   border-radius: 4px;
   cursor: pointer;
   font-size: 10px;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.2s;
 }
 
-.renew-btn:hover {
+.pay-btn:hover, .renew-btn:hover {
   background: #3a56d4;
   transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(67, 97, 238, 0.3);
 }
 
 /* Modal Styles */
@@ -561,7 +604,7 @@
   color: #2d3748;
 }
 
-#renewForm {
+#paymentForm, #renewForm {
   padding: 15px;
 }
 
@@ -640,10 +683,10 @@
   box-shadow: 0 2px 8px rgba(67, 97, 238, 0.3);
 }
 
-/* Print Styles */
 @media print {
   .report-controls-row,
   .renew-btn,
+  .pay-btn,
   .print-report-btn,
   .tab-btn {
     display: none !important;
