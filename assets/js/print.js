@@ -198,6 +198,32 @@ const printUtils = {
           font-weight: 800;
         }
         
+        .group-header {
+          background: #e2e8f0 !important;
+          font-weight: 700 !important;
+        }
+        
+        .group-header td {
+          background: #e2e8f0 !important;
+          color: #1e293b !important;
+          border-top: 2px solid #cbd5e0;
+          border-bottom: 1px solid #cbd5e0;
+          font-weight: 700;
+        }
+        
+        .group-total-row {
+          background: #fef3c7 !important;
+          font-weight: 600 !important;
+        }
+        
+        .group-total-row td {
+          background: #fef3c7 !important;
+          color: #1a202c !important;
+          border-top: 1px solid #f59e0b;
+          border-bottom: 1px solid #f59e0b;
+          font-weight: 600;
+        }
+        
         /* CRITICAL: Aggressively remove browser headers/footers */
         @media print {
           @page {
@@ -290,7 +316,7 @@ const printUtils = {
     
     headerCells.forEach((th, index) => {
       const thText = th.textContent.toLowerCase();
-      if (thText.includes('action') || thText.includes('menu')) {
+      if (thText.includes('action') || thText.includes('menu') || thText.includes('pay') || thText.includes('renew')) {
         actionColumnIndex = index;
       }
     });
@@ -309,7 +335,7 @@ const printUtils = {
     }
     
     // Remove any buttons
-    clone.querySelectorAll('button, .action-btn, .dropdown-item').forEach(btn => {
+    clone.querySelectorAll('button, .action-btn, .dropdown-item, .pay-btn, .renew-btn').forEach(btn => {
       btn.remove();
     });
     
@@ -382,6 +408,119 @@ const printUtils = {
       periodInfo = `As at: ${toDate}`;
       this.printInvestmentTable('maturedReportTable', title, periodInfo);
     }
+  },
+
+  // Print subscription schedule report
+  printSubscriptionReport: function(tabName) {
+    console.log('printSubscriptionReport called for tab:', tabName);
+    
+    let title = '';
+    let periodInfo = '';
+    
+    if (tabName === 'allSchedule') {
+      title = 'SUBSCRIPTION & LICENSE SCHEDULE';
+      const fromDate = document.getElementById('fromDate')?.value || '';
+      const toDate = document.getElementById('toDate')?.value || '';
+      if (fromDate && toDate) {
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
+      }
+      this.printSubscriptionContainer('allScheduleWrapper', title, periodInfo);
+    } else if (tabName === 'prepaid') {
+      title = 'PREPAID SUBSCRIPTIONS REPORT';
+      const fromDate = document.getElementById('fromDatePrepaid')?.value || '';
+      const toDate = document.getElementById('toDatePrepaid')?.value || '';
+      if (fromDate && toDate) {
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
+      }
+      this.printSubscriptionTable('prepaidTableBody', title, periodInfo, 'prepaidTableFooter');
+    } else if (tabName === 'arrears') {
+      title = 'IN ARREARS SUBSCRIPTIONS REPORT';
+      const fromDate = document.getElementById('fromDateArrears')?.value || '';
+      const toDate = document.getElementById('toDateArrears')?.value || '';
+      if (fromDate && toDate) {
+        periodInfo = `Period: ${fromDate} to ${toDate}`;
+      }
+      this.printSubscriptionTable('arrearsTableBody', title, periodInfo, 'arrearsTableFooter');
+    } else if (tabName === 'expired') {
+      title = 'EXPIRED SUBSCRIPTIONS REPORT';
+      periodInfo = `As at: ${new Date().toLocaleDateString('en-GB')}`;
+      this.printSubscriptionTable('expiredTableBody', title, periodInfo);
+    }
+  },
+
+  // Print subscription table
+  printSubscriptionTable: function(tableBodyId, title, periodInfo, footerId) {
+    const tbody = document.getElementById(tableBodyId);
+    if (!tbody) {
+      console.error('Table body not found:', tableBodyId);
+      this.showMessage('Report table not found. Please ensure report is loaded.', 'error');
+      return;
+    }
+
+    // Create table structure
+    const table = document.createElement('table');
+    
+    // Get headers from the actual table if it exists
+    const actualTable = tbody.closest('table');
+    if (actualTable) {
+      const theadClone = actualTable.querySelector('thead').cloneNode(true);
+      table.appendChild(theadClone);
+    }
+    
+    // Clone tbody and remove action columns
+    const tbodyClone = tbody.cloneNode(true);
+    
+    // Remove Pay and Renew buttons
+    tbodyClone.querySelectorAll('.pay-btn, .renew-btn, button').forEach(btn => {
+      btn.remove();
+    });
+    
+    table.appendChild(tbodyClone);
+    
+    // Add footer if exists
+    if (footerId) {
+      const footer = document.getElementById(footerId);
+      if (footer) {
+        const tfootClone = footer.cloneNode(true);
+        table.appendChild(tfootClone);
+      }
+    }
+    
+    const tableHtml = `<div class="print-table-wrapper">${table.outerHTML}</div>`;
+    
+    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
+    this.openPrintWindow(printDocument, title);
+  },
+
+  // Print subscription container (grouped reports)
+  printSubscriptionContainer: function(containerId, title, periodInfo) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('Container not found:', containerId);
+      this.showMessage('Report container not found. Please ensure report is loaded.', 'error');
+      return;
+    }
+
+    let containerHTML = container.innerHTML;
+    if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No subscriptions')) {
+      this.showMessage('Report is empty. Please generate the report first.', 'error');
+      return;
+    }
+
+    // Remove action buttons and interactive elements
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = containerHTML;
+    tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, .pay-btn, .renew-btn, [onclick]').forEach(el => {
+      el.remove();
+    });
+    tempDiv.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('onclick');
+      el.removeAttribute('onchange');
+    });
+    containerHTML = tempDiv.innerHTML;
+    
+    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
+    this.openPrintWindow(printDocument, title);
   },
 
   // Print investment table
