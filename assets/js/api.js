@@ -226,6 +226,9 @@ class ApiService {
 async getInvestmentByCode(investmentCode, options = {}) {
   return this.request('getInvestmentByCode', { investmentCode }, options);
 }
+  async updateInvestmentRedeemDate(investmentCode, redeemDate, options = {}) {
+  return this.request('updateInvestmentRedeemDate', { investmentCode, redeemDate }, options);
+}
   // ============================================
   // SUBSCRIPTION API
   // ============================================
