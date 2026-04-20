@@ -68,17 +68,18 @@ function loadInvestmentAlerts() {
           fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
           fiveDaysLater.setHours(23, 59, 59, 999);
           
-          // Matured investments (maturity date <= today)
+          // Matured investments (maturity date < today)
           dashboardData.maturedInvestments = response.filter(inv => {
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            return maturityDate <= todayDate;
+            return maturityDate < todayDate;
           });
           
-          // Near maturity investments (maturity date between today and 5 days)
+          // Near maturity investments (maturity date is 1 to 5 days from today)
           dashboardData.nearMaturityInvestments = response.filter(inv => {
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
+            // Maturity date must be after today but within 5 days
             return maturityDate > todayDate && maturityDate <= fiveDaysLater;
           });
           
