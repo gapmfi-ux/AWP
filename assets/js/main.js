@@ -468,8 +468,8 @@ function processInvestmentAlerts(investments, todayStr, fiveDaysStr) {
             type: inv.investmentType
           });
         }
-        // Check if maturing within 5 days (and not today)
-        else if (maturityDate <= fiveDays && maturityDate > today) {
+        // Check if maturing within 1-5 days (and not today)
+        else if (maturityDate > today && maturityDate <= fiveDays) {
           nearMaturityList.push({
             code: inv.investmentCode,
             amount: inv.maturityAmount || inv.amount,
@@ -507,7 +507,7 @@ function processInvestmentAlerts(investments, todayStr, fiveDaysStr) {
     if (nearMaturityAlert) nearMaturityAlert.style.display = 'flex';
     if (nearMaturityMessage) {
       nearMaturityMessage.innerHTML = `
-        <strong>${nearMaturityList.length} investment(s) maturing in 5 days:</strong>
+        <strong>${nearMaturityList.length} investment(s) maturing in 1-5 days:</strong>
         <ul>
           ${nearMaturityList.map(inv => `<li>${inv.code} - GH₵ ${formatCurrency(inv.amount)} maturing on ${formatDate(inv.date)}</li>`).join('')}
         </ul>
