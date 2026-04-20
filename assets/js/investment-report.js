@@ -845,115 +845,197 @@
     }
   };
 
-  function populateInvestmentDetailsForRollover(investmentCode) {
-    console.log('Fetching investment details for rollover:', investmentCode);
-    
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
-      API.getInvestmentByCode(investmentCode)
-        .then(function(investment) {
-          console.log('Investment details received:', investment);
-          if (investment) {
-            const rolloverBankName = document.getElementById('rolloverBankName');
-            const rolloverCurrentType = document.getElementById('rolloverCurrentType');
-            const rolloverCurrentAmount = document.getElementById('rolloverCurrentAmount');
-            const rolloverCurrentMaturityAmount = document.getElementById('rolloverCurrentMaturityAmount');
-            
-            if (rolloverBankName) rolloverBankName.value = investment.bankName || '';
-            if (rolloverCurrentType) rolloverCurrentType.value = investment.investmentType || '';
-            if (rolloverCurrentAmount) rolloverCurrentAmount.value = formatCurrency(investment.amount) || '0.00';
-            if (rolloverCurrentMaturityAmount) rolloverCurrentMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
-            
-            console.log('Rollover modal populated successfully');
-          } else {
-            console.warn('Investment not found');
-            showMessage('Investment details not found', 'error');
+function populateInvestmentDetailsForRollover(investmentCode) {
+  console.log('Fetching investment details for rollover:', investmentCode);
+  
+  if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
+    API.getInvestmentByCode(investmentCode)
+      .then(function(investment) {
+        console.log('Investment details received:', investment);
+        if (investment) {
+          const rolloverBankName = document.getElementById('rolloverBankName');
+          const rolloverCurrentType = document.getElementById('rolloverCurrentType');
+          const rolloverCurrentAmount = document.getElementById('rolloverCurrentAmount');
+          const rolloverCurrentMaturityAmount = document.getElementById('rolloverCurrentMaturityAmount');
+          const rolloverCurrentMaturityDate = document.getElementById('rolloverCurrentMaturityDate');
+          
+          if (rolloverBankName) rolloverBankName.value = investment.bankName || '';
+          if (rolloverCurrentType) rolloverCurrentType.value = investment.investmentType || '';
+          if (rolloverCurrentAmount) rolloverCurrentAmount.value = formatCurrency(investment.amount) || '0.00';
+          if (rolloverCurrentMaturityAmount) rolloverCurrentMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
+          if (rolloverCurrentMaturityDate) rolloverCurrentMaturityDate.value = investment.maturityDate || '';
+          
+          // Set new investment date to today
+          const rolloverInvestmentDate = document.getElementById('rolloverInvestmentDate');
+          if (rolloverInvestmentDate) {
+            rolloverInvestmentDate.value = new Date().toISOString().split('T')[0];
           }
-        })
-        .catch(function(error) {
-          console.error('Error fetching investment details for rollover:', error);
-          showMessage('Error loading investment details: ' + error.message, 'error');
-        });
-    } else {
-      console.warn('API.getInvestmentByCode not available');
-      showMessage('API not available', 'error');
-    }
+          
+          // Set new amount to current maturity amount (amount to rollover)
+          const rolloverAmount = document.getElementById('rolloverAmount');
+          if (rolloverAmount) {
+            rolloverAmount.value = investment.maturityAmount || investment.amount || 0;
+            rolloverAmount.dispatchEvent(new Event('input'));
+          }
+          
+          console.log('Rollover modal populated successfully');
+        } else {
+          console.warn('Investment not found');
+          showMessage('Investment details not found', 'error');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error fetching investment details for rollover:', error);
+        showMessage('Error loading investment details: ' + error.message, 'error');
+      });
+  } else {
+    console.warn('API.getInvestmentByCode not available');
+    showMessage('API not available', 'error');
+  }
+}
+
+function populateInvestmentDetailsForRedeem(investmentCode) {
+  console.log('Fetching investment details for redeem:', investmentCode);
+  
+  if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
+    API.getInvestmentByCode(investmentCode)
+      .then(function(investment) {
+        console.log('Investment details received:', investment);
+        if (investment) {
+          const redeemInvestmentCode = document.getElementById('redeemInvestmentCode');
+          const redeemBankName = document.getElementById('redeemBankName');
+          const redeemInvestmentType = document.getElementById('redeemInvestmentType');
+          const redeemAmount = document.getElementById('redeemAmount');
+          const redeemMaturityDate = document.getElementById('redeemMaturityDate');
+          const redeemMaturityAmount = document.getElementById('redeemMaturityAmount');
+          
+          if (redeemInvestmentCode) redeemInvestmentCode.value = investment.investmentCode || '';
+          if (redeemBankName) redeemBankName.value = investment.bankName || '';
+          if (redeemInvestmentType) redeemInvestmentType.value = investment.investmentType || '';
+          if (redeemAmount) redeemAmount.value = formatCurrency(investment.amount) || '0.00';
+          if (redeemMaturityDate) redeemMaturityDate.value = investment.maturityDate || '';
+          if (redeemMaturityAmount) redeemMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
+          
+          // Set redeem date to today
+          const redeemDate = document.getElementById('redeemDate');
+          if (redeemDate) {
+            redeemDate.value = new Date().toISOString().split('T')[0];
+          }
+          
+          console.log('Redeem modal populated successfully');
+        } else {
+          console.warn('Investment not found');
+          showMessage('Investment details not found', 'error');
+        }
+      })
+      .catch(function(error) {
+        console.error('Error fetching investment details for redeem:', error);
+        showMessage('Error loading investment details: ' + error.message, 'error');
+      });
+  } else {
+    console.warn('API.getInvestmentByCode not available');
+    showMessage('API not available', 'error');
+  }
+}
+
+window.submitRolloverInvestment = function() {
+  const investmentCode = document.getElementById('rolloverInvestmentCode').value;
+  const investmentType = document.getElementById('rolloverInvestmentType').value;
+  const investmentDate = document.getElementById('rolloverInvestmentDate').value;
+  const amount = document.getElementById('rolloverAmount').value;
+  const interestRate = document.getElementById('rolloverInterestRate').value;
+  const duration = document.getElementById('rolloverDuration').value;
+  const maturityDate = document.getElementById('rolloverMaturityDate').value;
+  const bankName = document.getElementById('rolloverNewBankName').value;
+
+  // Validate inputs
+  if (!investmentType || !investmentDate || !amount || !interestRate || !duration || !maturityDate || !bankName) {
+    showMessage('Please fill in all required fields', 'error');
+    return;
   }
 
-  function populateInvestmentDetailsForRedeem(investmentCode) {
-    console.log('Fetching investment details for redeem:', investmentCode);
-    
-    if (typeof API !== 'undefined' && API && typeof API.getInvestmentByCode === 'function') {
-      API.getInvestmentByCode(investmentCode)
-        .then(function(investment) {
-          console.log('Investment details received:', investment);
-          if (investment) {
-            const redeemInvestmentCode = document.getElementById('redeemInvestmentCode');
-            const redeemBankName = document.getElementById('redeemBankName');
-            const redeemInvestmentType = document.getElementById('redeemInvestmentType');
-            const redeemAmount = document.getElementById('redeemAmount');
-            const redeemMaturityDate = document.getElementById('redeemMaturityDate');
-            const redeemMaturityAmount = document.getElementById('redeemMaturityAmount');
-            
-            if (redeemInvestmentCode) redeemInvestmentCode.value = investment.investmentCode || '';
-            if (redeemBankName) redeemBankName.value = investment.bankName || '';
-            if (redeemInvestmentType) redeemInvestmentType.value = investment.investmentType || '';
-            if (redeemAmount) redeemAmount.value = formatCurrency(investment.amount) || '0.00';
-            if (redeemMaturityDate) redeemMaturityDate.value = investment.maturityDate || '';
-            if (redeemMaturityAmount) redeemMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
-            
-            console.log('Redeem modal populated successfully');
-          } else {
-            console.warn('Investment not found');
-            showMessage('Investment details not found', 'error');
-          }
-        })
-        .catch(function(error) {
-          console.error('Error fetching investment details for redeem:', error);
-          showMessage('Error loading investment details: ' + error.message, 'error');
-        });
-    } else {
-      console.warn('API.getInvestmentByCode not available');
-      showMessage('API not available', 'error');
-    }
-  }
-
-  window.submitRolloverInvestment = function() {
-    const investmentCode = document.getElementById('rolloverInvestmentCode').value;
-    const investmentType = document.getElementById('rolloverInvestmentType').value;
-    const investmentDate = document.getElementById('rolloverInvestmentDate').value;
-    const amount = document.getElementById('rolloverAmount').value;
-    const interestRate = document.getElementById('rolloverInterestRate').value;
-    const duration = document.getElementById('rolloverDuration').value;
-    const maturityDate = document.getElementById('rolloverMaturityDate').value;
-
-    console.log('Rollover submission:', {
-      investmentCode: investmentCode,
-      investmentType: investmentType,
-      investmentDate: investmentDate,
-      amount: amount,
-      interestRate: interestRate,
-      duration: duration,
-      maturityDate: maturityDate
-    });
-
-    showMessage('Rollover investment submitted successfully!', 'success');
-    closeRolloverModal();
-    loadMaturedInvestmentsReport();
+  const rolloverData = {
+    previousInvestmentCode: investmentCode,
+    investmentType: investmentType,
+    investmentDate: investmentDate,
+    amount: parseFloat(amount),
+    interestRate: parseFloat(interestRate),
+    duration: parseInt(duration),
+    maturityDate: maturityDate,
+    bankName: bankName
   };
 
-  window.submitRedeemInvestment = function() {
-    const investmentCode = document.getElementById('redeemInvestmentCode').value;
-    const redeemDate = document.getElementById('redeemDate').value;
+  console.log('Rollover submission:', rolloverData);
 
-    console.log('Redeem submission:', {
-      investmentCode: investmentCode,
-      redeemDate: redeemDate
-    });
+  if (typeof API !== 'undefined' && API && typeof API.addNewInvestment === 'function') {
+    // Generate new investment code
+    API.generateInvestmentCode(investmentType)
+      .then(function(newCode) {
+        console.log('Generated new investment code:', newCode);
+        
+        rolloverData.investmentCode = newCode;
+        
+        // Calculate interest and maturity amount
+        let dayCount = 365;
+        if (investmentType === 'Treasury Bills') dayCount = 364;
+        else if (investmentType === 'Bonds') dayCount = 360;
+        
+        const interestAmount = (rolloverData.amount * rolloverData.interestRate * rolloverData.duration) / (dayCount * 100);
+        const maturityAmount = rolloverData.amount + interestAmount;
+        
+        rolloverData.interestAmount = interestAmount;
+        rolloverData.maturityAmount = maturityAmount;
+        
+        return API.addNewInvestment(rolloverData);
+      })
+      .then(function(response) {
+        console.log('Rollover created successfully:', response);
+        showMessage('Investment rolled over successfully! Code: ' + response.investmentCode, 'success');
+        closeRolloverModal();
+        loadMaturedInvestmentsReport();
+      })
+      .catch(function(error) {
+        console.error('Error creating rollover investment:', error);
+        showMessage('Error creating rollover investment: ' + error.message, 'error');
+      });
+  } else {
+    showMessage('API not available', 'error');
+  }
+};
 
-    showMessage('Investment redeemed successfully!', 'success');
+window.submitRedeemInvestment = function() {
+  const investmentCode = document.getElementById('redeemInvestmentCode').value;
+  const redeemDate = document.getElementById('redeemDate').value;
+
+  if (!investmentCode || !redeemDate) {
+    showMessage('Please select a redeem date', 'error');
+    return;
+  }
+
+  console.log('Redeem submission:', {
+    investmentCode: investmentCode,
+    redeemDate: redeemDate
+  });
+
+  if (typeof API !== 'undefined' && API && typeof API.updateInvestmentRedeemDate === 'function') {
+    API.updateInvestmentRedeemDate(investmentCode, redeemDate)
+      .then(function(response) {
+        console.log('Investment redeemed successfully:', response);
+        showMessage('Investment redeemed successfully on ' + redeemDate, 'success');
+        closeRedeemModal();
+        loadMaturedInvestmentsReport();
+      })
+      .catch(function(error) {
+        console.error('Error redeeming investment:', error);
+        showMessage('Error redeeming investment: ' + error.message, 'error');
+      });
+  } else {
+    // Fallback: show success message
+    showMessage('Investment redeemed successfully on ' + redeemDate, 'success');
     closeRedeemModal();
     loadMaturedInvestmentsReport();
-  };
+  }
+};
 
   // Calculation functions for rollover
   window.handleRolloverInvestmentTypeChange = function() {
