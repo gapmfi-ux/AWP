@@ -859,11 +859,19 @@ function populateInvestmentDetailsForRollover(investmentCode) {
           const rolloverCurrentMaturityAmount = document.getElementById('rolloverCurrentMaturityAmount');
           const rolloverCurrentMaturityDate = document.getElementById('rolloverCurrentMaturityDate');
           
+          // Current details (read-only)
           if (rolloverBankName) rolloverBankName.value = investment.bankName || '';
           if (rolloverCurrentType) rolloverCurrentType.value = investment.investmentType || '';
           if (rolloverCurrentAmount) rolloverCurrentAmount.value = formatCurrency(investment.amount) || '0.00';
           if (rolloverCurrentMaturityAmount) rolloverCurrentMaturityAmount.value = formatCurrency(investment.maturityAmount) || '0.00';
           if (rolloverCurrentMaturityDate) rolloverCurrentMaturityDate.value = investment.maturityDate || '';
+          
+          // Pre-fill new details with same bank and type
+          const rolloverNewBankName = document.getElementById('rolloverNewBankName');
+          const rolloverInvestmentType = document.getElementById('rolloverInvestmentType');
+          
+          if (rolloverNewBankName) rolloverNewBankName.value = investment.bankName || '';
+          if (rolloverInvestmentType) rolloverInvestmentType.value = investment.investmentType || '';
           
           // Set new investment date to today
           const rolloverInvestmentDate = document.getElementById('rolloverInvestmentDate');
@@ -893,7 +901,6 @@ function populateInvestmentDetailsForRollover(investmentCode) {
     showMessage('API not available', 'error');
   }
 }
-
 function populateInvestmentDetailsForRedeem(investmentCode) {
   console.log('Fetching investment details for redeem:', investmentCode);
   
