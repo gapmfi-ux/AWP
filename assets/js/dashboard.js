@@ -1,4 +1,3 @@
-
 // ============================================
 // DASHBOARD MODULE
 // ============================================
@@ -13,6 +12,8 @@ let dashboardData = {
   duePayments: []
 };
 
+let dashboardRefreshInterval = null;
+
 // ============================================
 // DASHBOARD INITIALIZATION
 // ============================================
@@ -20,6 +21,15 @@ let dashboardData = {
 function initDashboard() {
   console.log('Initializing Dashboard');
   loadDashboardData();
+  
+  // Set up auto-refresh every 5 minutes (300000 ms)
+  if (dashboardRefreshInterval) {
+    clearInterval(dashboardRefreshInterval);
+  }
+  dashboardRefreshInterval = setInterval(() => {
+    console.log('Auto-refreshing dashboard alerts...');
+    loadDashboardData();
+  }, 300000);
 }
 
 function loadDashboardData() {
@@ -105,6 +115,7 @@ function loadInvestmentAlerts() {
       });
   });
 }
+
 // ============================================
 // INVENTORY ALERTS
 // ============================================
@@ -376,6 +387,13 @@ function formatCurrency(val) {
   });
 }
 
+function cleanupDashboard() {
+  if (dashboardRefreshInterval) {
+    clearInterval(dashboardRefreshInterval);
+    dashboardRefreshInterval = null;
+  }
+}
+
 function loadModule(moduleName) {
   console.log('Loading module:', moduleName);
   // This function should be called from your main app to load the specified module
@@ -384,6 +402,13 @@ function loadModule(moduleName) {
   }
 }
 
-// Expose global functions
+// ============================================
+// GLOBAL EXPORTS
+// ============================================
+
 window.initDashboard = initDashboard;
 window.loadDashboardData = loadDashboardData;
+window.renderDashboardAlerts = renderDashboardAlerts;
+window.cleanupDashboard = cleanupDashboard;
+window.formatCurrency = formatCurrency;
+window.loadModule = loadModule;
