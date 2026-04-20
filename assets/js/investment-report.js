@@ -151,168 +151,190 @@
     }
   };
 
-  function displayFullReport(investments, groupBy, reportToDate) {
-    const container = document.getElementById('fullReportContainer');
-    if (!container) return;
+function displayFullReport(investments, groupBy, reportToDate) {
+  const container = document.getElementById('fullReportContainer');
+  if (!container) return;
 
-    if (!investments || investments.length === 0) {
-      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found</p></div>';
-      return;
-    }
-
-    // Filter active investments: investment date <= toDate and maturity date > toDate
-    const toDateTime = new Date(reportToDate);
-    toDateTime.setHours(23, 59, 59, 999);
-
-    const activeInvestments = investments.filter(function(inv) {
-      const investDate = new Date(inv.investmentDate);
-      const maturityDate = new Date(inv.maturityDate);
-      return investDate <= toDateTime && maturityDate > toDateTime;
-    });
-
-    if (activeInvestments.length === 0) {
-      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments as at ' + reportToDate + '</p></div>';
-      return;
-    }
-
-    let groupedData = {};
-    let totalAmount = 0;
-    let totalInterest = 0;
-    let totalMaturity = 0;
-    let totalCurrent = 0;
-
-    // Group investments
-    activeInvestments.forEach(function(inv) {
-      let groupKey;
-      
-      if (groupBy === 'byBank') {
-        groupKey = inv.bankName;
-      } else if (groupBy === 'byDuration') {
-        groupKey = inv.duration + ' days';
-      } else {
-        groupKey = inv.investmentType;
-      }
-
-      if (!groupedData[groupKey]) {
-        groupedData[groupKey] = [];
-      }
-      groupedData[groupKey].push(inv);
-
-      totalAmount += inv.amount;
-      totalInterest += inv.interestAmount;
-      totalMaturity += inv.maturityAmount;
-      
-      // Calculate accrued to-date: from investment date to report toDate, but NOT beyond maturity date
-      const accruedVals = calculateAccruedInterest(
-        inv.amount,
-        inv.interestRate,
-        inv.investmentDate,
-        inv.investmentDate,
-        reportToDate,
-        inv.investmentType,
-        inv.maturityDate
-      );
-      const currentValue = inv.amount + accruedVals.toDate;
-      totalCurrent += currentValue;
-    });
-
-    // Build HTML
-    let html = '';
-    
-    for (const group in groupedData) {
-      const items = groupedData[group];
-      let subtotalAmount = 0;
-      let subtotalInterest = 0;
-      let subtotalMaturity = 0;
-      let subtotalCurrent = 0;
-
-      items.forEach(function(item) {
-        subtotalAmount += item.amount;
-        subtotalInterest += item.interestAmount;
-        subtotalMaturity += item.maturityAmount;
-        
-        const accruedVals = calculateAccruedInterest(
-          item.amount,
-          item.interestRate,
-          item.investmentDate,
-          item.investmentDate,
-          reportToDate,
-          item.investmentType,
-          item.maturityDate
-        );
-        const currentValue = item.amount + accruedVals.toDate;
-        subtotalCurrent += currentValue;
-      });
-
-      html += '<div class="grouped-report">';
-      html += '<div class="group-title">' + group + '</div>';
-      html += '<div class="group-table-wrapper">';
-      html += '<table class="group-table">';
-      html += '<thead><tr>';
-      html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
-      html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th>';
-      html += '<th>Interest (GHc)</th><th>Maturity Amt (GHc)</th><th>Current Value (GHc)</th><th>Action</th>';
-      html += '</tr></thead>';
-      html += '<tbody>';
-
-      items.forEach(function(item) {
-        const accruedVals = calculateAccruedInterest(
-          item.amount,
-          item.interestRate,
-          item.investmentDate,
-          item.investmentDate,
-          reportToDate,
-          item.investmentType,
-          item.maturityDate
-        );
-        const currentValue = item.amount + accruedVals.toDate;
-        
-        html += '<tr>';
-        html += '<td>' + (item.investmentCode || '') + '</td>';
-        html += '<td>' + (item.bankName || '') + '</td>';
-        html += '<td>' + (item.investmentType || '') + '</td>';
-        html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
-        html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
-        html += '<td class="text-center">' + (item.duration || 0) + '</td>';
-        html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
-        html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
-        html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(item.maturityAmount) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(currentValue) + '</td>';
-        html += '<td><button class="action-btn" onclick="showFullReportActionMenu(event, \'' + (item.investmentCode || '') + '\')"><i class="fas fa-ellipsis-v"></i></button></td>';
-        html += '</tr>';
-      });
-
-      html += '<tr class="subtotal-row">';
-      html += '<td colspan="3">Subtotal</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
-      html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalMaturity) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
-      html += '<td>-</td>';
-      html += '</tr>';
-
-      html += '</tbody></table></div></div>';
-    }
-
-    // Grand total
-    html += '<div class="grand-total-report">';
-    html += '<table class="group-table"><tbody>';
-    html += '<tr class="grand-total-row">';
-    html += '<td colspan="3">GRAND TOTAL</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
-    html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-    html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalMaturity) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
-    html += '<td>-</td>';
-    html += '</tr>';
-    html += '</tbody></table></div>';
-
-    container.innerHTML = html;
+  if (!investments || investments.length === 0) {
+    container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found</p></div>';
+    return;
   }
 
+  // Filter active investments: investment date <= toDate and maturity date > toDate
+  const toDateTime = new Date(reportToDate);
+  toDateTime.setHours(23, 59, 59, 999);
+  const toDateOnly = new Date(reportToDate);
+  toDateOnly.setHours(0, 0, 0, 0);
+
+  const activeInvestments = investments.filter(function(inv) {
+    const investDate = new Date(inv.investmentDate);
+    const maturityDate = new Date(inv.maturityDate);
+    return investDate <= toDateTime && maturityDate > toDateTime;
+  });
+
+  if (activeInvestments.length === 0) {
+    container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments as at ' + reportToDate + '</p></div>';
+    return;
+  }
+
+  let groupedData = {};
+  let totalAmount = 0;
+  let totalInterest = 0;
+  let totalMaturity = 0;
+  let totalCurrent = 0;
+
+  // Group investments
+  activeInvestments.forEach(function(inv) {
+    let groupKey;
+    
+    if (groupBy === 'byBank') {
+      groupKey = inv.bankName;
+    } else if (groupBy === 'byDuration') {
+      groupKey = inv.duration + ' days';
+    } else {
+      groupKey = inv.investmentType;
+    }
+
+    if (!groupedData[groupKey]) {
+      groupedData[groupKey] = [];
+    }
+    groupedData[groupKey].push(inv);
+
+    totalAmount += inv.amount;
+    totalInterest += inv.interestAmount;
+    totalMaturity += inv.maturityAmount;
+    
+    // Calculate accrued to-date
+    const accruedVals = calculateAccruedInterest(
+      inv.amount,
+      inv.interestRate,
+      inv.investmentDate,
+      inv.investmentDate,
+      reportToDate,
+      inv.investmentType,
+      inv.maturityDate
+    );
+    
+    // Current value = 0 if matured, otherwise amount + accrued
+    const maturityDate = new Date(inv.maturityDate);
+    maturityDate.setHours(0, 0, 0, 0);
+    let currentValue = 0;
+    if (maturityDate > toDateOnly) {
+      currentValue = inv.amount + accruedVals.toDate;
+    }
+    totalCurrent += currentValue;
+  });
+
+  // Build HTML
+  let html = '';
+  
+  for (const group in groupedData) {
+    const items = groupedData[group];
+    let subtotalAmount = 0;
+    let subtotalInterest = 0;
+    let subtotalMaturity = 0;
+    let subtotalCurrent = 0;
+
+    items.forEach(function(item) {
+      subtotalAmount += item.amount;
+      subtotalInterest += item.interestAmount;
+      subtotalMaturity += item.maturityAmount;
+      
+      const accruedVals = calculateAccruedInterest(
+        item.amount,
+        item.interestRate,
+        item.investmentDate,
+        item.investmentDate,
+        reportToDate,
+        item.investmentType,
+        item.maturityDate
+      );
+      
+      // Current value = 0 if matured
+      const maturityDate = new Date(item.maturityDate);
+      maturityDate.setHours(0, 0, 0, 0);
+      let currentValue = 0;
+      if (maturityDate > toDateOnly) {
+        currentValue = item.amount + accruedVals.toDate;
+      }
+      subtotalCurrent += currentValue;
+    });
+
+    html += '<div class="grouped-report">';
+    html += '<div class="group-title">' + group + '</div>';
+    html += '<div class="group-table-wrapper">';
+    html += '<table class="group-table">';
+    html += '<thead><tr>';
+    html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
+    html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th>';
+    html += '<th>Interest (GHc)</th><th>Maturity Amt (GHc)</th><th>Current Value (GHc)</th><th>Action</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    items.forEach(function(item) {
+      const accruedVals = calculateAccruedInterest(
+        item.amount,
+        item.interestRate,
+        item.investmentDate,
+        item.investmentDate,
+        reportToDate,
+        item.investmentType,
+        item.maturityDate
+      );
+      
+      // Current value = 0 if matured
+      const maturityDate = new Date(item.maturityDate);
+      maturityDate.setHours(0, 0, 0, 0);
+      let currentValue = 0;
+      if (maturityDate > toDateOnly) {
+        currentValue = item.amount + accruedVals.toDate;
+      }
+      
+      html += '<tr>';
+      html += '<td>' + (item.investmentCode || '') + '</td>';
+      html += '<td>' + (item.bankName || '') + '</td>';
+      html += '<td>' + (item.investmentType || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+      html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.maturityAmount) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(currentValue) + '</td>';
+      html += '<td><button class="action-btn" onclick="showFullReportActionMenu(event, \'' + (item.investmentCode || '') + '\')"><i class="fas fa-ellipsis-v"></i></button></td>';
+      html += '</tr>';
+    });
+
+    html += '<tr class="subtotal-row">';
+    html += '<td colspan="3">Subtotal</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
+    html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalMaturity) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
+    html += '<td>-</td>';
+    html += '</tr>';
+
+    html += '</tbody></table></div></div>';
+  }
+
+  // Grand total
+  html += '<div class="grand-total-report">';
+  html += '<table class="group-table"><tbody>';
+  html += '<tr class="grand-total-row">';
+  html += '<td colspan="3">GRAND TOTAL</td>';
+  html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
+  html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+  html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
+  html += '<td class="text-right">' + formatCurrency(totalMaturity) + '</td>';
+  html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
+  html += '<td>-</td>';
+  html += '</tr>';
+  html += '</tbody></table></div>';
+
+  container.innerHTML = html;
+}
   // ============================================
   // LOAD INTEREST REPORT
   // ============================================
@@ -360,173 +382,192 @@
     }
   };
 
-  function displayInterestReport(investments, fromDate, toDate, groupBy) {
-    const container = document.getElementById('interestReportContainer');
-    if (!container) return;
+function displayInterestReport(investments, fromDate, toDate, groupBy) {
+  const container = document.getElementById('interestReportContainer');
+  if (!container) return;
 
-    if (!investments || investments.length === 0) {
-      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found for selected period</p></div>';
-      return;
-    }
-
-    // Filter active investments within the date range
-    // Active means: investment date <= toDate and maturity date > fromDate (overlaps with period)
-    const fromDateTime = new Date(fromDate);
-    fromDateTime.setHours(0, 0, 0, 0);
-    const toDateTime = new Date(toDate);
-    toDateTime.setHours(23, 59, 59, 999);
-
-    const activeInvestments = investments.filter(function(inv) {
-      const investDate = new Date(inv.investmentDate);
-      const maturityDate = new Date(inv.maturityDate);
-      // Investment must be started on or before toDate AND mature after fromDate
-      return investDate <= toDateTime && maturityDate > fromDateTime;
-    });
-
-    if (activeInvestments.length === 0) {
-      container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments in the selected period</p></div>';
-      return;
-    }
-
-    let groupedData = {};
-    let totalAmount = 0;
-    let totalInterest = 0;
-    let totalAccruedMonthly = 0;
-    let totalAccruedToDate = 0;
-    let totalCurrent = 0;
-
-    activeInvestments.forEach(function(inv) {
-      let groupKey;
-      
-      if (groupBy === 'byBank') {
-        groupKey = inv.bankName;
-      } else if (groupBy === 'byDuration') {
-        groupKey = inv.duration + ' days';
-      } else {
-        groupKey = inv.investmentType;
-      }
-      
-      if (!groupedData[groupKey]) {
-        groupedData[groupKey] = [];
-      }
-      groupedData[groupKey].push(inv);
-      
-      totalAmount += inv.amount;
-      totalInterest += inv.interestAmount;
-      
-      // Calculate accrued values based on report date range, NOT beyond maturity date
-      const accruedVals = calculateAccruedInterest(
-        inv.amount,
-        inv.interestRate,
-        inv.investmentDate,
-        fromDate,
-        toDate,
-        inv.investmentType,
-        inv.maturityDate
-      );
-      
-      totalAccruedMonthly += accruedVals.monthly;
-      totalAccruedToDate += accruedVals.toDate;
-      totalCurrent += inv.amount + accruedVals.toDate;
-    });
-
-    let html = '';
-    
-    for (const group in groupedData) {
-      const items = groupedData[group];
-      let subtotalAmount = 0;
-      let subtotalInterest = 0;
-      let subtotalAccruedMonthly = 0;
-      let subtotalAccruedToDate = 0;
-      let subtotalCurrent = 0;
-
-      items.forEach(function(item) {
-        subtotalAmount += item.amount;
-        subtotalInterest += item.interestAmount;
-        
-        const accruedVals = calculateAccruedInterest(
-          item.amount,
-          item.interestRate,
-          item.investmentDate,
-          fromDate,
-          toDate,
-          item.investmentType,
-          item.maturityDate
-        );
-        
-        subtotalAccruedMonthly += accruedVals.monthly;
-        subtotalAccruedToDate += accruedVals.toDate;
-        subtotalCurrent += item.amount + accruedVals.toDate;
-      });
-
-      html += '<div class="grouped-report">';
-      html += '<div class="group-title">' + group + '</div>';
-      html += '<div class="group-table-wrapper">';
-      html += '<table class="group-table">';
-      html += '<thead><tr>';
-      html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
-      html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th><th>Interest (GHc)</th>';
-      html += '<th>Accrued Monthly</th><th>Accrued To Date</th><th>Current Value (GHc)</th>';
-      html += '</tr></thead>';
-      html += '<tbody>';
-
-      items.forEach(function(item) {
-        const accruedVals = calculateAccruedInterest(
-          item.amount,
-          item.interestRate,
-          item.investmentDate,
-          fromDate,
-          toDate,
-          item.investmentType,
-          item.maturityDate
-        );
-        
-        const currentVal = item.amount + accruedVals.toDate;
-        
-        html += '<tr>';
-        html += '<td>' + (item.investmentCode || '') + '</td>';
-        html += '<td>' + (item.bankName || '') + '</td>';
-        html += '<td>' + (item.investmentType || '') + '</td>';
-        html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
-        html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
-        html += '<td class="text-center">' + (item.duration || 0) + '</td>';
-        html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
-        html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
-        html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(accruedVals.monthly) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(accruedVals.toDate) + '</td>';
-        html += '<td class="text-right">' + formatCurrency(currentVal) + '</td>';
-        html += '</tr>';
-      });
-
-      html += '<tr class="subtotal-row">';
-      html += '<td colspan="3">Subtotal</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
-      html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalAccruedMonthly) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalAccruedToDate) + '</td>';
-      html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
-      html += '</tr>';
-      html += '</tbody></table></div></div>';
-    }
-
-    html += '<div class="grand-total-report">';
-    html += '<table class="group-table"><tbody>';
-    html += '<tr class="grand-total-row">';
-    html += '<td colspan="3">TOTAL</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
-    html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
-    html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAccruedMonthly) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAccruedToDate) + '</td>';
-    html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
-    html += '</tr>';
-    html += '</tbody></table></div>';
-
-    container.innerHTML = html;
+  if (!investments || investments.length === 0) {
+    container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No investments found for selected period</p></div>';
+    return;
   }
 
+  // Filter active investments within the date range
+  const fromDateTime = new Date(fromDate);
+  fromDateTime.setHours(0, 0, 0, 0);
+  const toDateTime = new Date(toDate);
+  toDateTime.setHours(23, 59, 59, 999);
+
+  const activeInvestments = investments.filter(function(inv) {
+    const investDate = new Date(inv.investmentDate);
+    const maturityDate = new Date(inv.maturityDate);
+    return investDate <= toDateTime && maturityDate > fromDateTime;
+  });
+
+  if (activeInvestments.length === 0) {
+    container.innerHTML = '<div class="empty-report"><i class="fas fa-inbox"></i><p>No active investments in the selected period</p></div>';
+    return;
+  }
+
+  let groupedData = {};
+  let totalAmount = 0;
+  let totalInterest = 0;
+  let totalAccruedMonthly = 0;
+  let totalAccruedToDate = 0;
+  let totalCurrent = 0;
+
+  activeInvestments.forEach(function(inv) {
+    let groupKey;
+    
+    if (groupBy === 'byBank') {
+      groupKey = inv.bankName;
+    } else if (groupBy === 'byDuration') {
+      groupKey = inv.duration + ' days';
+    } else {
+      groupKey = inv.investmentType;
+    }
+    
+    if (!groupedData[groupKey]) {
+      groupedData[groupKey] = [];
+    }
+    groupedData[groupKey].push(inv);
+    
+    totalAmount += inv.amount;
+    totalInterest += inv.interestAmount;
+    
+    // Calculate accrued values
+    const accruedVals = calculateAccruedInterest(
+      inv.amount,
+      inv.interestRate,
+      inv.investmentDate,
+      fromDate,
+      toDate,
+      inv.investmentType,
+      inv.maturityDate
+    );
+    
+    totalAccruedMonthly += accruedVals.monthly;
+    totalAccruedToDate += accruedVals.toDate;
+    
+    // Current value = 0 if matured, otherwise amount + accrued
+    const maturityDate = new Date(inv.maturityDate);
+    maturityDate.setHours(0, 0, 0, 0);
+    let currentVal = 0;
+    if (maturityDate > toDateTime) {
+      currentVal = inv.amount + accruedVals.toDate;
+    }
+    totalCurrent += currentVal;
+  });
+
+  let html = '';
+  
+  for (const group in groupedData) {
+    const items = groupedData[group];
+    let subtotalAmount = 0;
+    let subtotalInterest = 0;
+    let subtotalAccruedMonthly = 0;
+    let subtotalAccruedToDate = 0;
+    let subtotalCurrent = 0;
+
+    items.forEach(function(item) {
+      subtotalAmount += item.amount;
+      subtotalInterest += item.interestAmount;
+      
+      const accruedVals = calculateAccruedInterest(
+        item.amount,
+        item.interestRate,
+        item.investmentDate,
+        fromDate,
+        toDate,
+        item.investmentType,
+        item.maturityDate
+      );
+      
+      subtotalAccruedMonthly += accruedVals.monthly;
+      subtotalAccruedToDate += accruedVals.toDate;
+      
+      // Current value = 0 if matured
+      const maturityDate = new Date(item.maturityDate);
+      maturityDate.setHours(0, 0, 0, 0);
+      let currentVal = 0;
+      if (maturityDate > toDateTime) {
+        currentVal = item.amount + accruedVals.toDate;
+      }
+      subtotalCurrent += currentVal;
+    });
+
+    html += '<div class="grouped-report">';
+    html += '<div class="group-title">' + group + '</div>';
+    html += '<div class="group-table-wrapper">';
+    html += '<table class="group-table">';
+    html += '<thead><tr>';
+    html += '<th>Code</th><th>Bank</th><th>Type</th><th>Amount (GHc)</th><th>Rate (%)</th>';
+    html += '<th>Duration (Days)</th><th>Inv. Date</th><th>Maturity Date</th><th>Interest (GHc)</th>';
+    html += '<th>Accrued Monthly</th><th>Accrued To Date</th><th>Current Value (GHc)</th>';
+    html += '</tr></thead>';
+    html += '<tbody>';
+
+    items.forEach(function(item) {
+      const accruedVals = calculateAccruedInterest(
+        item.amount,
+        item.interestRate,
+        item.investmentDate,
+        fromDate,
+        toDate,
+        item.investmentType,
+        item.maturityDate
+      );
+      
+      // Current value = 0 if matured
+      const maturityDate = new Date(item.maturityDate);
+      maturityDate.setHours(0, 0, 0, 0);
+      let currentVal = 0;
+      if (maturityDate > toDateTime) {
+        currentVal = item.amount + accruedVals.toDate;
+      }
+      
+      html += '<tr>';
+      html += '<td>' + (item.investmentCode || '') + '</td>';
+      html += '<td>' + (item.bankName || '') + '</td>';
+      html += '<td>' + (item.investmentType || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
+      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
+      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
+      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
+      html += '<td class="text-center">' + (item.maturityDate || '') + '</td>';
+      html += '<td class="text-right">' + formatCurrency(item.interestAmount) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(accruedVals.monthly) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(accruedVals.toDate) + '</td>';
+      html += '<td class="text-right">' + formatCurrency(currentVal) + '</td>';
+      html += '</tr>';
+    });
+
+    html += '<tr class="subtotal-row">';
+    html += '<td colspan="3">Subtotal</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalAmount) + '</td>';
+    html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalInterest) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalAccruedMonthly) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalAccruedToDate) + '</td>';
+    html += '<td class="text-right">' + formatCurrency(subtotalCurrent) + '</td>';
+    html += '</tr>';
+    html += '</tbody></table></div></div>';
+  }
+
+  html += '<div class="grand-total-report">';
+  html += '<table class="group-table"><tbody>';
+  html += '<tr class="grand-total-row">';
+  html += '<td colspan="3">TOTAL</td>';
+  html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
+  html += '<td>-</td><td>-</td><td>-</td><td>-</td>';
+  html += '<td class="text-right">' + formatCurrency(totalInterest) + '</td>';
+  html += '<td class="text-right">' + formatCurrency(totalAccruedMonthly) + '</td>';
+  html += '<td class="text-right">' + formatCurrency(totalAccruedToDate) + '</td>';
+  html += '<td class="text-right">' + formatCurrency(totalCurrent) + '</td>';
+  html += '</tr>';
+  html += '</tbody></table></div>';
+
+  container.innerHTML = html;
+}
   // ============================================
   // LOAD PURCHASE REPORT
   // ============================================
