@@ -56,11 +56,14 @@ function loadInvestmentAlerts() {
     }
     
     const today = new Date().toISOString().split('T')[0];
+    console.log('Today date string:', today);
     
     // Get all investments to check maturity dates
     API.getAllInvestments()
       .then(function(response) {
         if (response && Array.isArray(response)) {
+          console.log('Total investments:', response.length);
+          
           const todayDate = new Date(today);
           todayDate.setHours(0, 0, 0, 0);
           
@@ -68,23 +71,31 @@ function loadInvestmentAlerts() {
           fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
           fiveDaysLater.setHours(23, 59, 59, 999);
           
+          console.log('Today:', todayDate);
+          console.log('5 days later:', fiveDaysLater);
+          
           // Matured investments (maturity date < today)
           dashboardData.maturedInvestments = response.filter(inv => {
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            return maturityDate < todayDate;
+            const isMature = maturityDate < todayDate;
+            console.log('Investment ' + inv.investmentCode + ': maturityDate=' + maturityDate + ', isMature=' + isMature);
+            return isMature;
           });
           
           // Near maturity investments (maturity date is 1 to 5 days from today)
           dashboardData.nearMaturityInvestments = response.filter(inv => {
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            // Maturity date must be after today but within 5 days
-            return maturityDate > todayDate && maturityDate <= fiveDaysLater;
+            const isNearMaturity = maturityDate > todayDate && maturityDate <= fiveDaysLater;
+            if (isNearMaturity) {
+              console.log('NEAR MATURITY - Investment ' + inv.investmentCode + ': maturityDate=' + maturityDate);
+            }
+            return isNearMaturity;
           });
           
-          console.log('Matured investments:', dashboardData.maturedInvestments);
-          console.log('Near maturity investments:', dashboardData.nearMaturityInvestments);
+          console.log('Matured investments count:', dashboardData.maturedInvestments.length);
+          console.log('Near maturity investments count:', dashboardData.nearMaturityInvestments.length);
         }
         resolve();
       })
