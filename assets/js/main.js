@@ -8,21 +8,17 @@ let currentOpenSubmenu = null;
 let sidebarCollapsed = false;
 let currentUser = null;
 let currentModule = 'dashboard';
-let dashboardRefreshInterval = null;
 
 // ============================================
 // COMPATIBILITY LAYER - For modules using google.script.run
 // ============================================
 
-// Create a wrapper that mimics google.script.run for compatibility
 window.google = {
   script: {
     run: (function() {
-      // Store the current success and failure handlers
       let currentSuccessHandler = null;
       let currentFailureHandler = null;
       
-      // Create the chainable object
       const chainable = {
         withSuccessHandler: function(callback) {
           currentSuccessHandler = callback;
@@ -34,7 +30,6 @@ window.google = {
         }
       };
       
-      // Add dynamic methods for all API actions
       const actions = [
         'getUserInfo',
         'processForm',
@@ -58,30 +53,29 @@ window.google = {
         'addNewInvestment',
         'getInvestmentsByDateRange',
         'getMaturedInvestments',
-        'getPVFormHTML',
-        'getAddInventoryHTML',
-        'getInventoryReportHTML',
-        'getAddAssetHTML',
-        'getAssetRegisterHTML',
-        'getInvestmentAddHTML',
-        'getInvestmentReportHTML'
+        'getAllInvestments',
+        'getInvestmentByCode',
+        'getSubscriptionCategories',
+        'generateSubscriptionCategoryCode',
+        'getNextSubscriptionCode',
+        'addSubscription',
+        'getAllSubscriptions',
+        'updateSubscription',
+        'deleteSubscription',
+        'getSubscriptionsByDateRange',
+        'getExpiredSubscriptions',
+        'renewSubscription'
       ];
       
       actions.forEach(action => {
         chainable[action] = function(...args) {
-          // Map the action to API methods
           const actionMap = {
-            // User
             'getUserInfo': () => API.getUserInfo(),
-            
-            // Payment Voucher
             'processForm': () => API.processForm(args[0]),
             'getNextPVNumber': () => API.getNextPVNumber(args[0]),
             'getPVNumbersByType': () => API.getPVNumbersByType(),
             'getVoucherByNumber': () => API.getVoucherByNumber(args[0], args[1]),
             'updateVoucher': () => API.updateVoucher(args[0]),
-            
-            // Inventory
             'generateInventoryCategoryCode': () => API.generateInventoryCategoryCode(),
             'getInventoryCategories': () => API.getInventoryCategories(),
             'addNewInventory': () => API.addNewInventory(args[0]),
@@ -90,39 +84,26 @@ window.google = {
             'getInventoryListData': () => API.getInventoryListData(),
             'recordInventoryUsage': () => API.recordInventoryUsage(args[0]),
             'removeInventory': () => API.removeInventory(args[0]),
-            
-            // Fixed Assets
             'generateAssetCode': () => API.generateAssetCode(args[0]),
             'addNewAsset': () => API.addNewAsset(args[0]),
             'getDetailedRegister': () => API.getDetailedRegister(),
             'updateAssetStatus': () => API.updateAssetStatus(args[0], args[1]),
-            
-            // Investment
             'generateInvestmentCode': () => API.generateInvestmentCode(args[0]),
             'addNewInvestment': () => API.addNewInvestment(args[0]),
             'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(args[0], args[1]),
             'getMaturedInvestments': () => API.getMaturedInvestments(args[0]),
-
-     
-'getSubscriptionCategories': () => API.getSubscriptionCategories(),
-'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
-'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
-'addSubscription': () => API.addSubscription(args[0]),
-'getAllSubscriptions': () => API.getAllSubscriptions(),
-'updateSubscription': () => API.updateSubscription(args[0]),
-'deleteSubscription': () => API.deleteSubscription(args[0]),
-'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
-'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
-'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
-             
-            // HTML Module Loaders
-            'getPVFormHTML': () => loadModuleFile('paymentVoucher'),
-            'getAddInventoryHTML': () => loadModuleFile('inventoryAdd'),
-            'getInventoryReportHTML': () => loadModuleFile('inventoryReport'),
-            'getAddAssetHTML': () => loadModuleFile('addAsset'),
-            'getAssetRegisterHTML': () => loadModuleFile('viewAssetRegister'),
-            'getInvestmentAddHTML': () => loadModuleFile('investmentAdd'),
-            'getInvestmentReportHTML': () => loadModuleFile('investmentReport')
+            'getAllInvestments': () => API.getAllInvestments(),
+            'getInvestmentByCode': () => API.getInvestmentByCode(args[0]),
+            'getSubscriptionCategories': () => API.getSubscriptionCategories(),
+            'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
+            'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
+            'addSubscription': () => API.addSubscription(args[0]),
+            'getAllSubscriptions': () => API.getAllSubscriptions(),
+            'updateSubscription': () => API.updateSubscription(args[0]),
+            'deleteSubscription': () => API.deleteSubscription(args[0]),
+            'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
+            'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
+            'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2])
           };
           
           const apiCall = actionMap[action];
@@ -153,30 +134,6 @@ window.google = {
     })()
   }
 };
-
-// Helper to load module HTML files
-async function loadModuleFile(moduleName) {
-  const modules = {
-    'paymentVoucher': 'modules/payment-voucher.html',
-    'inventoryAdd': 'modules/add-inventory.html',
-    'inventoryReport': 'modules/inventory-report.html',
-    'addAsset': 'modules/add-asset.html',
-    'viewAssetRegister': 'modules/asset-register.html',
-    'investmentAdd': 'modules/add-investment.html',
-    'investmentReport': 'modules/investment-report.html'
-  };
-  
-  try {
-    const response = await fetch(modules[moduleName]);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
-    }
-    return await response.text();
-  } catch (error) {
-    console.error('Error loading module file:', error);
-    return '<div class="welcome-card"><i class="fas fa-exclamation-circle welcome-icon"></i><h2>Error Loading Module</h2><p>Could not load module. Please try again.</p></div>';
-  }
-}
 
 // ============================================
 // INITIALIZATION
@@ -328,303 +285,116 @@ function hideLoadingModal() {
 }
 
 // ============================================
-// DASHBOARD FUNCTIONS
+// DASHBOARD LOADING
 // ============================================
 
-// Load dashboard content directly
 function loadDashboardContent() {
   const mainContent = document.getElementById('mainContent');
   if (mainContent) {
-    mainContent.innerHTML = '<div class="content-wrapper">' + generateDashboardHTML() + '</div>';
+    // Load dashboard HTML structure
+    mainContent.innerHTML = `
+      <div class="content-wrapper">
+        <div class="dashboard-container">
+          <div class="alerts-section">
+            <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
+            
+            <div class="alert-card" id="maturedAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-check-circle"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Matured Investments</div>
+                <div class="alert-message" id="maturedMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+              </div>
+            </div>
+
+            <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-clock"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Investments Maturing in 5 Days</div>
+                <div class="alert-message" id="nearMaturityMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+              </div>
+            </div>
+
+            <div class="alert-card warning" id="lowStockAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-boxes"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Low Stock Alert</div>
+                <div class="alert-message" id="lowStockMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('inventoryReport')" class="alert-btn">View Inventory</button>
+              </div>
+            </div>
+
+            <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-times-circle"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Out of Stock</div>
+                <div class="alert-message" id="outOfStockMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('inventoryAdd')" class="alert-btn">Restock Now</button>
+              </div>
+            </div>
+
+            <div class="alert-card warning" id="expiredSubscriptionsAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-exclamation-circle"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Expired Subscriptions</div>
+                <div class="alert-message" id="expiredSubscriptionsMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">View Details</button>
+              </div>
+            </div>
+
+            <div class="alert-card warning" id="expiringSubscriptionsAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-hourglass-end"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Subscriptions Expiring Soon</div>
+                <div class="alert-message" id="expiringSubscriptionsMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">View Details</button>
+              </div>
+            </div>
+
+            <div class="alert-card warning" id="duePaymentsAlert" style="display: none;">
+              <div class="alert-icon"><i class="fas fa-money-bill"></i></div>
+              <div class="alert-content">
+                <div class="alert-title">Pending Subscription Payments</div>
+                <div class="alert-message" id="duePaymentsMessage"></div>
+              </div>
+              <div class="alert-action">
+                <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">View Details</button>
+              </div>
+            </div>
+
+            <div class="no-alerts" id="noAlerts">
+              <i class="fas fa-check-circle"></i>
+              <p>All clear! No pending alerts.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
   }
-  // Initialize dashboard and load alerts
+  
+  // Initialize dashboard alerts
   setTimeout(() => {
     initDashboard();
   }, 100);
 }
 
-// Generate dashboard HTML
-function generateDashboardHTML() {
-  return `
-    <div class="dashboard-container">
-      <div class="alerts-section">
-        <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
-        
-        <div class="alert-card" id="maturedAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Matured Investments</div>
-            <div class="alert-message" id="maturedMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
-          </div>
-        </div>
-
-        <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Investments Maturing in 5 Days</div>
-            <div class="alert-message" id="nearMaturityMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
-          </div>
-        </div>
-
-        <div class="alert-card warning" id="lowStockAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-boxes"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Low Stock Alert</div>
-            <div class="alert-message" id="lowStockMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('inventoryReport')" class="alert-btn">View Inventory</button>
-          </div>
-        </div>
-
-        <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-times-circle"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Out of Stock</div>
-            <div class="alert-message" id="outOfStockMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('inventoryAdd')" class="alert-btn">Restock Now</button>
-          </div>
-        </div>
-
-        <div class="no-alerts" id="noAlerts">
-          <i class="fas fa-check-circle"></i>
-          <p>All clear! No pending alerts.</p>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// Load dashboard data (alerts)
-async function loadDashboardData() {
-  try {
-    console.log('Loading dashboard alerts...');
-    
-    // Get today's date
-    const today = new Date();
-    const todayStr = formatDateForInput(today);
-    
-    // Get date 5 days from now
-    const fiveDaysLater = new Date(today);
-    fiveDaysLater.setDate(today.getDate() + 5);
-    const fiveDaysStr = formatDateForInput(fiveDaysLater);
-    
-    // Get start of year for date range
-    const startOfYear = getStartOfYear();
-    
-    // Load investments and inventory data
-    const [investments, inventoryList] = await Promise.all([
-      API.getInvestmentsByDateRange(startOfYear, fiveDaysStr).catch(() => []),
-      API.getInventoryListData().catch(() => [])
-    ]);
-    
-    console.log('Investments loaded:', investments ? investments.length : 0);
-    console.log('Inventory loaded:', inventoryList ? inventoryList.length : 0);
-    
-    // Process investment alerts
-    processInvestmentAlerts(investments, todayStr, fiveDaysStr);
-    
-    // Process inventory alerts
-    processInventoryAlerts(inventoryList);
-    
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-  }
-}
-
-// Process investment alerts (matured and near maturity)
-function processInvestmentAlerts(investments, todayStr, fiveDaysStr) {
-  const maturedList = [];
-  const nearMaturityList = [];
-  
-  if (investments && Array.isArray(investments)) {
-    investments.forEach(inv => {
-      if (inv.maturityDate) {
-        const maturityDate = new Date(inv.maturityDate);
-        const today = new Date(todayStr);
-        const fiveDays = new Date(fiveDaysStr);
-        
-        // Check if matured today
-        if (formatDateForInput(maturityDate) === todayStr) {
-          maturedList.push({
-            code: inv.investmentCode,
-            amount: inv.maturityAmount || inv.amount,
-            type: inv.investmentType
-          });
-        }
-        // Check if maturing within 5 days (and not today)
-        else if (maturityDate <= fiveDays && maturityDate > today) {
-          nearMaturityList.push({
-            code: inv.investmentCode,
-            amount: inv.maturityAmount || inv.amount,
-            date: inv.maturityDate,
-            type: inv.investmentType
-          });
-        }
-      }
-    });
-  }
-  
-  // Display matured investments alert
-  const maturedAlert = document.getElementById('maturedAlert');
-  const maturedMessage = document.getElementById('maturedMessage');
-  
-  if (maturedList.length > 0) {
-    if (maturedAlert) maturedAlert.style.display = 'flex';
-    if (maturedMessage) {
-      maturedMessage.innerHTML = `
-        <strong>${maturedList.length} investment(s) matured today:</strong>
-        <ul>
-          ${maturedList.map(inv => `<li>${inv.code} - GH₵ ${formatCurrency(inv.amount)}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (maturedAlert) maturedAlert.style.display = 'none';
-  }
-  
-  // Display near maturity alert
-  const nearMaturityAlert = document.getElementById('nearMaturityAlert');
-  const nearMaturityMessage = document.getElementById('nearMaturityMessage');
-  
-  if (nearMaturityList.length > 0) {
-    if (nearMaturityAlert) nearMaturityAlert.style.display = 'flex';
-    if (nearMaturityMessage) {
-      nearMaturityMessage.innerHTML = `
-        <strong>${nearMaturityList.length} investment(s) maturing in 5 days:</strong>
-        <ul>
-          ${nearMaturityList.map(inv => `<li>${inv.code} - GH₵ ${formatCurrency(inv.amount)} maturing on ${formatDate(inv.date)}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (nearMaturityAlert) nearMaturityAlert.style.display = 'none';
-  }
-}
-
-// Process inventory alerts (low stock and out of stock)
-function processInventoryAlerts(inventoryList) {
-  const lowStockList = [];
-  const outOfStockList = [];
-  
-  if (inventoryList && Array.isArray(inventoryList)) {
-    inventoryList.forEach(item => {
-      const quantity = parseInt(item.quantity) || 0;
-      const code = item.inventoryCode || item.code;
-      const name = item.categoryName || item.name;
-      
-      if (quantity === 0) {
-        outOfStockList.push({ code, name, quantity });
-      } else if (quantity <= 5) {
-        lowStockList.push({ code, name, quantity });
-      }
-    });
-  }
-  
-  // Display out of stock alert
-  const outOfStockAlert = document.getElementById('outOfStockAlert');
-  const outOfStockMessage = document.getElementById('outOfStockMessage');
-  
-  if (outOfStockList.length > 0) {
-    if (outOfStockAlert) outOfStockAlert.style.display = 'flex';
-    if (outOfStockMessage) {
-      outOfStockMessage.innerHTML = `
-        <strong>${outOfStockList.length} item(s) out of stock:</strong>
-        <ul>
-          ${outOfStockList.map(item => `<li>${item.code} - ${item.name}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (outOfStockAlert) outOfStockAlert.style.display = 'none';
-  }
-  
-  // Display low stock alert
-  const lowStockAlert = document.getElementById('lowStockAlert');
-  const lowStockMessage = document.getElementById('lowStockMessage');
-  
-  if (lowStockList.length > 0) {
-    if (lowStockAlert) lowStockAlert.style.display = 'flex';
-    if (lowStockMessage) {
-      lowStockMessage.innerHTML = `
-        <strong>${lowStockList.length} item(s) running low (≤5 units):</strong>
-        <ul>
-          ${lowStockList.map(item => `<li>${item.code} - ${item.name} (${item.quantity} left)</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (lowStockAlert) lowStockAlert.style.display = 'none';
-  }
-  
-  // Show/hide "no alerts" message (check all alerts)
-  const noAlerts = document.getElementById('noAlerts');
-  const maturedAlert = document.getElementById('maturedAlert');
-  const nearMaturityAlert = document.getElementById('nearMaturityAlert');
-  
-  const hasAnyAlerts = 
-    (maturedAlert && maturedAlert.style.display === 'flex') ||
-    (nearMaturityAlert && nearMaturityAlert.style.display === 'flex') ||
-    lowStockList.length > 0 ||
-    outOfStockList.length > 0;
-  
-  if (noAlerts) {
-    if (hasAnyAlerts) {
-      noAlerts.style.display = 'none';
-    } else {
-      noAlerts.style.display = 'block';
-    }
-  }
-}
-
-// Initialize Dashboard
-function initDashboard() {
-  console.log('Dashboard initialized - loading alerts');
-  currentModule = 'dashboard';
-  // Load dashboard data
-  loadDashboardData();
-  
-  // Set up auto-refresh every 5 minutes (300000 ms)
-  if (dashboardRefreshInterval) {
-    clearInterval(dashboardRefreshInterval);
-  }
-  dashboardRefreshInterval = setInterval(() => {
-    if (currentModule === 'dashboard') {
-      console.log('Auto-refreshing dashboard alerts...');
-      loadDashboardData();
-    }
-  }, 300000);
-}
-
-// Clean up interval when leaving dashboard (optional)
-function cleanupDashboard() {
-  if (dashboardRefreshInterval) {
-    clearInterval(dashboardRefreshInterval);
-    dashboardRefreshInterval = null;
-  }
-}
-
 // ============================================
-// MODULE LOADING (for other modules)
+// MODULE LOADING
 // ============================================
 
-// Alias for sidebar to load modules
 function loadModule(moduleName) {
   if (currentModule === moduleName) return;
   
@@ -643,7 +413,7 @@ function loadModule(moduleName) {
     'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
-  'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
+    'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
     'dashboard': null
   };
   
@@ -682,12 +452,10 @@ function loadModule(moduleName) {
 }
 
 function updateActiveMenuItem(moduleName) {
-  // Remove active class from all menu items
   document.querySelectorAll('.menu-item').forEach(item => {
     item.classList.remove('active');
   });
   
-  // Find and activate the corresponding menu item
   document.querySelectorAll('.menu-item').forEach(item => {
     const onclickAttr = item.getAttribute('onclick');
     if (onclickAttr && onclickAttr.includes(`'${moduleName}'`)) {
@@ -739,6 +507,14 @@ function initInvestmentModule() {
 
 function initInvestmentReportModule() {
   console.log('Investment Report module loaded');
+}
+
+function initSubscriptionAddModule() {
+  console.log('Subscription Add module loaded');
+}
+
+function initSubscriptionScheduleModule() {
+  console.log('Subscription Schedule module loaded');
 }
 
 // ============================================
@@ -809,10 +585,9 @@ function getStartOfYear() {
 }
 
 // ============================================
-// EXPORT FOR MODULES
+// GLOBAL EXPORTS
 // ============================================
 
-// Make functions available globally
 window.loadModule = loadModule;
 window.toggleSidebar = toggleSidebar;
 window.toggleUserMenu = toggleUserMenu;
@@ -827,8 +602,9 @@ window.initAssetModule = initAssetModule;
 window.initAssetRegisterModule = initAssetRegisterModule;
 window.initInvestmentModule = initInvestmentModule;
 window.initInvestmentReportModule = initInvestmentReportModule;
+window.initSubscriptionAddModule = initSubscriptionAddModule;
+window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
 window.initDashboard = initDashboard;
-window.refreshDashboard = loadDashboardData;
 window.formatCurrency = formatCurrency;
 window.formatDate = formatDate;
 window.formatDateForInput = formatDateForInput;
@@ -836,7 +612,7 @@ window.getToday = getToday;
 window.getStartOfYear = getStartOfYear;
 
 // ============================================
-// ADD CSS FOR LOADING MODAL AND DASHBOARD
+// LOADING MODAL AND DASHBOARD STYLES
 // ============================================
 
 const homepageLoadingStyle = document.createElement('style');
@@ -885,7 +661,6 @@ homepageLoadingStyle.textContent = `
     100% { transform: rotate(360deg); }
   }
 
-  /* Dashboard Alerts Styles */
   .dashboard-container {
     max-width: 1000px;
     margin: 0 auto;
@@ -980,6 +755,10 @@ homepageLoadingStyle.textContent = `
 
   .alert-message li {
     margin: 3px 0;
+  }
+
+  .alert-action {
+    flex-shrink: 0;
   }
 
   .alert-btn {
