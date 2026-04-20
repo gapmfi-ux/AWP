@@ -3,7 +3,7 @@ let currentOpenSubmenu = null;
 let sidebarCollapsed = false;
 let currentUser = null;
 let currentModule = 'dashboard';
-let dashboardRefreshInterval = null;
+
 
 // ============================================
 // COMPATIBILITY LAYER - For modules using google.script.run
