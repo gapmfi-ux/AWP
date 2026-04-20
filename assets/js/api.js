@@ -223,7 +223,9 @@ class ApiService {
   async getAllInvestments(options = {}) {
     return this.request('getAllInvestments', {}, options);
   }
-
+async getInvestmentByCode(investmentCode, options = {}) {
+  return this.request('getInvestmentByCode', { investmentCode }, options);
+}
   // ============================================
   // SUBSCRIPTION API
   // ============================================
