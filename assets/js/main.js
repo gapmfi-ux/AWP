@@ -1,8 +1,3 @@
-/* ============================================
-   ACCOUNTS WORKSPACE - MAIN JAVASCRIPT
-   Maintains original Google Apps Script logic approach
-   ============================================ */
-
 // Global Variables
 let currentOpenSubmenu = null;
 let sidebarCollapsed = false;
