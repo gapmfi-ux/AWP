@@ -709,10 +709,17 @@
       const dailyRate = (annualRate / 100) / dayCount;
       
       // Calculate accrued to-date: from investment date to toDate, but NOT beyond maturity date
-      let accruedToDateEndDate = periodEnd;
-      if (periodEnd > maturityDateObj) {
-        accruedToDateEndDate = maturityDateObj;
-      }
+// If already matured, accrued should be 0
+let accruedToDateEndDate = periodEnd;
+if (accruedToDateEndDate > maturityDateObj) {
+  // Investment has matured - no more accrual
+  return {
+    monthly: 0,
+    toDate: 0,
+    daysToDiff: 0,
+    daysMonthlyDiff: 0
+  };
+}
       
       // Calculate days: from investStart to accruedToDateEndDate (inclusive)
       const timeToDiff = accruedToDateEndDate - investStart;
