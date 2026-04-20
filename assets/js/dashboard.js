@@ -12,8 +12,6 @@ let dashboardData = {
   duePayments: []
 };
 
-let dashboardRefreshInterval = null;
-
 // ============================================
 // DASHBOARD INITIALIZATION
 // ============================================
@@ -27,8 +25,10 @@ function initDashboard() {
     clearInterval(dashboardRefreshInterval);
   }
   dashboardRefreshInterval = setInterval(() => {
-    console.log('Auto-refreshing dashboard alerts...');
-    loadDashboardData();
+    if (currentModule === 'dashboard') {
+      console.log('Auto-refreshing dashboard alerts...');
+      loadDashboardData();
+    }
   }, 300000);
 }
 
@@ -206,7 +206,7 @@ function processSubscriptionAlerts(subscriptions) {
   
   const expiredSubs = [];
   const expiringSubs = [];
-  const duPayments = [];
+  const duePayments = [];
   
   subscriptions.forEach(sub => {
     if (!sub.expiryDate) return;
@@ -239,7 +239,7 @@ function processSubscriptionAlerts(subscriptions) {
       const remaining = (sub.annualCost || 0) - amountPaid;
       
       if (remaining > 0) {
-        duPayments.push({
+        duePayments.push({
           ...sub,
           amountDue: remaining,
           amountPaid: amountPaid
@@ -250,7 +250,7 @@ function processSubscriptionAlerts(subscriptions) {
   
   dashboardData.expiredSubscriptions = expiredSubs;
   dashboardData.expiringSubscriptions = expiringSubs;
-  dashboardData.duePayments = duPayments;
+  dashboardData.duePayments = duePayments;
   
   console.log('Expired subscriptions:', dashboardData.expiredSubscriptions);
   console.log('Expiring subscriptions:', dashboardData.expiringSubscriptions);
@@ -276,6 +276,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `<strong>${count}</strong> investment(s) have matured and are ready for action.`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('maturedAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render near maturity investments
@@ -288,6 +291,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `<strong>${count}</strong> investment(s) will mature within the next 5 days.`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('nearMaturityAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render low stock alert
@@ -304,6 +310,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('lowStockAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render out of stock alert
@@ -316,6 +325,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `<strong>${count}</strong> item(s) are out of stock and need restocking.`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('outOfStockAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render expired subscriptions alert
@@ -332,6 +344,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('expiredSubscriptionsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render expiring subscriptions alert
@@ -348,6 +363,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('expiringSubscriptionsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render due payments alert
@@ -364,6 +382,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('duePaymentsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Show "no alerts" message if there are no alerts
@@ -387,6 +408,10 @@ function formatCurrency(val) {
   });
 }
 
+// ============================================
+// CLEAN UP ON MODULE CHANGE
+// ============================================
+
 function cleanupDashboard() {
   if (dashboardRefreshInterval) {
     clearInterval(dashboardRefreshInterval);
@@ -394,21 +419,9 @@ function cleanupDashboard() {
   }
 }
 
-function loadModule(moduleName) {
-  console.log('Loading module:', moduleName);
-  // This function should be called from your main app to load the specified module
-  if (typeof window.loadModule === 'function') {
-    window.loadModule(moduleName);
-  }
-}
-
-// ============================================
-// GLOBAL EXPORTS
-// ============================================
-
+// Expose global functions
 window.initDashboard = initDashboard;
 window.loadDashboardData = loadDashboardData;
 window.renderDashboardAlerts = renderDashboardAlerts;
 window.cleanupDashboard = cleanupDashboard;
 window.formatCurrency = formatCurrency;
-window.loadModule = loadModule;
