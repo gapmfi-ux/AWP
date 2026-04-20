@@ -163,39 +163,7 @@
     </div>
     <form id="rolloverForm" onsubmit="event.preventDefault(); submitRolloverInvestment();">
       <!-- Current Investment Details (Read-only) -->
-      <div class="form-row-two">
-        <div class="form-group">
-          <label>Current Bank:</label>
-          <input type="text" id="rolloverBankName" readonly>
-        </div>
-        <div class="form-group">
-          <label>Current Type:</label>
-          <input type="text" id="rolloverCurrentType" readonly>
-        </div>
-      </div>
-      <div class="form-row-two">
-        <div class="form-group">
-          <label>Current Amount (GHc):</label>
-          <input type="text" id="rolloverCurrentAmount" readonly>
-        </div>
-        <div class="form-group">
-          <label>Current Maturity (GHc):</label>
-          <input type="text" id="rolloverCurrentMaturityAmount" readonly>
-        </div>
-      </div>
-      <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
-     
-      <!-- Rollover Modal -->
-<div class="rollover-modal" id="rolloverModal" style="display: none;">
-  <div class="rollover-modal-content">
-    <div class="rollover-modal-header">
-      <h2>Rollover Investment</h2>
-      <button class="rollover-modal-close" onclick="closeRolloverModal()">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <form id="rolloverForm" onsubmit="event.preventDefault(); submitRolloverInvestment();">
-      <!-- Current Investment Details (Read-only) -->
+      <div class="form-section-title">Current Investment Details</div>
       <div class="form-row-two">
         <div class="form-group">
           <label>Current Bank:</label>
@@ -222,15 +190,21 @@
       </div>
       <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
       <!-- New Rollover Details -->
+      <div class="form-section-title">New Investment Details</div>
       <div class="form-row-two">
         <div class="form-group">
-          <label for="rolloverInvestmentType">New Type:</label>
-          <select id="rolloverInvestmentType" onchange="handleRolloverInvestmentTypeChange()" required>
-            <option value="">Select</option>
-            <option value="Fixed Deposit">Fixed Deposit</option>
-            <option value="Treasury Bills">Treasury Bills</option>
-            <option value="Bonds">Bonds</option>
-          </select>
+          <label for="rolloverNewBankName">Bank (Same as Current):</label>
+          <input type="text" id="rolloverNewBankName" readonly style="background: #f7fafc; cursor: not-allowed; color: #4361ee; font-weight: 600;">
+        </div>
+        <div class="form-group">
+          <label for="rolloverInvestmentType">Type (Same as Current):</label>
+          <input type="text" id="rolloverInvestmentType" readonly style="background: #f7fafc; cursor: not-allowed; color: #4361ee; font-weight: 600;">
+        </div>
+      </div>
+      <div class="form-row-two">
+        <div class="form-group">
+          <label for="rolloverInvestmentCode">Code:</label>
+          <input type="text" id="rolloverInvestmentCode" readonly placeholder="Auto-generated" style="background: #f7fafc; color: #4361ee; font-weight: 600;">
         </div>
         <div class="form-group">
           <label for="rolloverInvestmentDate">New Inv. Date:</label>
@@ -239,23 +213,7 @@
       </div>
       <div class="form-row-two">
         <div class="form-group">
-          <label for="rolloverInvestmentCode">Code:</label>
-          <input type="text" id="rolloverInvestmentCode" readonly placeholder="Auto-generated">
-        </div>
-        <div class="form-group">
-          <label for="rolloverNewBankName">New Bank:</label>
-          <select id="rolloverNewBankName" required>
-            <option value="">Select</option>
-            <option value="Fidelity">Fidelity</option>
-            <option value="CBG">CBG</option>
-            <option value="Ecobank">Ecobank</option>
-            <option value="GCB">GCB</option>
-          </select>
-        </div>
-      </div>
-      <div class="form-row-two">
-        <div class="form-group">
-          <label for="rolloverAmount">New Amount (GHc):</label>
+          <label for="rolloverAmount">Amount to Rollover (GHc):</label>
           <input type="number" id="rolloverAmount" step="0.01" placeholder="0.00" required oninput="calculateRolloverMaturityAmount()">
         </div>
         <div class="form-group">
@@ -265,22 +223,22 @@
       </div>
       <div class="form-row-two">
         <div class="form-group">
-          <label for="rolloverDuration">Days:</label>
+          <label for="rolloverDuration">Duration (Days):</label>
           <input type="number" id="rolloverDuration" step="1" placeholder="0" required oninput="calculateRolloverMaturityDate()">
         </div>
         <div class="form-group">
-          <label for="rolloverMaturityDate">New Maturity:</label>
+          <label for="rolloverMaturityDate">New Maturity Date:</label>
           <input type="date" id="rolloverMaturityDate" required onchange="calculateRolloverMaturityAmount()">
         </div>
       </div>
       <div class="form-row-two">
         <div class="form-group">
-          <label>New Interest:</label>
-          <input type="text" id="rolloverInterestAmount" readonly>
+          <label>Calculated Interest (GHc):</label>
+          <input type="text" id="rolloverInterestAmount" readonly style="background: #f0f4ff; color: #4361ee; font-weight: 600;">
         </div>
         <div class="form-group">
-          <label>New Maturity Amount:</label>
-          <input type="text" id="rolloverMaturityAmount" readonly>
+          <label>New Maturity Amount (GHc):</label>
+          <input type="text" id="rolloverMaturityAmount" readonly style="background: #e8f8f3; color: #118d57; font-weight: 600;">
         </div>
       </div>
       <div class="modal-actions">
@@ -302,6 +260,7 @@
     </div>
     <form id="redeemForm" onsubmit="event.preventDefault(); submitRedeemInvestment();">
       <!-- Investment Details (Read-only) -->
+      <div class="form-section-title">Investment Details</div>
       <div class="form-row-two">
         <div class="form-group">
           <label>Investment Code:</label>
@@ -334,8 +293,9 @@
       </div>
       <hr style="margin: 15px 0; border: none; border-top: 1px solid #e2e8f0;">
       <!-- Redeem Date -->
+      <div class="form-section-title">Redemption Details</div>
       <div class="form-group">
-        <label>Redeem Date:</label>
+        <label for="redeemDate">Redeem Date:</label>
         <input type="date" id="redeemDate" required>
       </div>
       <div class="modal-actions">
@@ -808,6 +768,8 @@
     align-items: center;
     padding: 12px 15px;
     border-bottom: 1px solid #e2e8f0;
+    background: #f7fafc;
+    border-radius: 10px 10px 0 0;
   }
 
   .rollover-modal-header h2 {
@@ -834,6 +796,18 @@
     padding: 15px;
   }
 
+  .form-section-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
   .form-row-two {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
@@ -858,11 +832,12 @@
   .form-group input,
   .form-group select {
     width: 100%;
-    padding: 5px 8px;
+    padding: 6px 8px;
     border: 1px solid #cbd5e0;
     border-radius: 4px;
     font-size: 11px;
     font-family: inherit;
+    transition: all 0.2s;
   }
 
   .form-group input:focus,
@@ -875,8 +850,6 @@
   .form-group input[readonly] {
     background: #f7fafc;
     cursor: not-allowed;
-    color: #4361ee;
-    font-weight: 500;
   }
 
   .modal-actions {
