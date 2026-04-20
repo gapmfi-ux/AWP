@@ -57,39 +57,42 @@ function loadInvestmentAlerts() {
     
     const today = new Date().toISOString().split('T')[0];
     
-    // Get matured investments
-    API.getMaturedInvestments(today)
+    // Get all investments to check maturity dates
+    API.getAllInvestments()
       .then(function(response) {
         if (response && Array.isArray(response)) {
-          dashboardData.maturedInvestments = response;
-          console.log('Matured investments:', dashboardData.maturedInvestments);
-        }
-      })
-      .catch(error => console.error('Error loading matured investments:', error))
-      .finally(() => {
-        // Get near maturity investments (5 days from today)
-        const fiveDaysLater = new Date();
-        fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
-        const fiveDaysDate = fiveDaysLater.toISOString().split('T')[0];
-        
-        API.getInvestmentsByDateRange(today, fiveDaysDate)
-          .then(function(response) {
-            if (response && Array.isArray(response)) {
-              dashboardData.nearMaturityInvestments = response.filter(inv => 
-                new Date(inv.expiryDate) > new Date(today)
-              );
-              console.log('Near maturity investments:', dashboardData.nearMaturityInvestments);
-            }
-            resolve();
-          })
-          .catch(error => {
-            console.error('Error loading near maturity investments:', error);
-            resolve();
+          const todayDate = new Date(today);
+          todayDate.setHours(0, 0, 0, 0);
+          
+          const fiveDaysLater = new Date(today);
+          fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
+          fiveDaysLater.setHours(23, 59, 59, 999);
+          
+          // Matured investments (maturity date <= today)
+          dashboardData.maturedInvestments = response.filter(inv => {
+            const maturityDate = new Date(inv.maturityDate);
+            maturityDate.setHours(0, 0, 0, 0);
+            return maturityDate <= todayDate;
           });
+          
+          // Near maturity investments (maturity date between today and 5 days)
+          dashboardData.nearMaturityInvestments = response.filter(inv => {
+            const maturityDate = new Date(inv.maturityDate);
+            maturityDate.setHours(0, 0, 0, 0);
+            return maturityDate > todayDate && maturityDate <= fiveDaysLater;
+          });
+          
+          console.log('Matured investments:', dashboardData.maturedInvestments);
+          console.log('Near maturity investments:', dashboardData.nearMaturityInvestments);
+        }
+        resolve();
+      })
+      .catch(error => {
+        console.error('Error loading investments:', error);
+        resolve();
       });
   });
 }
-
 // ============================================
 // INVENTORY ALERTS
 // ============================================
