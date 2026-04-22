@@ -12,13 +12,153 @@ let dashboardData = {
   duePayments: []
 };
 
+let dashboardRefreshInterval = null;
+
 // ============================================
 // DASHBOARD INITIALIZATION
 // ============================================
 
 function initDashboard() {
   console.log('Initializing Dashboard');
+  currentModule = 'dashboard';
   loadDashboardData();
+  
+  // Set up auto-refresh every 5 minutes (300000 ms)
+  if (dashboardRefreshInterval) {
+    clearInterval(dashboardRefreshInterval);
+  }
+  dashboardRefreshInterval = setInterval(() => {
+    if (currentModule === 'dashboard') {
+      console.log('Auto-refreshing dashboard alerts...');
+      loadDashboardData();
+    }
+  }, 300000);
+}
+
+function cleanupDashboard() {
+  if (dashboardRefreshInterval) {
+    clearInterval(dashboardRefreshInterval);
+    dashboardRefreshInterval = null;
+  }
+}
+
+// Load dashboard content directly
+function loadDashboardContent() {
+  const mainContent = document.getElementById('mainContent');
+  if (mainContent) {
+    mainContent.innerHTML = '<div class="content-wrapper">' + generateDashboardHTML() + '</div>';
+  }
+  // Initialize dashboard and load alerts
+  setTimeout(() => {
+    initDashboard();
+  }, 100);
+}
+
+// Generate dashboard HTML
+function generateDashboardHTML() {
+  return `
+    <div class="dashboard-container">
+      <div class="alerts-section">
+        <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
+        
+        <div class="alert-card" id="maturedAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-check-circle"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Matured Investments</div>
+            <div class="alert-message" id="maturedMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+          </div>
+        </div>
+
+        <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-clock"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Investments Maturing in 5 Days</div>
+            <div class="alert-message" id="nearMaturityMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
+          </div>
+        </div>
+
+        <div class="alert-card warning" id="lowStockAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-boxes"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Low Stock Alert</div>
+            <div class="alert-message" id="lowStockMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('inventoryReport')" class="alert-btn">View Inventory</button>
+          </div>
+        </div>
+
+        <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-times-circle"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Out of Stock</div>
+            <div class="alert-message" id="outOfStockMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('inventoryAdd')" class="alert-btn">Restock Now</button>
+          </div>
+        </div>
+
+        <div class="alert-card danger" id="expiredSubscriptionsAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-calendar-times"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Expired Subscriptions</div>
+            <div class="alert-message" id="expiredSubscriptionsMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">Renew Now</button>
+          </div>
+        </div>
+
+        <div class="alert-card warning" id="expiringSubscriptionsAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-exclamation-circle"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Subscriptions Expiring Soon</div>
+            <div class="alert-message" id="expiringSubscriptionsMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">View Schedule</button>
+          </div>
+        </div>
+
+        <div class="alert-card danger" id="duePaymentsAlert" style="display: none;">
+          <div class="alert-icon">
+            <i class="fas fa-credit-card"></i>
+          </div>
+          <div class="alert-content">
+            <div class="alert-title">Subscription Payments Due</div>
+            <div class="alert-message" id="duePaymentsMessage"></div>
+          </div>
+          <div class="alert-action">
+            <button onclick="loadModule('subscriptionSchedule')" class="alert-btn">Make Payment</button>
+          </div>
+        </div>
+
+        <div class="no-alerts" id="noAlerts">
+          <i class="fas fa-check-circle"></i>
+          <p>All clear! No pending alerts.</p>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 function loadDashboardData() {
@@ -54,8 +194,11 @@ function loadInvestmentAlerts() {
       return;
     }
     
-    const today = new Date().toISOString().split('T')[0];
-    console.log('Today date string:', today);
+    const today = new Date();
+    const todayStr = formatDateForInput(today);
+    const fiveDaysLater = new Date(today);
+    fiveDaysLater.setDate(today.getDate() + 5);
+    const fiveDaysStr = formatDateForInput(fiveDaysLater);
     
     // Get all investments to check maturity dates
     API.getAllInvestments()
@@ -63,34 +206,26 @@ function loadInvestmentAlerts() {
         if (response && Array.isArray(response)) {
           console.log('Total investments:', response.length);
           
-          const todayDate = new Date(today);
+          const todayDate = new Date(todayStr);
           todayDate.setHours(0, 0, 0, 0);
           
-          const fiveDaysLater = new Date(today);
-          fiveDaysLater.setDate(fiveDaysLater.getDate() + 5);
-          fiveDaysLater.setHours(23, 59, 59, 999);
-          
-          console.log('Today:', todayDate);
-          console.log('5 days later:', fiveDaysLater);
+          const fiveDaysDate = new Date(fiveDaysStr);
+          fiveDaysDate.setHours(23, 59, 59, 999);
           
           // Matured investments (maturity date < today)
           dashboardData.maturedInvestments = response.filter(inv => {
+            if (!inv.maturityDate) return false;
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            const isMature = maturityDate < todayDate;
-            console.log('Investment ' + inv.investmentCode + ': maturityDate=' + maturityDate + ', isMature=' + isMature);
-            return isMature;
+            return maturityDate < todayDate;
           });
           
           // Near maturity investments (maturity date is 1 to 5 days from today)
           dashboardData.nearMaturityInvestments = response.filter(inv => {
+            if (!inv.maturityDate) return false;
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            const isNearMaturity = maturityDate > todayDate && maturityDate <= fiveDaysLater;
-            if (isNearMaturity) {
-              console.log('NEAR MATURITY - Investment ' + inv.investmentCode + ': maturityDate=' + maturityDate);
-            }
-            return isNearMaturity;
+            return maturityDate > todayDate && maturityDate <= fiveDaysDate;
           });
           
           console.log('Matured investments count:', dashboardData.maturedInvestments.length);
@@ -104,6 +239,7 @@ function loadInvestmentAlerts() {
       });
   });
 }
+
 // ============================================
 // INVENTORY ALERTS
 // ============================================
@@ -123,14 +259,14 @@ function loadInventoryAlerts() {
         if (response && Array.isArray(response)) {
           // Separate low stock and out of stock
           dashboardData.lowStockItems = response.filter(item => 
-            item.quantity > 0 && item.quantity <= 10
+            item.quantity > 0 && item.quantity <= 5
           );
           dashboardData.outOfStockItems = response.filter(item => 
             item.quantity === 0
           );
           
-          console.log('Low stock items:', dashboardData.lowStockItems);
-          console.log('Out of stock items:', dashboardData.outOfStockItems);
+          console.log('Low stock items:', dashboardData.lowStockItems.length);
+          console.log('Out of stock items:', dashboardData.outOfStockItems.length);
         }
         resolve();
       })
@@ -151,7 +287,6 @@ function loadSubscriptionAlerts() {
   return new Promise((resolve) => {
     if (typeof API === 'undefined' || !API) {
       console.log('API not available for subscriptions');
-      // Try loading from localStorage
       loadSubscriptionAlertsFromStorage();
       resolve();
       return;
@@ -240,9 +375,9 @@ function processSubscriptionAlerts(subscriptions) {
   dashboardData.expiringSubscriptions = expiringSubs;
   dashboardData.duePayments = duPayments;
   
-  console.log('Expired subscriptions:', dashboardData.expiredSubscriptions);
-  console.log('Expiring subscriptions:', dashboardData.expiringSubscriptions);
-  console.log('Due payments:', dashboardData.duePayments);
+  console.log('Expired subscriptions:', dashboardData.expiredSubscriptions.length);
+  console.log('Expiring subscriptions:', dashboardData.expiringSubscriptions.length);
+  console.log('Due payments:', dashboardData.duePayments.length);
 }
 
 // ============================================
@@ -261,9 +396,13 @@ function renderDashboardAlerts() {
     const message = document.getElementById('maturedMessage');
     if (alert && message) {
       const count = dashboardData.maturedInvestments.length;
-      message.innerHTML = `<strong>${count}</strong> investment(s) have matured and are ready for action.`;
+      const totalAmount = dashboardData.maturedInvestments.reduce((sum, inv) => sum + (parseFloat(inv.maturityAmount || inv.amount) || 0), 0);
+      message.innerHTML = `<strong>${count}</strong> investment(s) have matured (Total: GH₵ ${formatCurrency(totalAmount)}).`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('maturedAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render near maturity investments
@@ -273,9 +412,13 @@ function renderDashboardAlerts() {
     const message = document.getElementById('nearMaturityMessage');
     if (alert && message) {
       const count = dashboardData.nearMaturityInvestments.length;
-      message.innerHTML = `<strong>${count}</strong> investment(s) will mature within the next 5 days.`;
+      const totalAmount = dashboardData.nearMaturityInvestments.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
+      message.innerHTML = `<strong>${count}</strong> investment(s) will mature within 5 days (Total: GH₵ ${formatCurrency(totalAmount)}).`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('nearMaturityAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render low stock alert
@@ -285,13 +428,16 @@ function renderDashboardAlerts() {
     const message = document.getElementById('lowStockMessage');
     if (alert && message) {
       const items = dashboardData.lowStockItems.slice(0, 3).map(item => 
-        `${item.name || item.code} (${item.quantity} left)`
+        `${item.name || item.categoryName || item.code} (${item.quantity} left)`
       ).join(', ');
       const remaining = dashboardData.lowStockItems.length > 3 ? 
         ` and ${dashboardData.lowStockItems.length - 3} more` : '';
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('lowStockAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render out of stock alert
@@ -304,6 +450,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `<strong>${count}</strong> item(s) are out of stock and need restocking.`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('outOfStockAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render expired subscriptions alert
@@ -320,6 +469,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('expiredSubscriptionsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render expiring subscriptions alert
@@ -336,6 +488,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('expiringSubscriptionsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Render due payments alert
@@ -352,6 +507,9 @@ function renderDashboardAlerts() {
       message.innerHTML = `${items}${remaining}`;
       alert.style.display = 'flex';
     }
+  } else {
+    const alert = document.getElementById('duePaymentsAlert');
+    if (alert) alert.style.display = 'none';
   }
   
   // Show "no alerts" message if there are no alerts
@@ -365,9 +523,9 @@ function renderDashboardAlerts() {
 // UTILITY FUNCTIONS
 // ============================================
 
-function formatCurrency(val) {
-  if (val === null || val === undefined || val === '') return '0.00';
-  const numValue = parseFloat(val);
+function formatCurrency(value) {
+  if (value === null || value === undefined || value === '') return '0.00';
+  const numValue = parseFloat(value);
   if (isNaN(numValue)) return '0.00';
   return numValue.toLocaleString('en-US', {
     minimumFractionDigits: 2,
@@ -375,14 +533,19 @@ function formatCurrency(val) {
   });
 }
 
-function loadModule(moduleName) {
-  console.log('Loading module:', moduleName);
-  // This function should be called from your main app to load the specified module
-  if (typeof window.loadModule === 'function') {
-    window.loadModule(moduleName);
-  }
+function formatDateForInput(date) {
+  if (!date) return '';
+  const d = new Date(date);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 // Expose global functions
 window.initDashboard = initDashboard;
 window.loadDashboardData = loadDashboardData;
+window.loadDashboardContent = loadDashboardContent;
+window.cleanupDashboard = cleanupDashboard;
+window.formatCurrency = formatCurrency;
+window.formatDateForInput = formatDateForInput;
