@@ -3,13 +3,12 @@
 // ============================================
 
 let dashboardData = {
-  maturedInvestments: [],
   nearMaturityInvestments: [],
   lowStockItems: [],
   outOfStockItems: [],
   expiredSubscriptions: [],
   expiringSubscriptions: [],
-  duePayments: []
+  duePayments: []  // Now includes recurring payments based on frequency
 };
 
 let dashboardRefreshInterval = null;
@@ -61,25 +60,13 @@ function generateDashboardHTML() {
       <div class="alerts-section">
         <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
         
-        <div class="alert-card" id="maturedAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Matured Investments</div>
-            <div class="alert-message" id="maturedMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
-          </div>
-        </div>
-
+        <!-- Near Maturity Alert (1-5 days) -->
         <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-clock"></i>
           </div>
           <div class="alert-content">
-            <div class="alert-title">Investments Maturing in 5 Days</div>
+            <div class="alert-title">Investments Maturing in 1-5 Days</div>
             <div class="alert-message" id="nearMaturityMessage"></div>
           </div>
           <div class="alert-action">
@@ -87,6 +74,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- Low Stock Alert -->
         <div class="alert-card warning" id="lowStockAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-boxes"></i>
@@ -100,6 +88,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- Out of Stock Alert -->
         <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-times-circle"></i>
@@ -113,6 +102,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- Expired Subscriptions Alert -->
         <div class="alert-card danger" id="expiredSubscriptionsAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-calendar-times"></i>
@@ -126,6 +116,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- Expiring Subscriptions Alert (based on expiry date) -->
         <div class="alert-card warning" id="expiringSubscriptionsAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-exclamation-circle"></i>
@@ -139,6 +130,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- Due Payments Alert (based on payment mode and frequency) -->
         <div class="alert-card danger" id="duePaymentsAlert" style="display: none;">
           <div class="alert-icon">
             <i class="fas fa-credit-card"></i>
@@ -152,6 +144,7 @@ function generateDashboardHTML() {
           </div>
         </div>
 
+        <!-- No Alerts Message -->
         <div class="no-alerts" id="noAlerts">
           <i class="fas fa-check-circle"></i>
           <p>All clear! No pending alerts.</p>
@@ -181,7 +174,7 @@ function loadDashboardData() {
 }
 
 // ============================================
-// INVESTMENT ALERTS
+// INVESTMENT ALERTS - Only maturing within 1-5 days
 // ============================================
 
 function loadInvestmentAlerts() {
@@ -195,41 +188,38 @@ function loadInvestmentAlerts() {
     }
     
     const today = new Date();
-    const todayStr = formatDateForInput(today);
+    today.setHours(0, 0, 0, 0);
+    
+    // Get date 1 day from now (tomorrow)
+    const oneDayLater = new Date(today);
+    oneDayLater.setDate(today.getDate() + 1);
+    oneDayLater.setHours(0, 0, 0, 0);
+    
+    // Get date 5 days from now
     const fiveDaysLater = new Date(today);
     fiveDaysLater.setDate(today.getDate() + 5);
-    const fiveDaysStr = formatDateForInput(fiveDaysLater);
+    fiveDaysLater.setHours(23, 59, 59, 999);
     
     // Get all investments to check maturity dates
     API.getAllInvestments()
       .then(function(response) {
         if (response && Array.isArray(response)) {
-          console.log('Total investments:', response.length);
-          
-          const todayDate = new Date(todayStr);
-          todayDate.setHours(0, 0, 0, 0);
-          
-          const fiveDaysDate = new Date(fiveDaysStr);
-          fiveDaysDate.setHours(23, 59, 59, 999);
-          
-          // Matured investments (maturity date < today)
-          dashboardData.maturedInvestments = response.filter(inv => {
-            if (!inv.maturityDate) return false;
-            const maturityDate = new Date(inv.maturityDate);
-            maturityDate.setHours(0, 0, 0, 0);
-            return maturityDate < todayDate;
-          });
-          
-          // Near maturity investments (maturity date is 1 to 5 days from today)
+          // Only get investments maturing within 1-5 days (excluding today)
           dashboardData.nearMaturityInvestments = response.filter(inv => {
             if (!inv.maturityDate) return false;
             const maturityDate = new Date(inv.maturityDate);
             maturityDate.setHours(0, 0, 0, 0);
-            return maturityDate > todayDate && maturityDate <= fiveDaysDate;
+            
+            // Check if maturity date is between tomorrow and 5 days from now
+            return maturityDate >= oneDayLater && maturityDate <= fiveDaysLater;
           });
           
-          console.log('Matured investments count:', dashboardData.maturedInvestments.length);
-          console.log('Near maturity investments count:', dashboardData.nearMaturityInvestments.length);
+          // Sort by maturity date (soonest first)
+          dashboardData.nearMaturityInvestments.sort((a, b) => {
+            return new Date(a.maturityDate) - new Date(b.maturityDate);
+          });
+          
+          console.log('Near maturity investments count (1-5 days):', dashboardData.nearMaturityInvestments.length);
         }
         resolve();
       })
@@ -329,43 +319,90 @@ function processSubscriptionAlerts(subscriptions) {
   
   const expiredSubs = [];
   const expiringSubs = [];
-  const duPayments = [];
+  const duePaymentsList = [];
   
   subscriptions.forEach(sub => {
-    if (!sub.expiryDate) return;
-    
-    const expiryDate = new Date(sub.expiryDate);
-    expiryDate.setHours(0, 0, 0, 0);
-    
-    const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
-    
-    // Check for expired subscriptions
-    if (daysUntilExpiry < 0) {
-      expiredSubs.push({
-        ...sub,
-        daysOverdue: Math.abs(daysUntilExpiry)
-      });
-    }
-    // Check for expiring soon (30 days)
-    else if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
-      expiringSubs.push({
-        ...sub,
-        daysUntilExpiry: daysUntilExpiry
-      });
-    }
-  });
-  
-  // Check for in-arrears subscriptions with pending payments
-  subscriptions.forEach(sub => {
-    if (sub.paymentMode === 'In Arrears') {
-      const amountPaid = sub.amountPaid || 0;
-      const remaining = (sub.annualCost || 0) - amountPaid;
+    // Process expiry-based alerts
+    if (sub.expiryDate) {
+      const expiryDate = new Date(sub.expiryDate);
+      expiryDate.setHours(0, 0, 0, 0);
       
-      if (remaining > 0) {
-        duPayments.push({
+      const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+      
+      // Check for expired subscriptions
+      if (daysUntilExpiry < 0) {
+        expiredSubs.push({
           ...sub,
-          amountDue: remaining,
-          amountPaid: amountPaid
+          daysOverdue: Math.abs(daysUntilExpiry)
+        });
+      }
+      // Check for expiring soon (30 days)
+      else if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
+        expiringSubs.push({
+          ...sub,
+          daysUntilExpiry: daysUntilExpiry
+        });
+      }
+    }
+    
+    // Process payment due alerts based on payment mode and frequency
+    const paymentMode = sub.paymentMode || 'Upfront';
+    const frequency = sub.frequency || 'Yearly';
+    const startDate = sub.startDate ? new Date(sub.startDate) : null;
+    const lastPaymentDate = sub.lastPaymentDate ? new Date(sub.lastPaymentDate) : null;
+    const annualCost = parseFloat(sub.annualCost) || 0;
+    const amountPaid = parseFloat(sub.amountPaid) || 0;
+    
+    // Calculate next payment due date based on payment mode and frequency
+    let nextPaymentDate = null;
+    let paymentAmount = 0;
+    let isPaymentDue = false;
+    
+    if (paymentMode === 'In Arrears') {
+      // For In Arrears, payments are due after service period
+      // Calculate based on start date or last payment date
+      const baseDate = lastPaymentDate || startDate;
+      
+      if (baseDate) {
+        nextPaymentDate = calculateNextPaymentDate(baseDate, frequency);
+        paymentAmount = calculatePaymentAmount(annualCost, frequency);
+        
+        // Check if payment is due (today or overdue)
+        if (nextPaymentDate && nextPaymentDate <= today) {
+          // Calculate how many payments are overdue
+          const paymentsOverdue = calculatePaymentsOverdue(baseDate, today, frequency);
+          const totalAmountDue = paymentAmount * paymentsOverdue;
+          
+          isPaymentDue = true;
+          duePaymentsList.push({
+            ...sub,
+            nextPaymentDate: nextPaymentDate,
+            paymentAmount: paymentAmount,
+            totalAmountDue: totalAmountDue,
+            paymentsOverdue: paymentsOverdue,
+            frequency: frequency,
+            paymentMode: paymentMode
+          });
+        }
+      }
+    } else if (paymentMode === 'Upfront' && sub.expiryDate) {
+      // For Upfront, check if renewal payment is due (30 days before expiry)
+      const expiryDate = new Date(sub.expiryDate);
+      expiryDate.setHours(0, 0, 0, 0);
+      const daysUntilExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+      
+      // Alert for upcoming renewal payment (30 days before expiry)
+      if (daysUntilExpiry <= 30 && daysUntilExpiry > 0) {
+        duePaymentsList.push({
+          ...sub,
+          nextPaymentDate: expiryDate,
+          paymentAmount: annualCost,
+          totalAmountDue: annualCost,
+          paymentsOverdue: 0,
+          paymentType: 'renewal',
+          daysUntilDue: daysUntilExpiry,
+          frequency: frequency,
+          paymentMode: paymentMode
         });
       }
     }
@@ -373,11 +410,96 @@ function processSubscriptionAlerts(subscriptions) {
   
   dashboardData.expiredSubscriptions = expiredSubs;
   dashboardData.expiringSubscriptions = expiringSubs;
-  dashboardData.duePayments = duPayments;
+  dashboardData.duePayments = duePaymentsList;
   
   console.log('Expired subscriptions:', dashboardData.expiredSubscriptions.length);
   console.log('Expiring subscriptions:', dashboardData.expiringSubscriptions.length);
   console.log('Due payments:', dashboardData.duePayments.length);
+  
+  // Log details for debugging
+  dashboardData.duePayments.forEach(payment => {
+    console.log(`Payment due: ${payment.name} - ${payment.frequency} - ${payment.paymentMode} - Amount: ${payment.totalAmountDue}`);
+  });
+}
+
+// Helper function to calculate next payment date based on frequency
+function calculateNextPaymentDate(baseDate, frequency) {
+  if (!baseDate) return null;
+  
+  const nextDate = new Date(baseDate);
+  
+  switch(frequency) {
+    case 'Monthly':
+      nextDate.setMonth(nextDate.getMonth() + 1);
+      break;
+    case 'Quarterly':
+      nextDate.setMonth(nextDate.getMonth() + 3);
+      break;
+    case 'Half-Yearly':
+    case 'Semi-Annual':
+      nextDate.setMonth(nextDate.getMonth() + 6);
+      break;
+    case 'Yearly':
+    case 'Annual':
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+      break;
+    default:
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+  }
+  
+  return nextDate;
+}
+
+// Helper function to calculate payment amount based on frequency
+function calculatePaymentAmount(annualCost, frequency) {
+  switch(frequency) {
+    case 'Monthly':
+      return annualCost / 12;
+    case 'Quarterly':
+      return annualCost / 4;
+    case 'Half-Yearly':
+    case 'Semi-Annual':
+      return annualCost / 2;
+    case 'Yearly':
+    case 'Annual':
+    default:
+      return annualCost;
+  }
+}
+
+// Helper function to calculate how many payments are overdue
+function calculatePaymentsOverdue(startDate, currentDate, frequency) {
+  if (!startDate) return 0;
+  
+  let monthsDiff = (currentDate.getFullYear() - startDate.getFullYear()) * 12;
+  monthsDiff += currentDate.getMonth() - startDate.getMonth();
+  
+  // Adjust for day of month
+  if (currentDate.getDate() < startDate.getDate()) {
+    monthsDiff--;
+  }
+  
+  let periodsPassed = 0;
+  switch(frequency) {
+    case 'Monthly':
+      periodsPassed = monthsDiff;
+      break;
+    case 'Quarterly':
+      periodsPassed = Math.floor(monthsDiff / 3);
+      break;
+    case 'Half-Yearly':
+    case 'Semi-Annual':
+      periodsPassed = Math.floor(monthsDiff / 6);
+      break;
+    case 'Yearly':
+    case 'Annual':
+      periodsPassed = Math.floor(monthsDiff / 12);
+      break;
+    default:
+      periodsPassed = Math.floor(monthsDiff / 12);
+  }
+  
+  return Math.max(0, periodsPassed);
 }
 
 // ============================================
@@ -389,23 +511,7 @@ function renderDashboardAlerts() {
   
   let hasAlerts = false;
   
-  // Render matured investments
-  if (dashboardData.maturedInvestments && dashboardData.maturedInvestments.length > 0) {
-    hasAlerts = true;
-    const alert = document.getElementById('maturedAlert');
-    const message = document.getElementById('maturedMessage');
-    if (alert && message) {
-      const count = dashboardData.maturedInvestments.length;
-      const totalAmount = dashboardData.maturedInvestments.reduce((sum, inv) => sum + (parseFloat(inv.maturityAmount || inv.amount) || 0), 0);
-      message.innerHTML = `<strong>${count}</strong> investment(s) have matured (Total: GH₵ ${formatCurrency(totalAmount)}).`;
-      alert.style.display = 'flex';
-    }
-  } else {
-    const alert = document.getElementById('maturedAlert');
-    if (alert) alert.style.display = 'none';
-  }
-  
-  // Render near maturity investments
+  // Render near maturity investments (1-5 days only)
   if (dashboardData.nearMaturityInvestments && dashboardData.nearMaturityInvestments.length > 0) {
     hasAlerts = true;
     const alert = document.getElementById('nearMaturityAlert');
@@ -413,7 +519,23 @@ function renderDashboardAlerts() {
     if (alert && message) {
       const count = dashboardData.nearMaturityInvestments.length;
       const totalAmount = dashboardData.nearMaturityInvestments.reduce((sum, inv) => sum + (parseFloat(inv.amount) || 0), 0);
-      message.innerHTML = `<strong>${count}</strong> investment(s) will mature within 5 days (Total: GH₵ ${formatCurrency(totalAmount)}).`;
+      
+      // Calculate days until maturity for display
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const investmentDetails = dashboardData.nearMaturityInvestments.map(inv => {
+        const maturityDate = new Date(inv.maturityDate);
+        maturityDate.setHours(0, 0, 0, 0);
+        const daysUntil = Math.ceil((maturityDate - today) / (1000 * 60 * 60 * 24));
+        return `${inv.investmentCode || inv.code} (${daysUntil} day${daysUntil !== 1 ? 's' : ''}) - GH₵ ${formatCurrency(inv.amount)}`;
+      }).join('; ');
+      
+      message.innerHTML = `
+        <strong>${count}</strong> investment(s) maturing in 1-5 days.<br>
+        <small>Total: GH₵ ${formatCurrency(totalAmount)}</small><br>
+        <small>Details: ${investmentDetails}</small>
+      `;
       alert.style.display = 'flex';
     }
   } else {
@@ -474,7 +596,7 @@ function renderDashboardAlerts() {
     if (alert) alert.style.display = 'none';
   }
   
-  // Render expiring subscriptions alert
+  // Render expiring subscriptions alert (based on expiry date)
   if (dashboardData.expiringSubscriptions && dashboardData.expiringSubscriptions.length > 0) {
     hasAlerts = true;
     const alert = document.getElementById('expiringSubscriptionsAlert');
@@ -493,18 +615,38 @@ function renderDashboardAlerts() {
     if (alert) alert.style.display = 'none';
   }
   
-  // Render due payments alert
+  // Render due payments alert (based on payment mode and frequency)
   if (dashboardData.duePayments && dashboardData.duePayments.length > 0) {
     hasAlerts = true;
     const alert = document.getElementById('duePaymentsAlert');
     const message = document.getElementById('duePaymentsMessage');
     if (alert && message) {
-      const items = dashboardData.duePayments.slice(0, 3).map(sub => 
-        `${sub.name} (GH₵ ${formatCurrency(sub.amountDue)} due)`
-      ).join(', ');
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const paymentDetails = dashboardData.duePayments.slice(0, 3).map(payment => {
+        let detailText = '';
+        
+        if (payment.paymentMode === 'In Arrears') {
+          if (payment.paymentsOverdue > 1) {
+            detailText = `${payment.name} - ${payment.frequency} (${payment.paymentsOverdue} payments overdue, total GH₵ ${formatCurrency(payment.totalAmountDue)})`;
+          } else {
+            detailText = `${payment.name} - ${payment.frequency} payment of GH₵ ${formatCurrency(payment.paymentAmount)} due`;
+          }
+        } else if (payment.paymentMode === 'Upfront' && payment.paymentType === 'renewal') {
+          detailText = `${payment.name} - Renewal payment of GH₵ ${formatCurrency(payment.paymentAmount)} due in ${payment.daysUntilDue} days`;
+        }
+        
+        return detailText;
+      }).join('; ');
+      
       const remaining = dashboardData.duePayments.length > 3 ? 
         ` and ${dashboardData.duePayments.length - 3} more` : '';
-      message.innerHTML = `${items}${remaining}`;
+      
+      message.innerHTML = `
+        <strong>${dashboardData.duePayments.length}</strong> payment(s) due.<br>
+        <small>${paymentDetails}${remaining}</small>
+      `;
       alert.style.display = 'flex';
     }
   } else {
