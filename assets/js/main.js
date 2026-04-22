@@ -1,6 +1,5 @@
 /* ============================================
    ACCOUNTS WORKSPACE - MAIN JAVASCRIPT
-   Maintains original Google Apps Script logic approach
    ============================================ */
 
 // Global Variables
@@ -8,7 +7,6 @@ let currentOpenSubmenu = null;
 let sidebarCollapsed = false;
 let currentUser = null;
 let currentModule = 'dashboard';
-let dashboardRefreshInterval = null;
 
 // ============================================
 // COMPATIBILITY LAYER - For modules using google.script.run
@@ -102,18 +100,18 @@ window.google = {
             'addNewInvestment': () => API.addNewInvestment(args[0]),
             'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(args[0], args[1]),
             'getMaturedInvestments': () => API.getMaturedInvestments(args[0]),
-
-     
-'getSubscriptionCategories': () => API.getSubscriptionCategories(),
-'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
-'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
-'addSubscription': () => API.addSubscription(args[0]),
-'getAllSubscriptions': () => API.getAllSubscriptions(),
-'updateSubscription': () => API.updateSubscription(args[0]),
-'deleteSubscription': () => API.deleteSubscription(args[0]),
-'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
-'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
-'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
+            
+            // Subscription
+            'getSubscriptionCategories': () => API.getSubscriptionCategories(),
+            'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
+            'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
+            'addSubscription': () => API.addSubscription(args[0]),
+            'getAllSubscriptions': () => API.getAllSubscriptions(),
+            'updateSubscription': () => API.updateSubscription(args[0]),
+            'deleteSubscription': () => API.deleteSubscription(args[0]),
+            'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
+            'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
+            'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
              
             // HTML Module Loaders
             'getPVFormHTML': () => loadModuleFile('paymentVoucher'),
@@ -191,8 +189,16 @@ function initializeApp() {
   setupEventListeners();
   setupSidebarToggleOnResize();
   
-  // Load dashboard content directly
-  loadDashboardContent();
+  // Load dashboard content directly (using dashboard.js function)
+  if (typeof loadDashboardContent === 'function') {
+    loadDashboardContent();
+  } else {
+    // Fallback
+    const mainContent = document.getElementById('mainContent');
+    if (mainContent) {
+      mainContent.innerHTML = '<div class="content-wrapper"><p>Loading dashboard...</p></div>';
+    }
+  }
   
   // Check if sidebar should be collapsed based on screen size
   if (window.innerWidth <= 768) {
@@ -328,303 +334,9 @@ function hideLoadingModal() {
 }
 
 // ============================================
-// DASHBOARD FUNCTIONS
+// MODULE LOADING
 // ============================================
 
-// Load dashboard content directly
-function loadDashboardContent() {
-  const mainContent = document.getElementById('mainContent');
-  if (mainContent) {
-    mainContent.innerHTML = '<div class="content-wrapper">' + generateDashboardHTML() + '</div>';
-  }
-  // Initialize dashboard and load alerts
-  setTimeout(() => {
-    initDashboard();
-  }, 100);
-}
-
-// Generate dashboard HTML
-function generateDashboardHTML() {
-  return `
-    <div class="dashboard-container">
-      <div class="alerts-section">
-        <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
-        
-        <div class="alert-card" id="maturedAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-check-circle"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Matured Investments</div>
-            <div class="alert-message" id="maturedMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
-          </div>
-        </div>
-
-        <div class="alert-card warning" id="nearMaturityAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-clock"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Investments Maturing in 5 Days</div>
-            <div class="alert-message" id="nearMaturityMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('investmentReport')" class="alert-btn">View Details</button>
-          </div>
-        </div>
-
-        <div class="alert-card warning" id="lowStockAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-boxes"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Low Stock Alert</div>
-            <div class="alert-message" id="lowStockMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('inventoryReport')" class="alert-btn">View Inventory</button>
-          </div>
-        </div>
-
-        <div class="alert-card danger" id="outOfStockAlert" style="display: none;">
-          <div class="alert-icon">
-            <i class="fas fa-times-circle"></i>
-          </div>
-          <div class="alert-content">
-            <div class="alert-title">Out of Stock</div>
-            <div class="alert-message" id="outOfStockMessage"></div>
-          </div>
-          <div class="alert-action">
-            <button onclick="loadModule('inventoryAdd')" class="alert-btn">Restock Now</button>
-          </div>
-        </div>
-
-        <div class="no-alerts" id="noAlerts">
-          <i class="fas fa-check-circle"></i>
-          <p>All clear! No pending alerts.</p>
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-// Load dashboard data (alerts)
-async function loadDashboardData() {
-  try {
-    console.log('Loading dashboard alerts...');
-    
-    // Get today's date
-    const today = new Date();
-    const todayStr = formatDateForInput(today);
-    
-    // Get date 5 days from now
-    const fiveDaysLater = new Date(today);
-    fiveDaysLater.setDate(today.getDate() + 5);
-    const fiveDaysStr = formatDateForInput(fiveDaysLater);
-    
-    // Get start of year for date range
-    const startOfYear = getStartOfYear();
-    
-    // Load investments and inventory data
-    const [investments, inventoryList] = await Promise.all([
-      API.getInvestmentsByDateRange(startOfYear, fiveDaysStr).catch(() => []),
-      API.getInventoryListData().catch(() => [])
-    ]);
-    
-    console.log('Investments loaded:', investments ? investments.length : 0);
-    console.log('Inventory loaded:', inventoryList ? inventoryList.length : 0);
-    
-    // Process investment alerts
-    processInvestmentAlerts(investments, todayStr, fiveDaysStr);
-    
-    // Process inventory alerts
-    processInventoryAlerts(inventoryList);
-    
-  } catch (error) {
-    console.error('Error loading dashboard data:', error);
-  }
-}
-
-// Process investment alerts (matured and near maturity)
-function processInvestmentAlerts(investments, todayStr, fiveDaysStr) {
-  const maturedList = [];
-  const nearMaturityList = [];
-  
-  if (investments && Array.isArray(investments)) {
-    investments.forEach(inv => {
-      if (inv.maturityDate) {
-        const maturityDate = new Date(inv.maturityDate);
-        const today = new Date(todayStr);
-        const fiveDays = new Date(fiveDaysStr);
-        
-        // Check if matured today
-        if (formatDateForInput(maturityDate) === todayStr) {
-          maturedList.push({
-            code: inv.investmentCode,
-            amount: inv.maturityAmount || inv.amount,
-            type: inv.investmentType
-          });
-        }
-        // Check if maturing within 1-5 days (and not today)
-        else if (maturityDate > today && maturityDate <= fiveDays) {
-          nearMaturityList.push({
-            code: inv.investmentCode,
-            amount: inv.maturityAmount || inv.amount,
-            date: inv.maturityDate,
-            type: inv.investmentType
-          });
-        }
-      }
-    });
-  }
-  
-  // Display matured investments alert
-  const maturedAlert = document.getElementById('maturedAlert');
-  const maturedMessage = document.getElementById('maturedMessage');
-  
-  if (maturedList.length > 0) {
-    if (maturedAlert) maturedAlert.style.display = 'flex';
-    if (maturedMessage) {
-      maturedMessage.innerHTML = `
-        <strong>${maturedList.length} investment(s) matured today:</strong>
-        <ul>
-          ${maturedList.map(inv => `<li>${inv.code} - GH₵ ${formatCurrency(inv.amount)}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (maturedAlert) maturedAlert.style.display = 'none';
-  }
-  
-  // Display near maturity alert
-  const nearMaturityAlert = document.getElementById('nearMaturityAlert');
-  const nearMaturityMessage = document.getElementById('nearMaturityMessage');
-  
-  if (nearMaturityList.length > 0) {
-    if (nearMaturityAlert) nearMaturityAlert.style.display = 'flex';
-    if (nearMaturityMessage) {
-      nearMaturityMessage.innerHTML = `
-        <strong>${nearMaturityList.length} investment(s) maturing in 1-5 days:</strong>
-        <ul>
-          ${nearMaturityList.map(inv => `<li>${inv.code} - GH₵ ${formatCurrency(inv.amount)} maturing on ${formatDate(inv.date)}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (nearMaturityAlert) nearMaturityAlert.style.display = 'none';
-  }
-}
-
-// Process inventory alerts (low stock and out of stock)
-function processInventoryAlerts(inventoryList) {
-  const lowStockList = [];
-  const outOfStockList = [];
-  
-  if (inventoryList && Array.isArray(inventoryList)) {
-    inventoryList.forEach(item => {
-      const quantity = parseInt(item.quantity) || 0;
-      const code = item.inventoryCode || item.code;
-      const name = item.categoryName || item.name;
-      
-      if (quantity === 0) {
-        outOfStockList.push({ code, name, quantity });
-      } else if (quantity <= 5) {
-        lowStockList.push({ code, name, quantity });
-      }
-    });
-  }
-  
-  // Display out of stock alert
-  const outOfStockAlert = document.getElementById('outOfStockAlert');
-  const outOfStockMessage = document.getElementById('outOfStockMessage');
-  
-  if (outOfStockList.length > 0) {
-    if (outOfStockAlert) outOfStockAlert.style.display = 'flex';
-    if (outOfStockMessage) {
-      outOfStockMessage.innerHTML = `
-        <strong>${outOfStockList.length} item(s) out of stock:</strong>
-        <ul>
-          ${outOfStockList.map(item => `<li>${item.code} - ${item.name}</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (outOfStockAlert) outOfStockAlert.style.display = 'none';
-  }
-  
-  // Display low stock alert
-  const lowStockAlert = document.getElementById('lowStockAlert');
-  const lowStockMessage = document.getElementById('lowStockMessage');
-  
-  if (lowStockList.length > 0) {
-    if (lowStockAlert) lowStockAlert.style.display = 'flex';
-    if (lowStockMessage) {
-      lowStockMessage.innerHTML = `
-        <strong>${lowStockList.length} item(s) running low (≤5 units):</strong>
-        <ul>
-          ${lowStockList.map(item => `<li>${item.code} - ${item.name} (${item.quantity} left)</li>`).join('')}
-        </ul>
-      `;
-    }
-  } else {
-    if (lowStockAlert) lowStockAlert.style.display = 'none';
-  }
-  
-  // Show/hide "no alerts" message (check all alerts)
-  const noAlerts = document.getElementById('noAlerts');
-  const maturedAlert = document.getElementById('maturedAlert');
-  const nearMaturityAlert = document.getElementById('nearMaturityAlert');
-  
-  const hasAnyAlerts = 
-    (maturedAlert && maturedAlert.style.display === 'flex') ||
-    (nearMaturityAlert && nearMaturityAlert.style.display === 'flex') ||
-    lowStockList.length > 0 ||
-    outOfStockList.length > 0;
-  
-  if (noAlerts) {
-    if (hasAnyAlerts) {
-      noAlerts.style.display = 'none';
-    } else {
-      noAlerts.style.display = 'block';
-    }
-  }
-}
-
-// Initialize Dashboard
-function initDashboard() {
-  console.log('Dashboard initialized - loading alerts');
-  currentModule = 'dashboard';
-  // Load dashboard data
-  loadDashboardData();
-  
-  // Set up auto-refresh every 5 minutes (300000 ms)
-  if (dashboardRefreshInterval) {
-    clearInterval(dashboardRefreshInterval);
-  }
-  dashboardRefreshInterval = setInterval(() => {
-    if (currentModule === 'dashboard') {
-      console.log('Auto-refreshing dashboard alerts...');
-      loadDashboardData();
-    }
-  }, 300000);
-}
-
-// Clean up interval when leaving dashboard (optional)
-function cleanupDashboard() {
-  if (dashboardRefreshInterval) {
-    clearInterval(dashboardRefreshInterval);
-    dashboardRefreshInterval = null;
-  }
-}
-
-// ============================================
-// MODULE LOADING (for other modules)
-// ============================================
-
-// Alias for sidebar to load modules
 function loadModule(moduleName) {
   if (currentModule === moduleName) return;
   
@@ -643,13 +355,15 @@ function loadModule(moduleName) {
     'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
-  'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
+    'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
     'dashboard': null
   };
   
   // Handle dashboard separately
   if (moduleName === 'dashboard') {
-    loadDashboardContent();
+    if (typeof loadDashboardContent === 'function') {
+      loadDashboardContent();
+    }
     hideLoadingModal();
     closeSidebarMobile();
     return;
@@ -741,6 +455,14 @@ function initInvestmentReportModule() {
   console.log('Investment Report module loaded');
 }
 
+function initSubscriptionAddModule() {
+  console.log('Subscription Add module loaded');
+}
+
+function initSubscriptionScheduleModule() {
+  console.log('Subscription Schedule module loaded');
+}
+
 // ============================================
 // USER FUNCTIONS
 // ============================================
@@ -765,16 +487,6 @@ function logout() {
 // UTILITY FUNCTIONS
 // ============================================
 
-function formatCurrency(value) {
-  if (value === null || value === undefined || value === '') return '0.00';
-  const numValue = parseFloat(value);
-  if (isNaN(numValue)) return '0.00';
-  return numValue.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-}
-
 function formatDate(dateString) {
   if (!dateString) return '';
   try {
@@ -787,15 +499,6 @@ function formatDate(dateString) {
   } catch (e) {
     return dateString;
   }
-}
-
-function formatDateForInput(date) {
-  if (!date) return '';
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 }
 
 function getToday() {
@@ -827,16 +530,16 @@ window.initAssetModule = initAssetModule;
 window.initAssetRegisterModule = initAssetRegisterModule;
 window.initInvestmentModule = initInvestmentModule;
 window.initInvestmentReportModule = initInvestmentReportModule;
-window.initDashboard = initDashboard;
-window.refreshDashboard = loadDashboardData;
-window.formatCurrency = formatCurrency;
+window.initSubscriptionAddModule = initSubscriptionAddModule;
+window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
 window.formatDate = formatDate;
-window.formatDateForInput = formatDateForInput;
 window.getToday = getToday;
 window.getStartOfYear = getStartOfYear;
+window.showLoadingModal = showLoadingModal;
+window.hideLoadingModal = hideLoadingModal;
 
 // ============================================
-// ADD CSS FOR LOADING MODAL AND DASHBOARD
+// ADD CSS FOR LOADING MODAL
 // ============================================
 
 const homepageLoadingStyle = document.createElement('style');
@@ -883,173 +586,6 @@ homepageLoadingStyle.textContent = `
   @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-  }
-
-  /* Dashboard Alerts Styles */
-  .dashboard-container {
-    max-width: 1000px;
-    margin: 0 auto;
-  }
-
-  .alerts-section {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  }
-
-  .alerts-section h3 {
-    color: #2d3748;
-    font-size: 16px;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 2px solid #e2e8f0;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .alerts-section h3 i {
-    color: #4361ee;
-  }
-
-  .alert-card {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    padding: 15px;
-    margin-bottom: 12px;
-    border-radius: 10px;
-    background: #f0fdf4;
-    border-left: 4px solid #06d6a0;
-    transition: all 0.2s;
-  }
-
-  .alert-card.warning {
-    background: #fefce8;
-    border-left-color: #ffd166;
-  }
-
-  .alert-card.danger {
-    background: #fef2f2;
-    border-left-color: #ef476f;
-  }
-
-  .alert-card:hover {
-    transform: translateX(3px);
-  }
-
-  .alert-icon {
-    font-size: 28px;
-    min-width: 50px;
-    text-align: center;
-  }
-
-  .alert-card .alert-icon i {
-    color: #06d6a0;
-  }
-
-  .alert-card.warning .alert-icon i {
-    color: #ffd166;
-  }
-
-  .alert-card.danger .alert-icon i {
-    color: #ef476f;
-  }
-
-  .alert-content {
-    flex: 1;
-  }
-
-  .alert-title {
-    font-weight: 700;
-    font-size: 14px;
-    color: #2d3748;
-    margin-bottom: 4px;
-  }
-
-  .alert-message {
-    font-size: 12px;
-    color: #4a5568;
-  }
-
-  .alert-message ul {
-    margin: 5px 0 0 20px;
-    padding: 0;
-  }
-
-  .alert-message li {
-    margin: 3px 0;
-  }
-
-  .alert-btn {
-    background: #4361ee;
-    color: white;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
-  }
-
-  .alert-btn:hover {
-    background: #3a56d4;
-    transform: translateY(-1px);
-  }
-
-  .alert-card.danger .alert-btn {
-    background: #ef476f;
-  }
-
-  .alert-card.danger .alert-btn:hover {
-    background: #d32f2f;
-  }
-
-  .alert-card.warning .alert-btn {
-    background: #ffd166;
-    color: #2d3748;
-  }
-
-  .alert-card.warning .alert-btn:hover {
-    background: #e6c200;
-  }
-
-  .no-alerts {
-    text-align: center;
-    padding: 40px;
-    color: #a0aec0;
-  }
-
-  .no-alerts i {
-    font-size: 48px;
-    margin-bottom: 12px;
-    color: #cbd5e0;
-  }
-
-  .no-alerts p {
-    font-size: 14px;
-  }
-
-  @media (max-width: 768px) {
-    .alerts-section {
-      padding: 15px;
-    }
-
-    .alert-card {
-      flex-direction: column;
-      text-align: center;
-      gap: 10px;
-    }
-
-    .alert-action {
-      width: 100%;
-    }
-
-    .alert-btn {
-      width: 100%;
-    }
   }
 `;
 document.head.appendChild(homepageLoadingStyle);
