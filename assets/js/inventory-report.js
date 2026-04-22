@@ -518,7 +518,8 @@ function submitUsageRecord() {
     return;
   }
 
-  showInventoryLoadingModal('Recording usage and checking FIFO...');
+  // Show loading modal with "Recording usage..." message
+  showRecordingUsageLoading();
 
   const usageCost = quantityUsed * currentUsageItem.unitCost;
 
@@ -563,7 +564,70 @@ function submitUsageRecord() {
     .recordInventoryUsage(formData);
 }
 
+// New function: Show "Recording usage..." loading modal
+function showRecordingUsageLoading() {
+  let modal = document.getElementById('recordingUsageModal');
+  
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'recordingUsageModal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1002;
+    `;
+    document.body.appendChild(modal);
+  }
+  
+  modal.innerHTML = `
+    <div style="background: white; padding: 35px 45px; border-radius: 16px; text-align: center; min-width: 280px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+      <div style="width: 50px; height: 50px; border: 4px solid #e2e8f0; border-top: 4px solid #4361ee; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 20px auto;"></div>
+      <div style="font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">
+        <i class="fas fa-box-open" style="color: #4361ee; margin-right: 8px;"></i>
+        Recording Usage...
+      </div>
+      <div style="font-size: 13px; color: #6b7280;">
+        Please wait while we process your request
+      </div>
+    </div>
+  `;
+  
+  modal.style.display = 'flex';
+  
+  // Ensure spin animation exists
+  if (!document.querySelector('#recording-spinner-style')) {
+    const style = document.createElement('style');
+    style.id = 'recording-spinner-style';
+    style.textContent = `
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+}
+
+// Override hideInventoryLoadingModal to also hide recording modal
+function hideInventoryLoadingModal() {
+  const modal = document.getElementById('inventoryLoadingModal');
+  if (modal) modal.style.display = 'none';
+  
+  const recordingModal = document.getElementById('recordingUsageModal');
+  if (recordingModal) recordingModal.style.display = 'none';
+}
+
 function showSuccessModalUsage(message, callback) {
+  // Hide any loading modals first
+  hideInventoryLoadingModal();
+  
   let modal = document.getElementById('successModalUsage');
   
   if (!modal) {
@@ -703,11 +767,6 @@ function showInventoryLoadingSpinner(elementId, colspan) {
 }
 
 function showInventoryLoadingModal(message) {
-  if (window.printUtils && printUtils.showLoading) {
-    printUtils.showLoading(message);
-    return;
-  }
-  
   let modal = document.getElementById('inventoryLoadingModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -743,11 +802,6 @@ function showInventoryLoadingModal(message) {
   }
 }
 
-function hideInventoryLoadingModal() {
-  const modal = document.getElementById('inventoryLoadingModal');
-  if (modal) modal.style.display = 'none';
-}
-
 // ============================================
 // EXPORT FUNCTIONS FOR GLOBAL USE
 // ============================================
@@ -764,8 +818,9 @@ window.submitUsageRecord = submitUsageRecord;
 window.removeInventoryItem = removeInventoryItem;
 window.showSuccessModalUsage = showSuccessModalUsage;
 window.closeSuccessModalUsage = closeSuccessModalUsage;
+window.showRecordingUsageLoading = showRecordingUsageLoading;
 
-/* Add CSS for success modal */
+/* Add CSS for success modal and improved loading */
 const usageModalStyle = document.createElement('style');
 usageModalStyle.textContent = `
   .success-modal-usage {
@@ -841,6 +896,12 @@ usageModalStyle.textContent = `
 
   .report-table td.text-center {
     text-align: center;
+  }
+  
+  /* Additional spinner animation */
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
   }
 `;
 document.head.appendChild(usageModalStyle);
