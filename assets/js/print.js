@@ -30,6 +30,7 @@ const printUtils = {
   },
 
   // Get clean print styles - Aggressively remove browser headers/footers
+  // UPDATED: Reduced font sizes for investment reports + bolder heading colors for print
   getPrintStyles: function() {
     return `
       <style>
@@ -55,7 +56,7 @@ const printUtils = {
           background: white;
         }
         
-        /* Report Header */
+        /* Report Header - Enhanced colors for print */
         .print-report-header {
           text-align: center;
           margin-bottom: 16px;
@@ -64,21 +65,23 @@ const printUtils = {
         }
         
         .report-title {
-          font-size: 14pt;
-          font-weight: 700;
-          color: #2c3e66;
+          font-size: 12pt !important;      /* REDUCED: was 14pt */
+          font-weight: 800 !important;
+          color: #1e3a5f !important;       /* Enhanced: deeper navy for better print contrast */
           margin: 0;
           padding: 0;
+          letter-spacing: 0.3px;
         }
         
         .period-info {
-          font-size: 10pt;
-          color: #4a5568;
+          font-size: 8.5pt !important;     /* REDUCED: was 10pt */
+          color: #2c3e50 !important;
           margin-top: 5px;
           padding: 0;
+          font-weight: 500;
         }
         
-        /* Table Styles */
+        /* Table Styles - Reduced font size */
         .print-table-wrapper {
           margin: 0;
           page-break-inside: auto;
@@ -88,28 +91,28 @@ const printUtils = {
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 9pt;
+          font-size: 8pt !important;       /* REDUCED: was 9pt */
           margin: 0;
           page-break-inside: auto;
         }
         
         th {
-          background: #2c3e66;
-          color: white;
+          background: #1e3a5f !important;   /* Enhanced: solid deep navy, not faint */
+          color: white !important;
           padding: 8px 6px;
-          border: 1px solid #1a2a4a;
+          border: 1px solid #0f2c45;
           text-align: center;
-          font-weight: 700;
-          font-size: 9pt;
+          font-weight: 800 !important;
+          font-size: 8pt !important;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.4px;
         }
         
         td {
           padding: 6px 5px;
           border: 1px solid #cbd5e0;
           text-align: center;
-          font-size: 9pt;
+          font-size: 8pt !important;
           color: #2d3748;
           vertical-align: middle;
         }
@@ -132,7 +135,7 @@ const printUtils = {
           text-align: center !important;
         }
         
-        /* Group Report Styles */
+        /* Group Report Styles - Enhanced colors */
         .grouped-report {
           margin-bottom: 14px;
           page-break-inside: avoid;
@@ -140,15 +143,16 @@ const printUtils = {
         }
         
         .group-title {
-          font-size: 11pt;
-          font-weight: 800;
-          background: linear-gradient(135deg, #2c3e66, #4361ee);
-          color: white;
-          padding: 6px 10px;
+          font-size: 10.5pt !important;     /* REDUCED: was 11pt */
+          font-weight: 800 !important;
+          background: #1e3a5f !important;   /* Enhanced: solid navy for print */
+          color: white !important;
+          padding: 6px 12px;
           margin: 10px 0 0 0;
           border-radius: 4px 4px 0 0;
           page-break-after: avoid;
           break-after: avoid;
+          border-bottom: 1px solid #2d4a74;
         }
         
         .group-table-wrapper {
@@ -160,42 +164,42 @@ const printUtils = {
         }
         
         .subtotal-row {
-          background: #e8f0fe !important;
-          font-weight: 700;
+          background: #eef2ff !important;
+          font-weight: 800 !important;
         }
         
         .subtotal-row td {
-          background: #e8f0fe !important;
-          color: #2c3e66 !important;
+          background: #eef2ff !important;
+          color: #1e3a5f !important;
           border-top: 1px solid #4361ee;
           border-bottom: 1px solid #4361ee;
-          font-weight: 700;
+          font-weight: 800 !important;
         }
         
         .grand-total-row {
           background: #e6f7f0 !important;
-          font-weight: 800;
+          font-weight: 800 !important;
         }
         
         .grand-total-row td {
           background: #e6f7f0 !important;
-          color: #0d6e42 !important;
+          color: #0b5e35 !important;
           border-top: 2px solid #0d6e42;
           border-bottom: 2px solid #0d6e42;
-          font-weight: 800;
-          font-size: 10pt;
+          font-weight: 800 !important;
+          font-size: 9pt !important;
         }
         
         .total-row {
           background: #e6f7f0 !important;
-          font-weight: 800;
+          font-weight: 800 !important;
         }
         
         .total-row td {
           background: #e6f7f0 !important;
-          color: #0d6e42 !important;
+          color: #0b5e35 !important;
           border-top: 2px solid #0d6e42;
-          font-weight: 800;
+          font-weight: 800 !important;
         }
         
         .group-header {
@@ -205,7 +209,7 @@ const printUtils = {
         
         .group-header td {
           background: #e2e8f0 !important;
-          color: #1e293b !important;
+          color: #0f2c45 !important;
           border-top: 2px solid #cbd5e0;
           border-bottom: 1px solid #cbd5e0;
           font-weight: 700;
