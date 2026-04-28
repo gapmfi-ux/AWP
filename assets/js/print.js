@@ -8,7 +8,7 @@ const printUtils = {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-  },  
+  },
 
   // Format number with thousand separators
   formatNumber: function(value) {
@@ -306,36 +306,133 @@ const printUtils = {
     `;
   },
 
-  // Remove action button columns from tables
+  // Remove action button columns from tables - Enhanced version
   removeActionColumns: function(table) {
     const clone = table.cloneNode(true);
     
-    // Find and remove action column
-    const headerCells = clone.querySelectorAll('thead th');
-    let actionColumnIndex = -1;
-    
-    headerCells.forEach((th, index) => {
-      const thText = th.textContent.toLowerCase();
-      if (thText.includes('action') || thText.includes('menu') || thText.includes('pay') || thText.includes('renew')) {
-        actionColumnIndex = index;
-      }
-    });
-
-    if (actionColumnIndex >= 0) {
-      const headerRow = clone.querySelector('thead tr');
-      if (headerRow && headerRow.cells[actionColumnIndex]) {
-        headerRow.deleteCell(actionColumnIndex);
+    // Helper function to check if a cell is an action column
+    const isActionColumn = (cell) => {
+      const text = cell.textContent.toLowerCase().trim();
+      // Check header text for action-related words
+      if (text === 'action' || text === 'actions' || text === 'menu' || 
+          text === 'pay' || text === 'renew' || text === 'edit' || 
+          text === 'delete' || text === 'manage' || text === 'options' ||
+          text.includes('action') || text.includes('menu')) {
+        return true;
       }
       
-      clone.querySelectorAll('tbody tr').forEach(row => {
-        if (row.cells[actionColumnIndex]) {
-          row.deleteCell(actionColumnIndex);
+      // Check if cell contains any buttons
+      const buttons = cell.querySelectorAll('button, .btn, .action-btn, .dropdown-item, [onclick]');
+      if (buttons.length > 0) {
+        return true;
+      }
+      
+      // Check for common action icons or text
+      const html = cell.innerHTML.toLowerCase();
+      if (html.includes('fa-') && (html.includes('edit') || html.includes('delete') || 
+          html.includes('trash') || html.includes('pencil'))) {
+        return true;
+      }
+      
+      return false;
+    };
+    
+    // Remove action columns from thead
+    const thead = clone.querySelector('thead');
+    if (thead) {
+      const headerRows = thead.querySelectorAll('tr');
+      headerRows.forEach(headerRow => {
+        const cells = Array.from(headerRow.cells);
+        // Find indices of action columns (from right to left to avoid index shifting)
+        const actionIndices = [];
+        cells.forEach((cell, idx) => {
+          if (isActionColumn(cell)) {
+            actionIndices.push(idx);
+          }
+        });
+        
+        // Remove from highest index first
+        actionIndices.sort((a, b) => b - a);
+        actionIndices.forEach(idx => {
+          if (headerRow.cells[idx]) {
+            headerRow.deleteCell(idx);
+          }
+        });
+      });
+    }
+    
+    // Remove action columns and buttons from tbody
+    const tbody = clone.querySelector('tbody');
+    if (tbody) {
+      // First, determine which columns to remove based on thead after removal
+      // Get remaining column count from first row
+      const firstBodyRow = tbody.querySelector('tr');
+      let columnsToRemove = [];
+      
+      if (firstBodyRow) {
+        // Check each cell in first row for action content
+        Array.from(firstBodyRow.cells).forEach((cell, idx) => {
+          if (isActionColumn(cell)) {
+            columnsToRemove.push(idx);
+          }
+        });
+        
+        // Remove from highest index first
+        columnsToRemove.sort((a, b) => b - a);
+        
+        // Remove cells from all rows
+        tbody.querySelectorAll('tr').forEach(row => {
+          columnsToRemove.forEach(idx => {
+            if (row.cells[idx]) {
+              row.deleteCell(idx);
+            }
+          });
+        });
+      }
+      
+      // Also remove any remaining buttons that might be standalone
+      tbody.querySelectorAll('button, .action-btn, .dropdown-item, .pay-btn, .renew-btn').forEach(btn => {
+        const cell = btn.closest('td');
+        if (cell && cell.cells) {
+          // If the cell only contains buttons, remove the entire cell
+          if (cell.children.length === 1 && cell.querySelector('button')) {
+            const row = cell.parentNode;
+            const idx = Array.from(row.cells).indexOf(cell);
+            if (idx !== -1) {
+              row.deleteCell(idx);
+            }
+          } else {
+            // Otherwise just remove the button
+            btn.remove();
+          }
+        } else {
+          btn.remove();
         }
       });
     }
     
-    // Remove any buttons
-    clone.querySelectorAll('button, .action-btn, .dropdown-item, .pay-btn, .renew-btn').forEach(btn => {
+    // Also check tfoot if exists
+    const tfoot = clone.querySelector('tfoot');
+    if (tfoot) {
+      tfoot.querySelectorAll('tr').forEach(row => {
+        const cells = Array.from(row.cells);
+        const actionIndices = [];
+        cells.forEach((cell, idx) => {
+          if (isActionColumn(cell)) {
+            actionIndices.push(idx);
+          }
+        });
+        actionIndices.sort((a, b) => b - a);
+        actionIndices.forEach(idx => {
+          if (row.cells[idx]) {
+            row.deleteCell(idx);
+          }
+        });
+      });
+    }
+    
+    // Final cleanup: remove any remaining button elements
+    clone.querySelectorAll('button, .action-btn, .dropdown-item, .pay-btn, .renew-btn, .edit-btn, .delete-btn').forEach(btn => {
       btn.remove();
     });
     
@@ -486,7 +583,9 @@ const printUtils = {
       }
     }
     
-    const tableHtml = `<div class="print-table-wrapper">${table.outerHTML}</div>`;
+    // Apply action column removal to the entire table
+    const cleanedTable = this.removeActionColumns(table);
+    const tableHtml = `<div class="print-table-wrapper">${cleanedTable.outerHTML}</div>`;
     
     const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
     this.openPrintWindow(printDocument, title);
@@ -517,6 +616,13 @@ const printUtils = {
       el.removeAttribute('onclick');
       el.removeAttribute('onchange');
     });
+    
+    // Also clean any action columns from tables within the container
+    tempDiv.querySelectorAll('table').forEach(table => {
+      const cleanedTable = this.removeActionColumns(table);
+      table.parentNode.replaceChild(cleanedTable, table);
+    });
+    
     containerHTML = tempDiv.innerHTML;
     
     const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
@@ -571,6 +677,13 @@ const printUtils = {
       el.removeAttribute('onclick');
       el.removeAttribute('onchange');
     });
+    
+    // Also clean any action columns from tables within the container
+    tempDiv.querySelectorAll('table').forEach(table => {
+      const cleanedTable = this.removeActionColumns(table);
+      table.parentNode.replaceChild(cleanedTable, table);
+    });
+    
     containerHTML = tempDiv.innerHTML;
     
     const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
@@ -642,8 +755,7 @@ const printUtils = {
         return;
       }
       
-      const tableClone = summaryTable.cloneNode(true);
-      tableClone.querySelectorAll('button, .action-btn').forEach(btn => btn.remove());
+      const tableClone = this.removeActionColumns(summaryTable);
       const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
       
       const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
