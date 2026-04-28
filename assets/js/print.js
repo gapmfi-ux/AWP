@@ -29,7 +29,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-  // Get clean print styles - Aggressively remove browser headers/footers
+    // Get clean print styles - Aggressively remove browser headers/footers
   getPrintStyles: function() {
     return `
       <style>
@@ -50,16 +50,18 @@ const printUtils = {
         body {
           font-family: 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
           font-size: 10pt;
-          line-height: 1.4;
+          line-height: 1.3;
           color: #1a202c;
           background: white;
+          margin: 0 !important;
+          padding: 0 !important;
         }
         
         /* Report Header */
         .print-report-header {
           text-align: center;
-          margin-bottom: 16px;
-          padding-bottom: 8px;
+          margin-bottom: 8px;
+          padding-bottom: 4px;
           page-break-after: avoid;
         }
         
@@ -72,9 +74,9 @@ const printUtils = {
         }
         
         .period-info {
-          font-size: 10pt;
+          font-size: 9pt;
           color: #4a5568;
-          margin-top: 5px;
+          margin-top: 3px;
           padding: 0;
         }
         
@@ -88,7 +90,7 @@ const printUtils = {
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 9pt;
+          font-size: 8pt;
           margin: 0;
           page-break-inside: auto;
         }
@@ -96,20 +98,20 @@ const printUtils = {
         th {
           background: #2c3e66;
           color: white;
-          padding: 8px 6px;
+          padding: 6px 4px;
           border: 1px solid #1a2a4a;
           text-align: center;
           font-weight: 700;
-          font-size: 9pt;
+          font-size: 8pt;
           text-transform: uppercase;
-          letter-spacing: 0.5px;
+          letter-spacing: 0.3px;
         }
         
         td {
-          padding: 6px 5px;
+          padding: 5px 4px;
           border: 1px solid #cbd5e0;
           text-align: center;
-          font-size: 9pt;
+          font-size: 8pt;
           color: #2d3748;
           vertical-align: middle;
         }
@@ -125,7 +127,7 @@ const printUtils = {
         
         .text-right {
           text-align: right !important;
-          padding-right: 8px !important;
+          padding-right: 6px !important;
         }
         
         .text-center {
@@ -134,19 +136,19 @@ const printUtils = {
         
         /* Group Report Styles */
         .grouped-report {
-          margin-bottom: 14px;
+          margin-bottom: 10px;
           page-break-inside: avoid;
           break-inside: avoid;
         }
         
         .group-title {
-          font-size: 11pt;
+          font-size: 10pt;
           font-weight: 800;
           background: linear-gradient(135deg, #2c3e66, #4361ee);
           color: white;
-          padding: 6px 10px;
-          margin: 10px 0 0 0;
-          border-radius: 4px 4px 0 0;
+          padding: 5px 8px;
+          margin: 8px 0 0 0;
+          border-radius: 3px 3px 0 0;
           page-break-after: avoid;
           break-after: avoid;
         }
@@ -154,7 +156,7 @@ const printUtils = {
         .group-table-wrapper {
           border: 1px solid #cbd5e0;
           border-top: none;
-          border-radius: 0 0 4px 4px;
+          border-radius: 0 0 3px 3px;
           overflow-x: auto;
           margin-bottom: 0;
         }
@@ -183,7 +185,7 @@ const printUtils = {
           border-top: 2px solid #0d6e42;
           border-bottom: 2px solid #0d6e42;
           font-weight: 800;
-          font-size: 10pt;
+          font-size: 9pt;
         }
         
         .total-row {
@@ -228,12 +230,12 @@ const printUtils = {
         @media print {
           @page {
             size: A4 landscape;
-            margin: 15mm 12mm;
+            margin: 10mm 8mm;
           }
           
           /* Hide browser-generated headers and footers */
           @page :first {
-            margin-top: 15mm;
+            margin-top: 10mm;
           }
           
           /* Hide URL, date, page numbers */
@@ -277,10 +279,11 @@ const printUtils = {
             display: none !important;
           }
           
-          /* Ensure consistent spacing on all pages */
+          /* Ensure consistent spacing on all pages - reduce gaps */
           .print-table-wrapper,
           .grouped-report {
             page-break-inside: avoid;
+            margin-bottom: 0;
           }
           
           /* Hide action buttons */
@@ -301,11 +304,17 @@ const printUtils = {
           tr {
             page-break-inside: avoid;
           }
+          
+          /* Remove extra spacing between elements */
+          div, section, article {
+            margin: 0;
+            padding: 0;
+          }
         }
       </style>
     `;
   },
-
+  
   // Remove action button columns from tables - Enhanced version
   removeActionColumns: function(table) {
     const clone = table.cloneNode(true);
