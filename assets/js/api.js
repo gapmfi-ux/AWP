@@ -286,7 +286,84 @@ async getInvestmentByCode(investmentCode, options = {}) {
       newAnnualCost 
     }, options);
   }
+ 
+// ============================================
+// PDF GENERATION API METHODS
+// ============================================
+
+
+async downloadReportAsPDF(htmlContent, reportTitle, periodInfo = '') {
+  this.log('Downloading report as PDF:', reportTitle);
   
+  const response = await this.request('downloadReportAsPDF', {
+    htmlContent: htmlContent,
+    reportTitle: reportTitle,
+    periodInfo: periodInfo
+  });
+  
+  if (response && response.success && response.pdfBase64) {
+    // Convert base64 to blob and trigger download
+    this.triggerPDFDownload(response.pdfBase64, response.filename);
+    return { success: true, filename: response.filename };
+  } else {
+    throw new Error(response?.error || 'PDF generation failed');
+  }
+}
+
+
+async savePDFToDrive(htmlContent, reportTitle, periodInfo = '', folderId = null) {
+  this.log('Saving PDF to Drive:', reportTitle);
+  
+  return this.request('savePDFToDrive', {
+    htmlContent: htmlContent,
+    reportTitle: reportTitle,
+    periodInfo: periodInfo,
+    folderId: folderId
+  });
+}
+
+
+async generateCombinedPDF(reportsArray, mainTitle) {
+  this.log('Generating combined PDF:', mainTitle);
+  
+  const response = await this.request('generateCombinedPDF', {
+    reportsArray: reportsArray,
+    mainTitle: mainTitle
+  });
+  
+  if (response && response.success && response.pdfBase64) {
+    this.triggerPDFDownload(response.pdfBase64, response.filename);
+    return { success: true, filename: response.filename };
+  } else {
+    throw new Error(response?.error || 'Combined PDF generation failed');
+  }
+}
+
+/**
+ * Helper: Trigger PDF download from base64 data
+ */
+triggerPDFDownload(base64Data, filename) {
+  // Convert base64 to blob
+  const byteCharacters = atob(base64Data);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  const blob = new Blob([byteArray], { type: 'application/pdf' });
+  
+  // Create download link
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  
+  this.log('PDF download triggered:', filename);
+}
   // ============================================
   // TEST CONNECTION
   // ============================================
