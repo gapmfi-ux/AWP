@@ -30,7 +30,6 @@ const printUtils = {
   },
 
   // Get clean print styles - Aggressively remove browser headers/footers
-  // UPDATED: Reduced font sizes for investment reports + bolder heading colors for print
   getPrintStyles: function() {
     return `
       <style>
@@ -56,7 +55,6 @@ const printUtils = {
           background: white;
         }
         
-        /* Report Header - Enhanced colors for print */
         .print-report-header {
           text-align: center;
           margin-bottom: 16px;
@@ -65,23 +63,22 @@ const printUtils = {
         }
         
         .report-title {
-          font-size: 12pt !important;      /* REDUCED: was 14pt */
+          font-size: 12pt !important;
           font-weight: 800 !important;
-          color: #1e3a5f !important;       /* Enhanced: deeper navy for better print contrast */
+          color: #1e3a5f !important;
           margin: 0;
           padding: 0;
           letter-spacing: 0.3px;
         }
         
         .period-info {
-          font-size: 8.5pt !important;     /* REDUCED: was 10pt */
+          font-size: 8.5pt !important;
           color: #2c3e50 !important;
           margin-top: 5px;
           padding: 0;
           font-weight: 500;
         }
         
-        /* Table Styles - Reduced font size */
         .print-table-wrapper {
           margin: 0;
           page-break-inside: auto;
@@ -91,13 +88,13 @@ const printUtils = {
         table {
           width: 100%;
           border-collapse: collapse;
-          font-size: 8pt !important;       /* REDUCED: was 9pt */
+          font-size: 8pt !important;
           margin: 0;
           page-break-inside: auto;
         }
         
         th {
-          background: #1e3a5f !important;   /* Enhanced: solid deep navy, not faint */
+          background: #1e3a5f !important;
           color: white !important;
           padding: 8px 6px;
           border: 1px solid #0f2c45;
@@ -121,7 +118,6 @@ const printUtils = {
           background: #f9fafb;
         }
         
-        /* Text alignment classes */
         .text-left {
           text-align: left !important;
         }
@@ -135,7 +131,6 @@ const printUtils = {
           text-align: center !important;
         }
         
-        /* Group Report Styles - Enhanced colors */
         .grouped-report {
           margin-bottom: 14px;
           page-break-inside: avoid;
@@ -143,9 +138,9 @@ const printUtils = {
         }
         
         .group-title {
-          font-size: 10.5pt !important;     /* REDUCED: was 11pt */
+          font-size: 10.5pt !important;
           font-weight: 800 !important;
-          background: #1e3a5f !important;   /* Enhanced: solid navy for print */
+          background: #1e3a5f !important;
           color: white !important;
           padding: 6px 12px;
           margin: 10px 0 0 0;
@@ -202,108 +197,22 @@ const printUtils = {
           font-weight: 800 !important;
         }
         
-        .group-header {
-          background: #e2e8f0 !important;
-          font-weight: 700 !important;
-        }
-        
-        .group-header td {
-          background: #e2e8f0 !important;
-          color: #0f2c45 !important;
-          border-top: 2px solid #cbd5e0;
-          border-bottom: 1px solid #cbd5e0;
-          font-weight: 700;
-        }
-        
-        .group-total-row {
-          background: #fef3c7 !important;
-          font-weight: 600 !important;
-        }
-        
-        .group-total-row td {
-          background: #fef3c7 !important;
-          color: #1a202c !important;
-          border-top: 1px solid #f59e0b;
-          border-bottom: 1px solid #f59e0b;
-          font-weight: 600;
-        }
-        
-        /* PDF print optimization */
         @media print {
           @page {
             size: A4 landscape;
             margin: 15mm 12mm;
           }
-          
-          @page :first {
-            margin-top: 15mm;
-          }
-          
-          /* Hide URL, date, page numbers */
           @page {
-            @bottom-left {
-              content: '';
-            }
-            @bottom-center {
-              content: '';
-            }
-            @bottom-right {
-              content: '';
-            }
-            @top-left {
-              content: '';
-            }
-            @top-center {
-              content: '';
-            }
-            @top-right {
-              content: '';
-            }
+            @bottom-left { content: ''; }
+            @bottom-center { content: ''; }
+            @bottom-right { content: ''; }
+            @top-left { content: ''; }
+            @top-center { content: ''; }
+            @top-right { content: ''; }
           }
-          
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            height: auto !important;
-          }
-          
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            width: 100% !important;
-            background: white !important;
-          }
-          
-          /* Hide any potential browser-generated elements */
-          header, footer, nav, aside, .no-print {
-            display: none !important;
-          }
-          
-          /* Ensure consistent spacing on all pages */
-          .print-table-wrapper,
-          .grouped-report {
-            page-break-inside: avoid;
-          }
-          
-          /* Hide action buttons */
-          .action-btn, 
-          button, 
-          .dropdown-item,
-          .btn,
-          [type="button"],
-          [type="submit"] {
-            display: none !important;
-          }
-          
-          /* Prevent orphaned headers */
-          thead {
-            display: table-header-group;
-          }
-          
-          tr {
-            page-break-inside: avoid;
-          }
+          thead { display: table-header-group; }
+          tr { page-break-inside: avoid; }
+          .no-print, button, .action-btn { display: none !important; }
         }
       </style>
     `;
@@ -313,7 +222,6 @@ const printUtils = {
   removeActionColumns: function(table) {
     const clone = table.cloneNode(true);
     
-    // Find and remove action column
     const headerCells = clone.querySelectorAll('thead th');
     let actionColumnIndex = -1;
     
@@ -337,7 +245,6 @@ const printUtils = {
       });
     }
     
-    // Remove any buttons
     clone.querySelectorAll('button, .action-btn, .dropdown-item, .pay-btn, .renew-btn').forEach(btn => {
       btn.remove();
     });
@@ -374,51 +281,121 @@ const printUtils = {
   },
 
   // ============================================
-  // NEW: Download PDF via Google Apps Script (Server-side)
+  // PDF GENERATION - Using Google Apps Script
   // ============================================
-  
+
   /**
-   * Download report as PDF directly (no print dialog)
-   * Uses Google Apps Script server-side PDF generation
+   * Download report as PDF using server-side generation
    */
   downloadReportAsPDF: async function(contentHtml, title, periodInfo) {
     try {
       this.showMessage('Generating PDF, please wait...', 'info');
       
-      // Check if API is available
-      if (!window.API || typeof window.API.downloadReportAsPDF !== 'function') {
-        console.warn('API.downloadReportAsPDF not found, falling back to browser print');
-        this.fallbackToPrint(contentHtml, title, periodInfo);
-        return;
-      }
+      // Call the Google Apps Script function
+      // Using the existing API infrastructure
+      const action = 'generateReportPDF'; // This must match your GAS action
       
-      // Use server-side PDF generation
-      const result = await window.API.downloadReportAsPDF(contentHtml, title, periodInfo);
+      const response = await this.callApiAction(action, {
+        htmlContent: contentHtml,
+        reportTitle: title,
+        periodInfo: periodInfo
+      });
       
-      if (result && result.success) {
-        this.showMessage(`PDF downloaded: ${result.filename}`, 'success');
+      if (response && response.success && response.pdfBase64) {
+        // Convert base64 to blob and download
+        this.triggerDownload(response.pdfBase64, response.filename || `${title.replace(/[^a-z0-9]/gi, '_')}.pdf`);
+        this.showMessage('PDF downloaded successfully!', 'success');
       } else {
-        throw new Error(result?.error || 'PDF generation failed');
+        throw new Error(response?.error || 'PDF generation failed');
       }
     } catch (error) {
       console.error('PDF download error:', error);
-      this.showMessage('PDF generation failed: ' + error.message, 'error');
-      // Fallback to browser print
-      this.fallbackToPrint(contentHtml, title, periodInfo);
+      this.showMessage('PDF generation failed: ' + error.message + '. Using browser print...', 'warning');
+      this.fallbackToBrowserPrint(contentHtml, title, periodInfo);
     }
   },
 
   /**
-   * Fallback method: Use browser print dialog if server-side fails
+   * Call API action through existing infrastructure
    */
-  fallbackToPrint: function(contentHtml, title, periodInfo) {
-    this.showMessage('Using browser print dialog as fallback...', 'warning');
-    const printDocument = this.generatePrintDocument(title, contentHtml, periodInfo);
-    this.openPrintWindow(openPrintWindow, title);
+  callApiAction: function(action, data) {
+    return new Promise((resolve, reject) => {
+      try {
+        const callbackName = 'pdf_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        const baseUrl = 'https://script.google.com/macros/s/AKfycbyh-69v4qQbQYFJp6ZeHmnr_vOLuzBgRYjf0F2YeWa0W3k2RC_OMeCnT9V-Wq6Yu5G3/exec';
+        
+        const url = new URL(baseUrl);
+        url.searchParams.append('action', action);
+        url.searchParams.append('data', JSON.stringify(data));
+        url.searchParams.append('callback', callbackName);
+        
+        const timeoutId = setTimeout(() => {
+          if (window[callbackName]) {
+            delete window[callbackName];
+            reject(new Error('Request timeout after 30 seconds'));
+          }
+        }, 30000);
+        
+        window[callbackName] = (response) => {
+          clearTimeout(timeoutId);
+          delete window[callbackName];
+          if (script.parentNode) script.parentNode.removeChild(script);
+          
+          if (response && response.success !== false) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.error || 'API request failed'));
+          }
+        };
+        
+        const script = document.createElement('script');
+        script.src = url.toString();
+        script.onerror = () => {
+          clearTimeout(timeoutId);
+          delete window[callbackName];
+          reject(new Error('Network error - failed to connect to server'));
+        };
+        
+        document.head.appendChild(script);
+        
+      } catch (error) {
+        reject(error);
+      }
+    });
   },
 
   /**
-   * Open print window with proper handling (fallback)
+   * Trigger browser download from base64 PDF data
+   */
+  triggerDownload: function(base64Data, filename) {
+    const byteCharacters = atob(base64Data);
+    const byteNumbers = new Array(byteCharacters.length);
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'application/pdf' });
+    
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  },
+
+  /**
+   * Fallback: Use browser print dialog
+   */
+  fallbackToBrowserPrint: function(contentHtml, title, periodInfo) {
+    const printDocument = this.generatePrintDocument(title, contentHtml, periodInfo);
+    this.openPrintWindow(printDocument, title);
+  },
+
+  /**
+   * Open print window (fallback method)
    */
   openPrintWindow: function(printContent, title) {
     const printWindow = window.open('', '_blank');
@@ -436,39 +413,10 @@ const printUtils = {
     }, 500);
   },
 
-  /**
-   * Save PDF directly to Google Drive (optional)
-   */
-  savePDFToDrive: async function(contentHtml, title, periodInfo, folderId = null) {
-    try {
-      this.showMessage('Saving PDF to Google Drive...', 'info');
-      
-      if (!window.API || typeof window.API.savePDFToDrive !== 'function') {
-        throw new Error('API.savePDFToDrive not available');
-      }
-      
-      const result = await window.API.savePDFToDrive(contentHtml, title, periodInfo, folderId);
-      
-      if (result && result.success) {
-        this.showMessage(`PDF saved to Drive: ${result.fileName}`, 'success');
-        // Optionally open the file in new tab
-        if (result.fileUrl) {
-          window.open(result.fileUrl, '_blank');
-        }
-      } else {
-        throw new Error(result?.error || 'Save to Drive failed');
-      }
-    } catch (error) {
-      console.error('Save to Drive error:', error);
-      this.showMessage('Failed to save to Drive: ' + error.message, 'error');
-    }
-  },
-
   // ============================================
   // INVESTMENT REPORT METHODS
   // ============================================
 
-  // Print investment report (now downloads as PDF)
   printInvestmentReport: function(tabName) {
     console.log('printInvestmentReport called for tab:', tabName);
     
@@ -508,7 +456,6 @@ const printUtils = {
     }
   },
 
-  // Print investment table (now downloads as PDF)
   printInvestmentTable: function(tableId, title, periodInfo) {
     const tableWrapper = document.getElementById(tableId);
     if (!tableWrapper) {
@@ -527,11 +474,9 @@ const printUtils = {
     const tableClone = this.removeActionColumns(originalTable);
     const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
     
-    // Download as PDF directly (server-side)
     this.downloadReportAsPDF(tableHtml, title, periodInfo);
   },
 
-  // Print investment container (grouped reports) - now downloads as PDF
   printInvestmentContainer: function(containerId, title, periodInfo) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -546,7 +491,6 @@ const printUtils = {
       return;
     }
 
-    // Remove action buttons and interactive elements
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = containerHTML;
     tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, [onclick]').forEach(el => {
@@ -558,7 +502,6 @@ const printUtils = {
     });
     containerHTML = tempDiv.innerHTML;
     
-    // Download as PDF directly (server-side)
     this.downloadReportAsPDF(containerHTML, title, periodInfo);
   },
 
@@ -566,7 +509,6 @@ const printUtils = {
   // SUBSCRIPTION REPORT METHODS
   // ============================================
 
-  // Print subscription schedule report (now downloads as PDF)
   printSubscriptionReport: function(tabName) {
     console.log('printSubscriptionReport called for tab:', tabName);
     
@@ -604,7 +546,6 @@ const printUtils = {
     }
   },
 
-  // Print subscription table (now downloads as PDF)
   printSubscriptionTable: function(tableBodyId, title, periodInfo, footerId) {
     const tbody = document.getElementById(tableBodyId);
     if (!tbody) {
@@ -613,27 +554,19 @@ const printUtils = {
       return;
     }
 
-    // Create table structure
     const table = document.createElement('table');
-    
-    // Get headers from the actual table if it exists
     const actualTable = tbody.closest('table');
     if (actualTable) {
       const theadClone = actualTable.querySelector('thead').cloneNode(true);
       table.appendChild(theadClone);
     }
     
-    // Clone tbody and remove action columns
     const tbodyClone = tbody.cloneNode(true);
-    
-    // Remove Pay and Renew buttons
     tbodyClone.querySelectorAll('.pay-btn, .renew-btn, button').forEach(btn => {
       btn.remove();
     });
-    
     table.appendChild(tbodyClone);
     
-    // Add footer if exists
     if (footerId) {
       const footer = document.getElementById(footerId);
       if (footer) {
@@ -643,12 +576,9 @@ const printUtils = {
     }
     
     const tableHtml = `<div class="print-table-wrapper">${table.outerHTML}</div>`;
-    
-    // Download as PDF directly
     this.downloadReportAsPDF(tableHtml, title, periodInfo);
   },
 
-  // Print subscription container (grouped reports) - now downloads as PDF
   printSubscriptionContainer: function(containerId, title, periodInfo) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -663,7 +593,6 @@ const printUtils = {
       return;
     }
 
-    // Remove action buttons and interactive elements
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = containerHTML;
     tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, .pay-btn, .renew-btn, [onclick]').forEach(el => {
@@ -675,7 +604,6 @@ const printUtils = {
     });
     containerHTML = tempDiv.innerHTML;
     
-    // Download as PDF directly
     this.downloadReportAsPDF(containerHTML, title, periodInfo);
   },
 
@@ -683,7 +611,6 @@ const printUtils = {
   // INVENTORY REPORT METHODS
   // ============================================
 
-  // Print inventory report (now downloads as PDF)
   printInventoryReport: function(tabId) {
     let title = '';
     let periodInfo = '';
@@ -721,7 +648,6 @@ const printUtils = {
   // ASSET REGISTER METHODS
   // ============================================
 
-  // Print asset register (now downloads as PDF)
   printAssetRegister: function(tabName) {
     if (tabName === 'detailedRegister') {
       const title = 'DETAILED FIXED ASSET REGISTER';
@@ -756,7 +682,6 @@ const printUtils = {
       tableClone.querySelectorAll('button, .action-btn').forEach(btn => btn.remove());
       const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
       
-      // Download as PDF directly
       this.downloadReportAsPDF(tableHtml, title, periodInfo);
     }
   },
@@ -765,7 +690,6 @@ const printUtils = {
   // UTILITY METHODS
   // ============================================
 
-  // Show message notification
   showMessage: function(message, type) {
     const types = {
       success: { bg: '#c6f6d5', color: '#22543d', border: '#48bb78' },
@@ -801,5 +725,4 @@ const printUtils = {
   }
 };
 
-// Make printUtils available globally
 window.printUtils = printUtils;
