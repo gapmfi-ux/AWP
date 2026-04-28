@@ -8,7 +8,7 @@ const printUtils = {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2
     });
-  },
+  },  
 
   // Format number with thousand separators
   formatNumber: function(value) {
