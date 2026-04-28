@@ -228,14 +228,13 @@ const printUtils = {
           font-weight: 600;
         }
         
-        /* CRITICAL: Aggressively remove browser headers/footers */
+        /* PDF print optimization */
         @media print {
           @page {
             size: A4 landscape;
             margin: 15mm 12mm;
           }
           
-          /* Hide browser-generated headers and footers */
           @page :first {
             margin-top: 15mm;
           }
@@ -346,7 +345,7 @@ const printUtils = {
     return clone;
   },
 
-  // Generate clean print document - NO browser headers/footers
+  // Generate clean print document (fallback for browser print)
   generatePrintDocument: function(title, contentHtml, periodInfo) {
     let headerHtml = '';
     if (title || periodInfo) {
@@ -374,7 +373,102 @@ const printUtils = {
     `;
   },
 
-  // Print investment report
+  // ============================================
+  // NEW: Download PDF via Google Apps Script (Server-side)
+  // ============================================
+  
+  /**
+   * Download report as PDF directly (no print dialog)
+   * Uses Google Apps Script server-side PDF generation
+   */
+  downloadReportAsPDF: async function(contentHtml, title, periodInfo) {
+    try {
+      this.showMessage('Generating PDF, please wait...', 'info');
+      
+      // Check if API is available
+      if (!window.API || typeof window.API.downloadReportAsPDF !== 'function') {
+        console.warn('API.downloadReportAsPDF not found, falling back to browser print');
+        this.fallbackToPrint(contentHtml, title, periodInfo);
+        return;
+      }
+      
+      // Use server-side PDF generation
+      const result = await window.API.downloadReportAsPDF(contentHtml, title, periodInfo);
+      
+      if (result && result.success) {
+        this.showMessage(`PDF downloaded: ${result.filename}`, 'success');
+      } else {
+        throw new Error(result?.error || 'PDF generation failed');
+      }
+    } catch (error) {
+      console.error('PDF download error:', error);
+      this.showMessage('PDF generation failed: ' + error.message, 'error');
+      // Fallback to browser print
+      this.fallbackToPrint(contentHtml, title, periodInfo);
+    }
+  },
+
+  /**
+   * Fallback method: Use browser print dialog if server-side fails
+   */
+  fallbackToPrint: function(contentHtml, title, periodInfo) {
+    this.showMessage('Using browser print dialog as fallback...', 'warning');
+    const printDocument = this.generatePrintDocument(title, contentHtml, periodInfo);
+    this.openPrintWindow(openPrintWindow, title);
+  },
+
+  /**
+   * Open print window with proper handling (fallback)
+   */
+  openPrintWindow: function(printContent, title) {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      this.showMessage('Please disable popup blocker to print.', 'error');
+      return;
+    }
+
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
+  },
+
+  /**
+   * Save PDF directly to Google Drive (optional)
+   */
+  savePDFToDrive: async function(contentHtml, title, periodInfo, folderId = null) {
+    try {
+      this.showMessage('Saving PDF to Google Drive...', 'info');
+      
+      if (!window.API || typeof window.API.savePDFToDrive !== 'function') {
+        throw new Error('API.savePDFToDrive not available');
+      }
+      
+      const result = await window.API.savePDFToDrive(contentHtml, title, periodInfo, folderId);
+      
+      if (result && result.success) {
+        this.showMessage(`PDF saved to Drive: ${result.fileName}`, 'success');
+        // Optionally open the file in new tab
+        if (result.fileUrl) {
+          window.open(result.fileUrl, '_blank');
+        }
+      } else {
+        throw new Error(result?.error || 'Save to Drive failed');
+      }
+    } catch (error) {
+      console.error('Save to Drive error:', error);
+      this.showMessage('Failed to save to Drive: ' + error.message, 'error');
+    }
+  },
+
+  // ============================================
+  // INVESTMENT REPORT METHODS
+  // ============================================
+
+  // Print investment report (now downloads as PDF)
   printInvestmentReport: function(tabName) {
     console.log('printInvestmentReport called for tab:', tabName);
     
@@ -414,7 +508,65 @@ const printUtils = {
     }
   },
 
-  // Print subscription schedule report
+  // Print investment table (now downloads as PDF)
+  printInvestmentTable: function(tableId, title, periodInfo) {
+    const tableWrapper = document.getElementById(tableId);
+    if (!tableWrapper) {
+      console.error('Table not found:', tableId);
+      this.showMessage('Report table not found. Please ensure report is loaded.', 'error');
+      return;
+    }
+
+    const originalTable = tableWrapper.querySelector('table');
+    if (!originalTable) {
+      console.error('Table element not found in wrapper');
+      this.showMessage('Table element not found.', 'error');
+      return;
+    }
+
+    const tableClone = this.removeActionColumns(originalTable);
+    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
+    
+    // Download as PDF directly (server-side)
+    this.downloadReportAsPDF(tableHtml, title, periodInfo);
+  },
+
+  // Print investment container (grouped reports) - now downloads as PDF
+  printInvestmentContainer: function(containerId, title, periodInfo) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+      console.error('Container not found:', containerId);
+      this.showMessage('Report container not found. Please ensure report is loaded.', 'error');
+      return;
+    }
+
+    let containerHTML = container.innerHTML;
+    if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No investments')) {
+      this.showMessage('Report is empty. Please generate the report first.', 'error');
+      return;
+    }
+
+    // Remove action buttons and interactive elements
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = containerHTML;
+    tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, [onclick]').forEach(el => {
+      el.remove();
+    });
+    tempDiv.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('onclick');
+      el.removeAttribute('onchange');
+    });
+    containerHTML = tempDiv.innerHTML;
+    
+    // Download as PDF directly (server-side)
+    this.downloadReportAsPDF(containerHTML, title, periodInfo);
+  },
+
+  // ============================================
+  // SUBSCRIPTION REPORT METHODS
+  // ============================================
+
+  // Print subscription schedule report (now downloads as PDF)
   printSubscriptionReport: function(tabName) {
     console.log('printSubscriptionReport called for tab:', tabName);
     
@@ -452,7 +604,7 @@ const printUtils = {
     }
   },
 
-  // Print subscription table
+  // Print subscription table (now downloads as PDF)
   printSubscriptionTable: function(tableBodyId, title, periodInfo, footerId) {
     const tbody = document.getElementById(tableBodyId);
     if (!tbody) {
@@ -492,11 +644,11 @@ const printUtils = {
     
     const tableHtml = `<div class="print-table-wrapper">${table.outerHTML}</div>`;
     
-    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    this.openPrintWindow(printDocument, title);
+    // Download as PDF directly
+    this.downloadReportAsPDF(tableHtml, title, periodInfo);
   },
 
-  // Print subscription container (grouped reports)
+  // Print subscription container (grouped reports) - now downloads as PDF
   printSubscriptionContainer: function(containerId, title, periodInfo) {
     const container = document.getElementById(containerId);
     if (!container) {
@@ -523,65 +675,15 @@ const printUtils = {
     });
     containerHTML = tempDiv.innerHTML;
     
-    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
-    this.openPrintWindow(printDocument, title);
+    // Download as PDF directly
+    this.downloadReportAsPDF(containerHTML, title, periodInfo);
   },
 
-  // Print investment table
-  printInvestmentTable: function(tableId, title, periodInfo) {
-    const tableWrapper = document.getElementById(tableId);
-    if (!tableWrapper) {
-      console.error('Table not found:', tableId);
-      this.showMessage('Report table not found. Please ensure report is loaded.', 'error');
-      return;
-    }
+  // ============================================
+  // INVENTORY REPORT METHODS
+  // ============================================
 
-    const originalTable = tableWrapper.querySelector('table');
-    if (!originalTable) {
-      console.error('Table element not found in wrapper');
-      this.showMessage('Table element not found.', 'error');
-      return;
-    }
-
-    const tableClone = this.removeActionColumns(originalTable);
-    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
-    
-    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Print investment container (grouped reports)
-  printInvestmentContainer: function(containerId, title, periodInfo) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found:', containerId);
-      this.showMessage('Report container not found. Please ensure report is loaded.', 'error');
-      return;
-    }
-
-    let containerHTML = container.innerHTML;
-    if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No investments')) {
-      this.showMessage('Report is empty. Please generate the report first.', 'error');
-      return;
-    }
-
-    // Remove action buttons and interactive elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = containerHTML;
-    tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, [onclick]').forEach(el => {
-      el.remove();
-    });
-    tempDiv.querySelectorAll('*').forEach(el => {
-      el.removeAttribute('onclick');
-      el.removeAttribute('onchange');
-    });
-    containerHTML = tempDiv.innerHTML;
-    
-    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Print inventory report
+  // Print inventory report (now downloads as PDF)
   printInventoryReport: function(tabId) {
     let title = '';
     let periodInfo = '';
@@ -615,7 +717,11 @@ const printUtils = {
     this.printInvestmentTable(tableId, title, periodInfo);
   },
 
-  // Print asset register
+  // ============================================
+  // ASSET REGISTER METHODS
+  // ============================================
+
+  // Print asset register (now downloads as PDF)
   printAssetRegister: function(tabName) {
     if (tabName === 'detailedRegister') {
       const title = 'DETAILED FIXED ASSET REGISTER';
@@ -650,29 +756,16 @@ const printUtils = {
       tableClone.querySelectorAll('button, .action-btn').forEach(btn => btn.remove());
       const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
       
-      const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-      this.openPrintWindow(printDocument, title);
+      // Download as PDF directly
+      this.downloadReportAsPDF(tableHtml, title, periodInfo);
     }
   },
 
-  // Open print window with proper handling
-  openPrintWindow: function(printContent, title) {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      this.showMessage('Please disable popup blocker to print.', 'error');
-      return;
-    }
+  // ============================================
+  // UTILITY METHODS
+  // ============================================
 
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-  },
-
-  // Show message
+  // Show message notification
   showMessage: function(message, type) {
     const types = {
       success: { bg: '#c6f6d5', color: '#22543d', border: '#48bb78' },
