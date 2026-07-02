@@ -18,7 +18,9 @@ window.APP_CONFIG = {
   VOUCHER_PREFIXES: {
     'Payment Voucher': 'PVNO.FT',
     'Cash Payment Voucher': 'PVNO.CH',
-    'Cheque Payment Voucher': 'PVNO.CQ'
+    'Cheque Payment Voucher': 'PVNO.CQ',
+    'Direct Credit Payment Voucher': 'PVNO.DC',
+    'Staff Medical Payment Voucher': 'PVNO.SM'
   },
   
   // Asset Types
