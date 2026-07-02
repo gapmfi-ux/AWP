@@ -61,10 +61,6 @@
             <label for="payableTo">Payable to:</label>
             <input type="text" id="payableTo">
           </div>
-          <div class="form-field" id="creditAccountField" style="display:none;">
-            <label for="creditAccountNo">Credit Account No.:</label>
-            <input type="text" id="creditAccountNo">
-          </div>
           <div class="form-field">
             <label for="amount">Amount:</label>
             <input type="number" id="amount" step="0.01">
@@ -75,6 +71,12 @@
               <label for="withholdingTaxCheckbox">Withholding Tax</label>
             </div>
             <input type="number" id="withholdingTaxAmount" step="0.01" style="display: none;">
+          </div>
+        </div>
+        <div class="form-row" id="creditAccountRow" style="display:none;">
+          <div class="form-field">
+            <label for="creditAccountNo">Credit Account No.:</label>
+            <input type="text" id="creditAccountNo">
           </div>
         </div>
         <div class="form-row">
@@ -154,7 +156,7 @@
         <!-- Row 1: PAYABLE TO and DATE -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">PAYABLE TO:</span><span class="dots-line"></span><span class="input-value" id="preview-payableTo"></span></div><div class="half-width"><span class="label-text">DATE:</span><span class="dots-line"></span><span class="input-value" id="preview-date"></span></div></div>
         
-        <!-- Row 1B: CREDIT ACCOUNT NO (for Direct Credit Payment Voucher) -->
+        <!-- Row 1B: CREDIT ACCOUNT NO (for Direct Credit Payment Voucher) - Below PAYABLE TO and ACCOUNT CODE -->
         <div class="voucher-row" id="creditAccountPreviewRow" style="display:none;"><div class="half-width"><span class="label-text">CREDIT ACCOUNT NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-creditAccountNo"></span></div><div class="half-width"></div></div>
         
         <!-- Row 2: ADDRESS and DEPARTMENT -->
