@@ -61,7 +61,7 @@
             <label for="payableTo">Payable to:</label>
             <input type="text" id="payableTo">
           </div>
-          <div class="form-field" id="creditAccountFieldForm" style="display:none;">
+          <div class="form-field" id="creditAccountRow" style="display:none;">
             <label for="creditAccountNo">Credit Account No.:</label>
             <input type="text" id="creditAccountNo">
           </div>
@@ -154,31 +154,31 @@
         <!-- Row 1: PAYABLE TO and DATE -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">PAYABLE TO:</span><span class="dots-line"></span><span class="input-value" id="preview-payableTo"></span></div><div class="half-width"><span class="label-text">DATE:</span><span class="dots-line"></span><span class="input-value" id="preview-date"></span></div></div>
         
-        <!-- Row 1B: CREDIT ACCOUNT NO (for Direct Credit Payment Voucher and Staff Medical) - Below PAYABLE TO -->
-        <div class="voucher-row" id="creditAccountPreviewRow" style="display:none;"><div class="half-width"><span class="label-text">CREDIT ACCOUNT NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-creditAccountNo"></span></div><div class="half-width"></div></div>
-        
         <!-- Row 2: ADDRESS and DEPARTMENT -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">ADDRESS:</span><span class="dots-line"></span><span class="input-value" id="preview-address"></span></div><div class="half-width"><span class="label-text">DEPARTMENT:</span><span class="dots-line"></span><span class="input-value" id="preview-department"></span></div></div>
         
-        <!-- Row 3: INVOICE NO. and ACCOUNT CODE (swapped: ACCOUNT CODE moved up, INVOICE DATE moved down) -->
+        <!-- Row 3: INVOICE NO. and ACCOUNT CODE -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">INVOICE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceNo"></span></div><div class="half-width"><span class="label-text">ACCOUNT CODE:</span><span class="dots-line"></span><span class="input-value" id="preview-accountCode"></span></div></div>
         
-        <!-- Row 4: INVOICE DATE (moved here, below ACCOUNT CODE) -->
+        <!-- Row 4: CREDIT ACCOUNT NO (conditional for Direct Credit Payment) -->
+        <div class="voucher-row" id="creditAccountPreviewRow" style="display:none;"><div class="half-width"><span class="label-text">CREDIT ACCOUNT NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-creditAccountNo"></span></div><div class="half-width"></div></div>
+        
+        <!-- Row 5: INVOICE DATE -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">INVOICE DATE:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceDate"></span></div><div class="half-width"></div></div>
         
-        <!-- Row 5: AMOUNT (with double spacing above - using special class) -->
+        <!-- Row 6: AMOUNT (with double spacing above - using special class) -->
         <div class="voucher-row voucher-row-account-amount"><div class="full-width"><span class="label-text">AMOUNT (GHS):</span><span class="dots-line"></span><span class="input-value" id="preview-amount"></span></div></div>
         
-        <!-- Row 6: AMOUNT IN WORDS -->
-        <div class="voucher-row"><div class="full-width"><span class="label-text">AMOUNT IN WORDS:</span><span class="dots-line"></span><span class="input-value" id="preview-amountInWords"></span></div></div>
+        <!-- Row 7: AMOUNT IN WORDS -->
+        <div class="voucher-row"><div class="full-width"><span class="label-text">AMOUNT IN WORDS:</span><span class="dots-line"></span><span class="input-value" id="preview-amountInWords" style="min-width:350px;"></span></div></div>
         
-        <!-- Row 7: WITHHOLDING TAX -->
+        <!-- Row 8: WITHHOLDING TAX -->
         <div class="voucher-row" id="withholdingPreviewRow" style="display:none;"><div class="full-width"><span class="label-text">WITHHOLDING TAX:</span><span class="dots-line"></span><span class="input-value" id="preview-withholdingTax"></span></div></div>
         
-        <!-- Row 8: TRANSACTION DETAILS -->
+        <!-- Row 9: TRANSACTION DETAILS -->
         <div class="voucher-row"><div class="full-width"><span class="label-text">TRANSACTION DETAILS:</span><span class="dots-line"></span><span class="input-value" id="preview-transactionDetails"></span></div></div>
         
-        <!-- Row 9: BANK & CHEQUE NO -->
+        <!-- Row 10: BANK & CHEQUE NO -->
         <div class="voucher-row" id="chequePreviewFields" style="display:none;"><div class="half-width"><span class="label-text">BANK:</span><span class="dots-line"></span><span class="input-value" id="preview-bank"></span></div><div class="half-width"><span class="label-text">CHEQUE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-chequeNumber"></span></div></div>
         
         <!-- SIGNATURE SECTION: with extra spacing above -->
@@ -203,17 +203,17 @@
             <div class="sig-dotted-col"></div>
             <div class="sig-dotted-col"></div>
           </div>
+          <!-- Received By (for Staff Medical) -->
+          <div class="sig-row-item" id="receivedBySigRow" style="display:none;">
+            <div class="sig-role">RECEIVED BY:</div>
+            <div class="sig-name-field"><span class="sig-name-text" id="preview-receivedBy"></span></div>
+            <div class="sig-dotted-col"></div>
+            <div class="sig-dotted-col"></div>
+          </div>
           <!-- Authorised By -->
           <div class="sig-row-item">
             <div class="sig-role">AUTHORISED BY:</div>
             <div class="sig-name-field"><span class="sig-name-text" id="preview-authorizedBy"></span></div>
-            <div class="sig-dotted-col"></div>
-            <div class="sig-dotted-col"></div>
-          </div>
-          <!-- Received By -->
-          <div class="sig-row-item" id="receivedBySigRow" style="display:none;">
-            <div class="sig-role">RECEIVED BY:</div>
-            <div class="sig-name-field"><span class="sig-name-text" id="preview-receivedBy"></span></div>
             <div class="sig-dotted-col"></div>
             <div class="sig-dotted-col"></div>
           </div>
