@@ -28,7 +28,7 @@
             </select>
           </div>
           <div class="form-field top-row-field">
-            <label for="accountCode">Account Code:</label>
+            <label for="accountCode">Debit Account Code:</label>
             <input type="text" id="accountCode" class="account-code-input">
           </div>
         </div>
@@ -157,14 +157,14 @@
         <!-- Row 2: ADDRESS and DEPARTMENT -->
         <div class="voucher-row"><div class="half-width"><span class="label-text">ADDRESS:</span><span class="dots-line"></span><span class="input-value" id="preview-address"></span></div><div class="half-width"><span class="label-text">DEPARTMENT:</span><span class="dots-line"></span><span class="input-value" id="preview-department"></span></div></div>
         
-        <!-- Row 3: INVOICE NO. and ACCOUNT CODE (with Credit Account under Account Code) -->
+        <!-- Row 3: INVOICE NO. and DEBIT ACCOUNT CODE (with Credit Account under Account Code) -->
         <div class="voucher-row">
           <div class="half-width">
             <span class="label-text">INVOICE NO.:</span><span class="dots-line"></span><span class="input-value" id="preview-invoiceNo"></span>
           </div>
           <div class="half-width" style="display:flex; flex-direction:column; gap:8px;">
             <div>
-              <span class="label-text">ACCOUNT CODE:</span><span class="dots-line"></span><span class="input-value" id="preview-accountCode"></span>
+              <span class="label-text">DEBIT ACCOUNT CODE:</span><span class="dots-line"></span><span class="input-value" id="preview-accountCode"></span>
             </div>
             <!-- Credit Account No. will appear under Account Code when present (Direct Credit or Staff Medical) -->
             <div id="creditAccountInlinePreviewRow" style="display:none;">
