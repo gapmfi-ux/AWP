@@ -10,7 +10,11 @@ function updateVoucherTypeFields() {
   var voucherType = document.getElementById('voucherType').value;
   var bankField = document.getElementById('bankField');
   var chequeNumberField = document.getElementById('chequeNumberField');
+  var creditAccountRow = document.getElementById('creditAccountRow');
+  var reviewedByField = document.getElementById('reviewedByField');
+  var receivedByField = document.getElementById('receivedByField');
   
+  // Handle Cheque fields
   if (voucherType === 'Cheque Payment Voucher') {
     if (bankField) bankField.style.display = 'flex';
     if (chequeNumberField) chequeNumberField.style.display = 'flex';
@@ -21,6 +25,28 @@ function updateVoucherTypeFields() {
     var chequeInput = document.getElementById('chequeNumber');
     if (bankInput) bankInput.value = '';
     if (chequeInput) chequeInput.value = '';
+  }
+  
+  // Handle Credit Account Number field for Direct Credit Payment Voucher
+  if (voucherType === 'Direct Credit Payment Voucher') {
+    if (creditAccountRow) creditAccountRow.style.display = 'flex';
+  } else {
+    if (creditAccountRow) creditAccountRow.style.display = 'none';
+    var creditAccountInput = document.getElementById('creditAccountNo');
+    if (creditAccountInput) creditAccountInput.value = '';
+  }
+  
+  // Handle Reviewed By and Received By fields for Staff Medical Payment Voucher
+  if (voucherType === 'Staff Medical Payment Voucher') {
+    if (reviewedByField) reviewedByField.style.display = 'none';
+    if (receivedByField) receivedByField.style.display = 'flex';
+    var reviewedByInput = document.getElementById('reviewedBy');
+    if (reviewedByInput) reviewedByInput.value = '';
+  } else {
+    if (reviewedByField) reviewedByField.style.display = 'flex';
+    if (receivedByField) receivedByField.style.display = 'none';
+    var receivedByInput = document.getElementById('receivedBy');
+    if (receivedByInput) receivedByInput.value = '';
   }
   
   fetchNextPVNumberOptimized(voucherType);
@@ -78,8 +104,8 @@ function clearFormExceptPVDateType() {
   var ids = [
     'invoiceNo', 'invoiceDate', 'address',
     'payableTo', 'amount', 'transactionDetails',
-    'bank', 'chequeNumber', 'accountCode',
-    'requestedBy', 'reviewedBy', 'authorizedBy',
+    'bank', 'chequeNumber', 'accountCode', 'creditAccountNo',
+    'requestedBy', 'reviewedBy', 'receivedBy', 'authorizedBy',
     'withholdingTaxAmount'
   ];
   ids.forEach(function(id) {
@@ -112,11 +138,13 @@ function submitForm() {
     amount: document.getElementById('amount').value,
     department: document.getElementById('department').value,
     accountCode: document.getElementById('accountCode').value,
+    creditAccountNo: document.getElementById('creditAccountNo').value,
     transactionDetails: document.getElementById('transactionDetails').value,
     bank: document.getElementById('bank').value,
     chequeNumber: document.getElementById('chequeNumber').value,
     requestedBy: document.getElementById('requestedBy').value,
     reviewedBy: document.getElementById('reviewedBy').value,
+    receivedBy: document.getElementById('receivedBy').value,
     authorizedBy: document.getElementById('authorizedBy').value,
     withholdingTaxAmount: document.getElementById('withholdingTaxCheckbox').checked ? 
       document.getElementById('withholdingTaxAmount').value : null
@@ -139,6 +167,8 @@ function fetchPVTableOptimized() {
       renderPVList('cash-payment-list', data['Cash Payment Voucher']);
       renderPVList('cheque-list', data['Cheque Payment Voucher']);
       renderPVList('payment-list', data['Payment Voucher']);
+      renderPVList('direct-credit-list', data['Direct Credit Payment Voucher']);
+      renderPVList('staff-medical-list', data['Staff Medical Payment Voucher']);
     })
     .catch(function(error) {
       console.error('Error fetching PV table:', error);
@@ -271,11 +301,13 @@ function populateFormForEditing(voucherData) {
   var amount = document.getElementById('amount');
   var department = document.getElementById('department');
   var accountCode = document.getElementById('accountCode');
+  var creditAccountNo = document.getElementById('creditAccountNo');
   var transactionDetails = document.getElementById('transactionDetails');
   var bank = document.getElementById('bank');
   var chequeNumber = document.getElementById('chequeNumber');
   var requestedBy = document.getElementById('requestedBy');
   var reviewedBy = document.getElementById('reviewedBy');
+  var receivedBy = document.getElementById('receivedBy');
   var authorizedBy = document.getElementById('authorizedBy');
   
   if (voucherType) voucherType.value = voucherData.voucherType || '';
@@ -287,11 +319,13 @@ function populateFormForEditing(voucherData) {
   if (amount) amount.value = voucherData.amount || '';
   if (department) department.value = voucherData.department || 'Accounts';
   if (accountCode) accountCode.value = voucherData.accountCode || '';
+  if (creditAccountNo) creditAccountNo.value = voucherData.creditAccountNo || '';
   if (transactionDetails) transactionDetails.value = voucherData.transactionDetails || '';
   if (bank) bank.value = voucherData.bank || '';
   if (chequeNumber) chequeNumber.value = voucherData.chequeNumber || '';
   if (requestedBy) requestedBy.value = voucherData.requestedBy || '';
   if (reviewedBy) reviewedBy.value = voucherData.reviewedBy || '';
+  if (receivedBy) receivedBy.value = voucherData.receivedBy || '';
   if (authorizedBy) authorizedBy.value = voucherData.authorizedBy || '';
   
   var wtCheckbox = document.getElementById('withholdingTaxCheckbox');
@@ -327,11 +361,13 @@ function updateForm() {
     amount: document.getElementById('amount').value,
     department: document.getElementById('department').value,
     accountCode: document.getElementById('accountCode').value,
+    creditAccountNo: document.getElementById('creditAccountNo').value,
     transactionDetails: document.getElementById('transactionDetails').value,
     bank: document.getElementById('bank').value,
     chequeNumber: document.getElementById('chequeNumber').value,
     requestedBy: document.getElementById('requestedBy').value,
     reviewedBy: document.getElementById('reviewedBy').value,
+    receivedBy: document.getElementById('receivedBy').value,
     authorizedBy: document.getElementById('authorizedBy').value,
     withholdingTaxAmount: document.getElementById('withholdingTaxCheckbox').checked ? 
       document.getElementById('withholdingTaxAmount').value : null
@@ -398,7 +434,9 @@ function generateFallbackPVNumber(voucherType) {
   const prefixes = {
     'Payment Voucher': 'PVNO.FT',
     'Cash Payment Voucher': 'PVNO.CH',
-    'Cheque Payment Voucher': 'PVNO.CQ'
+    'Cheque Payment Voucher': 'PVNO.CQ',
+    'Direct Credit Payment Voucher': 'PVNO.DC',
+    'Staff Medical Payment Voucher': 'PVNO.SM'
   };
   const prefix = prefixes[voucherType] || 'PVNO';
   const timestamp = Date.now().toString().slice(-5);
@@ -420,6 +458,7 @@ function showVoucherPreview(voucherData) {
   voucherData.address = voucherData.address || '';
   voucherData.department = voucherData.department || '';
   voucherData.accountCode = voucherData.accountCode || '';
+  voucherData.creditAccountNo = voucherData.creditAccountNo || '';
   voucherData.invoiceDate = voucherData.invoiceDate || '';
   voucherData.invoiceNo = voucherData.invoiceNo || '';
   voucherData.amount = voucherData.amount || '';
@@ -429,13 +468,16 @@ function showVoucherPreview(voucherData) {
   voucherData.chequeNumber = voucherData.chequeNumber || '';
   voucherData.requestedBy = voucherData.requestedBy || '';
   voucherData.reviewedBy = voucherData.reviewedBy || '';
+  voucherData.receivedBy = voucherData.receivedBy || '';
   voucherData.authorizedBy = voucherData.authorizedBy || '';
   voucherData.withholdingTaxAmount = voucherData.withholdingTaxAmount || '';
 
   const typeHeading = {
     'Payment Voucher': 'FUNDS TRANSFER PAYMENT VOUCHER',
     'Cash Payment Voucher': 'CASH PAYMENT VOUCHER',
-    'Cheque Payment Voucher': 'CHEQUE DISBURSEMENT PAYMENT VOUCHER'
+    'Cheque Payment Voucher': 'CHEQUE DISBURSEMENT PAYMENT VOUCHER',
+    'Direct Credit Payment Voucher': 'DIRECT CREDIT PAYMENT VOUCHER',
+    'Staff Medical Payment Voucher': 'STAFF MEDICAL PAYMENT VOUCHER'
   };
 
   var voucherTypeHeading = document.getElementById('voucherTypeHeading');
@@ -453,6 +495,17 @@ function showVoucherPreview(voucherData) {
       if (previewCheque) previewCheque.textContent = voucherData.chequeNumber;
     } else {
       chequeFields.style.display = 'none';
+    }
+  }
+
+  var creditAccountPreviewRow = document.getElementById('creditAccountPreviewRow');
+  if (creditAccountPreviewRow) {
+    if (voucherData.voucherType === 'Direct Credit Payment Voucher') {
+      creditAccountPreviewRow.style.display = 'flex';
+      var previewCreditAccount = document.getElementById('preview-creditAccountNo');
+      if (previewCreditAccount) previewCreditAccount.textContent = voucherData.creditAccountNo;
+    } else {
+      creditAccountPreviewRow.style.display = 'none';
     }
   }
 
@@ -480,6 +533,7 @@ function showVoucherPreview(voucherData) {
   var previewTransactionDetails = document.getElementById('preview-transactionDetails');
   var previewRequestedBy = document.getElementById('preview-requestedBy');
   var previewReviewedBy = document.getElementById('preview-reviewedBy');
+  var previewReceivedBy = document.getElementById('preview-receivedBy');
   var previewAuthorizedBy = document.getElementById('preview-authorizedBy');
   
   if (previewPvNumber) previewPvNumber.textContent = voucherData.pvNumber;
@@ -504,10 +558,19 @@ function showVoucherPreview(voucherData) {
   if (previewTransactionDetails) previewTransactionDetails.textContent = voucherData.transactionDetails;
   if (previewRequestedBy) previewRequestedBy.textContent = voucherData.requestedBy;
   if (previewReviewedBy) previewReviewedBy.textContent = voucherData.reviewedBy;
+  if (previewReceivedBy) previewReceivedBy.textContent = voucherData.receivedBy;
   if (previewAuthorizedBy) previewAuthorizedBy.textContent = voucherData.authorizedBy;
-  
-  var previewReceivedBy = document.getElementById('preview-receivedBy');
-  if (previewReceivedBy) previewReceivedBy.textContent = '';
+
+  // Handle signature visibility
+  var reviewedBySigRow = document.getElementById('reviewedBySigRow');
+  var receivedBySigRow = document.getElementById('receivedBySigRow');
+  if (voucherData.voucherType === 'Staff Medical Payment Voucher') {
+    if (reviewedBySigRow) reviewedBySigRow.style.display = 'none';
+    if (receivedBySigRow) receivedBySigRow.style.display = 'flex';
+  } else {
+    if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
+    if (receivedBySigRow) receivedBySigRow.style.display = 'none';
+  }
   
   var voucherModal = document.getElementById('voucher-preview-modal');
   if (voucherModal) voucherModal.style.display = 'block';
