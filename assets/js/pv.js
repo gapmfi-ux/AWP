@@ -28,7 +28,7 @@ function updateVoucherTypeFields() {
   }
   
   // Handle Credit Account Number field for Direct Credit Payment Voucher
-  // AND make Staff Medical behave like Direct Credit (show credit account)
+  // Also enable for Staff Medical (per request)
   if (voucherType === 'Direct Credit Payment Voucher' || voucherType === 'Staff Medical Payment Voucher') {
     if (creditAccountRow) creditAccountRow.style.display = 'flex';
   } else {
@@ -37,21 +37,19 @@ function updateVoucherTypeFields() {
     if (creditAccountInput) creditAccountInput.value = '';
   }
   
-  // Handle Reviewed By and Received By fields for Staff Medical Payment Voucher
-  // Staff Medical should not show Received By; Reviewed By stays visible
+  // Handle Reviewed By and Received By fields:
+  // For Staff Medical we DO NOT show Received By; Reviewed By should remain visible.
   if (voucherType === 'Staff Medical Payment Voucher') {
     if (reviewedByField) reviewedByField.style.display = 'flex';
     if (receivedByField) receivedByField.style.display = 'none';
-    var reviewedByInput = document.getElementById('reviewedBy');
     var receivedByInput = document.getElementById('receivedBy');
-    if (reviewedByInput) reviewedByInput.value = reviewedByInput.value || '';
     if (receivedByInput) receivedByInput.value = '';
   } else {
-    // For other non-staff-medical types, keep Reviewed By visible by default and Received By hidden unless specific type requires it
+    // default behaviour: show Reviewed By; Received By hidden unless specifically used elsewhere
     if (reviewedByField) reviewedByField.style.display = 'flex';
     if (receivedByField) receivedByField.style.display = 'none';
-    var receivedByInput2 = document.getElementById('receivedBy');
-    if (receivedByInput2) receivedByInput2.value = '';
+    var reviewedByInput = document.getElementById('reviewedBy');
+    if (reviewedByInput) reviewedByInput.value = reviewedByInput.value || '';
   }
   
   fetchNextPVNumberOptimized(voucherType);
@@ -419,18 +417,15 @@ function fetchNextPVNumberOptimized(voucherType) {
   
   API.getNextPVNumber(voucherType)
     .then(function(pvNumber) {
-      // server may return object or string; ensure string
-      const pvStr = (pvNumber && typeof pvNumber === 'object' && pvNumber.pvNumber) ? pvNumber.pvNumber : pvNumber;
-      nextPvNumber = pvStr;
+      nextPvNumber = pvNumber;
       if (!currentlyEditingPvNumber) {
-        if (pvField) pvField.value = pvStr;
-        if (pvDisplay) pvDisplay.textContent = pvStr;
+        if (pvField) pvField.value = pvNumber;
+        if (pvDisplay) pvDisplay.textContent = pvNumber;
       }
     })
     .catch(function(error) {
       console.error('Error fetching next PV number:', error);
       const fallbackNumber = generateFallbackPVNumber(voucherType);
-      nextPvNumber = fallbackNumber;
       if (!currentlyEditingPvNumber) {
         if (pvField) pvField.value = fallbackNumber;
         if (pvDisplay) pvDisplay.textContent = fallbackNumber;
@@ -447,8 +442,8 @@ function generateFallbackPVNumber(voucherType) {
     'Staff Medical Payment Voucher': 'PVNO.SM'
   };
   const prefix = prefixes[voucherType] || 'PVNO';
-  // fallback to zero-sequence if nothing available
-  return prefix + '00000';
+  const timestamp = Date.now().toString().slice(-5);
+  return prefix + timestamp.padStart(5, '0');
 }
 
 function showVoucherPreview(voucherData) {
@@ -506,15 +501,28 @@ function showVoucherPreview(voucherData) {
     }
   }
 
-  // Credit Account: show for Direct Credit and Staff Medical (inline under Account Code)
-  var creditAccountInline = document.getElementById('creditAccountInlinePreviewRow');
-  if (creditAccountInline) {
+  var creditAccountPreviewRow = document.getElementById('creditAccountPreviewRow');
+  if (creditAccountPreviewRow) {
     if (voucherData.voucherType === 'Direct Credit Payment Voucher' || voucherData.voucherType === 'Staff Medical Payment Voucher') {
-      creditAccountInline.style.display = 'flex';
+      creditAccountPreviewRow.style.display = 'flex';
       var previewCreditAccount = document.getElementById('preview-creditAccountNo');
       if (previewCreditAccount) previewCreditAccount.textContent = voucherData.creditAccountNo;
+      // inline under account code
+      var previewCreditInline = document.getElementById('preview-creditAccountInline');
+      var previewCreditInlineValue = document.getElementById('preview-creditAccountInlineValue');
+      if (previewCreditInline && previewCreditInlineValue) {
+        if (voucherData.creditAccountNo) {
+          previewCreditInlineValue.textContent = voucherData.creditAccountNo;
+          previewCreditInline.style.display = 'block';
+        } else {
+          previewCreditInlineValue.textContent = '';
+          previewCreditInline.style.display = 'none';
+        }
+      }
     } else {
-      creditAccountInline.style.display = 'none';
+      creditAccountPreviewRow.style.display = 'none';
+      var previewCreditInline = document.getElementById('preview-creditAccountInline');
+      if (previewCreditInline) previewCreditInline.style.display = 'none';
     }
   }
 
@@ -556,7 +564,7 @@ function showVoucherPreview(voucherData) {
   
   if (previewAmount) {
     const amountNum = parseFloat(voucherData.amount);
-    previewAmount.textContent = isNaN(amountNum) ? '' : amountNum.toLocaleString('en-US', {
+    previewAmount.textContent = amountNum.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       useGrouping: true
@@ -570,7 +578,7 @@ function showVoucherPreview(voucherData) {
   if (previewReceivedBy) previewReceivedBy.textContent = voucherData.receivedBy;
   if (previewAuthorizedBy) previewAuthorizedBy.textContent = voucherData.authorizedBy;
 
-  // Handle signature visibility: Staff Medical should not show Received By
+  // Handle signature visibility
   var reviewedBySigRow = document.getElementById('reviewedBySigRow');
   var receivedBySigRow = document.getElementById('receivedBySigRow');
   if (voucherData.voucherType === 'Staff Medical Payment Voucher') {
