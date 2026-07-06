@@ -578,15 +578,34 @@ function showVoucherPreview(voucherData) {
   if (previewReceivedBy) previewReceivedBy.textContent = voucherData.receivedBy;
   if (previewAuthorizedBy) previewAuthorizedBy.textContent = voucherData.authorizedBy;
 
-  // Handle signature visibility
+  // Handle signature visibility based on voucher type
+  var requestedBySigRow = document.getElementById('requestedBySigRow');
   var reviewedBySigRow = document.getElementById('reviewedBySigRow');
   var receivedBySigRow = document.getElementById('receivedBySigRow');
-  if (voucherData.voucherType === 'Staff Medical Payment Voucher') {
+  var authorisedBySigRow = document.getElementById('authorisedBySigRow');
+  
+  const type = voucherData.voucherType;
+  
+  // Show/hide based on voucher type
+  if (requestedBySigRow) requestedBySigRow.style.display = 'flex'; // Always show for all types
+  if (authorisedBySigRow) authorisedBySigRow.style.display = 'flex'; // Always show for all types
+  
+  if (type === 'Cash Payment Voucher' || type === 'Cheque Payment Voucher') {
+    // Show: Requested By, Reviewed By, Authorised By, Received By
     if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
+    if (receivedBySigRow) receivedBySigRow.style.display = 'flex';
+  } else if (type === 'Payment Voucher' || type === 'Direct Credit Payment Voucher') {
+    // Show: Requested By, Reviewed By, Authorised By
+    if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
+    if (receivedBySigRow) receivedBySigRow.style.display = 'none';
+  } else if (type === 'Staff Medical Payment Voucher') {
+    // Show: Requested By, Authorised By (hide Reviewed By, Received By)
+    if (reviewedBySigRow) reviewedBySigRow.style.display = 'none';
     if (receivedBySigRow) receivedBySigRow.style.display = 'none';
   } else {
+    // Default: Show all
     if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
-    if (receivedBySigRow) receivedBySigRow.style.display = 'none';
+    if (receivedBySigRow) receivedBySigRow.style.display = 'flex';
   }
   
   var voucherModal = document.getElementById('voucher-preview-modal');
