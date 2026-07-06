@@ -200,12 +200,13 @@
           </div>
           
           <!-- Requested By -->
-          <div class="sig-row-item">
+          <div class="sig-row-item" id="requestedBySigRow">
             <div class="sig-role">REQUESTED BY:</div>
             <div class="sig-name-field"><span class="sig-name-text" id="preview-requestedBy"></span></div>
             <div class="sig-dotted-col"><span class="placeholder-text"></span></div>
             <div class="sig-dotted-col"><span class="placeholder-text"></span></div>
           </div>
+          
           <!-- Reviewed By -->
           <div class="sig-row-item" id="reviewedBySigRow">
             <div class="sig-role">REVIEWED BY:</div>
@@ -213,17 +214,19 @@
             <div class="sig-dotted-col"></div>
             <div class="sig-dotted-col"></div>
           </div>
-          <!-- Received By (for Cash/other) - hidden for Staff Medical -->
-          <div class="sig-row-item" id="receivedBySigRow" style="display:none;">
-            <div class="sig-role">RECEIVED BY:</div>
-            <div class="sig-name-field"><span class="sig-name-text" id="preview-receivedBy"></span></div>
+          
+          <!-- Authorised By -->
+          <div class="sig-row-item" id="authorisedBySigRow">
+            <div class="sig-role">AUTHORISED BY:</div>
+            <div class="sig-name-field"><span class="sig-name-text" id="preview-authorizedBy"></span></div>
             <div class="sig-dotted-col"></div>
             <div class="sig-dotted-col"></div>
           </div>
-          <!-- Authorised By -->
-          <div class="sig-row-item">
-            <div class="sig-role">AUTHORISED BY:</div>
-            <div class="sig-name-field"><span class="sig-name-text" id="preview-authorizedBy"></span></div>
+          
+          <!-- Received By (below Authorised By) -->
+          <div class="sig-row-item" id="receivedBySigRow" style="display:none;">
+            <div class="sig-role">RECEIVED BY:</div>
+            <div class="sig-name-field"><span class="sig-name-text" id="preview-receivedBy"></span></div>
             <div class="sig-dotted-col"></div>
             <div class="sig-dotted-col"></div>
           </div>
