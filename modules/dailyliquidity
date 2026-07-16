@@ -1,0 +1,42 @@
+<div class="liquidity-container">
+    <!-- header with upload button -->
+    <div class="liquidity-header">
+        <div class="liquidity-header-left">
+            <button class="upload-btn" id="uploadBtn" title="Upload liquidity data (JSON/CSV)">
+                <i class="fas fa-cloud-upload-alt"></i> Upload
+            </button>
+            <h1><i class="fas fa-water"></i> Daily Liquidity</h1>
+        </div>
+        <div class="week-badge"><i class="far fa-calendar-alt"></i> Week ending: <span id="weekEndingDisplay">Loading...</span></div>
+    </div>
+
+    <!-- main table -->
+    <div class="table-responsive">
+        <table id="liquidityTable">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding-left:14px; min-width:170px;">Description</th>
+                    <th id="col1">Day 1</th>
+                    <th id="col2">Day 2</th>
+                    <th id="col3">Day 3</th>
+                    <th id="col4">Day 4</th>
+                    <th id="col5">Day 5</th>
+                    <th id="col6">Day 6</th>
+                    <th id="col7">Day 7</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- data will be injected by JS -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        <span><i class="far fa-calendar-check"></i> Data as of week ending <span id="footerWeekEnding">Loading...</span></span>
+        <span><i class="fas fa-info-circle"></i> All figures in GH₵ (Ghana Cedis)</span>
+        <span><i class="fas fa-print" style="cursor:pointer;" onclick="window.print();"></i> Print</span>
+    </div>
+</div>
+
+<!-- hidden file input -->
+<input type="file" id="fileInput" accept=".json,.csv" style="display:none;">
