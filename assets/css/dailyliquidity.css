@@ -1,8 +1,8 @@
-/* Daily Liquidity Module Styles */
+/* Daily Liquidity Module Styles - Compact */
 .liquidity-container {
     background: white;
-    border-radius: 16px;
-    padding: 20px 24px 32px;
+    border-radius: 12px;
+    padding: 14px 16px 20px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.05);
     max-width: 1400px;
     margin: 0 auto;
@@ -13,81 +13,86 @@
     justify-content: space-between;
     align-items: center;
     flex-wrap: wrap;
-    gap: 16px;
+    gap: 10px;
     border-bottom: 2px solid #e2e8f0;
-    padding-bottom: 14px;
-    margin-bottom: 22px;
+    padding-bottom: 10px;
+    margin-bottom: 14px;
 }
 
 .liquidity-header-left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     flex-wrap: wrap;
 }
 
 .liquidity-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     font-weight: 600;
     color: #0f172a;
     margin: 0;
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 8px;
 }
 
 .liquidity-header h1 i {
     color: #4361ee;
+    font-size: 1.1rem;
 }
 
 .upload-btn {
     background: #eef2ff;
     border: 1px solid #c7d2fe;
-    padding: 8px 16px;
-    border-radius: 40px;
+    padding: 5px 12px;
+    border-radius: 30px;
     font-weight: 600;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: #1e293b;
     cursor: pointer;
     transition: 0.2s;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
 }
 
 .upload-btn:hover {
     background: #dbeafe;
     border-color: #818cf8;
-    transform: scale(1.02);
 }
 
 .upload-btn i {
     color: #4361ee;
+    font-size: 0.8rem;
 }
 
 .week-badge {
     background: #eef2ff;
-    padding: 8px 18px;
-    border-radius: 40px;
+    padding: 4px 14px;
+    border-radius: 30px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: #1e293b;
     border: 1px solid #cbd5e1;
 }
 
+.week-badge i {
+    font-size: 0.75rem;
+}
+
 .table-responsive {
     overflow-x: auto;
-    border-radius: 14px;
+    border-radius: 10px;
     border: 1px solid #e9edf2;
     background: white;
-    margin-top: 6px;
+    margin-top: 4px;
 }
 
 #liquidityTable {
     width: 100%;
     border-collapse: collapse;
-    font-size: 0.8rem;
-    min-width: 900px;
+    font-size: 0.75rem;
+    min-width: 700px;
     white-space: nowrap;
 }
 
@@ -95,28 +100,31 @@
     background: #f8fafc;
     color: #1e293b;
     font-weight: 700;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 14px 10px;
+    letter-spacing: 0.3px;
+    padding: 8px 6px;
     border-bottom: 2px solid #d1d9e6;
     text-align: center;
 }
 
 #liquidityTable td {
-    padding: 10px 8px;
+    padding: 5px 6px;
     border-bottom: 1px solid #eef2f6;
     text-align: center;
     color: #1e293b;
     background: white;
+    font-size: 0.75rem;
 }
 
 .row-label {
     font-weight: 600;
     text-align: left;
-    padding-left: 14px;
+    padding-left: 8px !important;
     background: #fafcff;
     color: #0b1e33;
+    font-size: 0.7rem;
+    letter-spacing: 0.2px;
 }
 
 .section-header td {
@@ -125,13 +133,15 @@
     color: #1e3a5f;
     border-top: 2px solid #cbd5e1;
     border-bottom: 2px solid #cbd5e1;
-    padding: 10px 8px;
+    padding: 6px 8px !important;
     letter-spacing: 0.2px;
+    font-size: 0.7rem;
 }
 
 .section-header i {
-    margin-right: 8px;
+    margin-right: 6px;
     color: #4361ee;
+    font-size: 0.75rem;
 }
 
 .total-row td {
@@ -140,6 +150,7 @@
     border-top: 2px solid #2b6e4f;
     border-bottom: 2px solid #2b6e4f;
     color: #0b3b2a;
+    font-size: 0.75rem;
 }
 
 .surplus-row td {
@@ -152,38 +163,51 @@
 .empty-cell {
     color: #94a3b8;
     font-style: italic;
+    font-size: 0.7rem;
 }
 
 .footer-note {
-    margin-top: 18px;
+    margin-top: 12px;
     display: flex;
     justify-content: flex-end;
     color: #64748b;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     border-top: 1px solid #e2e8f0;
-    padding-top: 16px;
-    gap: 20px;
+    padding-top: 10px;
+    gap: 16px;
     flex-wrap: wrap;
+}
+
+.footer-note i {
+    font-size: 0.7rem;
 }
 
 @media (max-width: 768px) {
     .liquidity-container {
-        padding: 12px;
+        padding: 10px 12px 16px;
     }
     .liquidity-header h1 {
-        font-size: 1.2rem;
+        font-size: 1rem;
     }
     .upload-btn {
-        padding: 6px 12px;
-        font-size: 0.75rem;
+        padding: 4px 10px;
+        font-size: 0.7rem;
+    }
+    .week-badge {
+        font-size: 0.7rem;
+        padding: 3px 10px;
     }
     #liquidityTable {
-        font-size: 0.7rem;
-        min-width: 700px;
+        font-size: 0.65rem;
+        min-width: 600px;
     }
     #liquidityTable th,
     #liquidityTable td {
-        padding: 6px 4px;
+        padding: 4px 4px;
+    }
+    .row-label {
+        font-size: 0.65rem;
+        padding-left: 4px !important;
     }
 }
 
