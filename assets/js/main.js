@@ -462,7 +462,14 @@ function initSubscriptionAddModule() {
 function initSubscriptionScheduleModule() {
   console.log('Subscription Schedule module loaded');
 }
-
+// Add to the module initializers section
+function initDailyLiquidityModule() {
+    console.log('Daily Liquidity module loaded');
+    // The actual init is in dailyliquidity.js
+    if (typeof window.initDailyLiquidityModule === 'function') {
+        window.initDailyLiquidityModule();
+    }
+}
 // ============================================
 // USER FUNCTIONS
 // ============================================
