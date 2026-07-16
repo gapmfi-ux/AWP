@@ -1,0 +1,201 @@
+/* Daily Liquidity Module Styles */
+.liquidity-container {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 24px 32px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.liquidity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 14px;
+    margin-bottom: 22px;
+}
+
+.liquidity-header-left {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.liquidity-header h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.liquidity-header h1 i {
+    color: #4361ee;
+}
+
+.upload-btn {
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    padding: 8px 16px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #1e293b;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.upload-btn:hover {
+    background: #dbeafe;
+    border-color: #818cf8;
+    transform: scale(1.02);
+}
+
+.upload-btn i {
+    color: #4361ee;
+}
+
+.week-badge {
+    background: #eef2ff;
+    padding: 8px 18px;
+    border-radius: 40px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #1e293b;
+    border: 1px solid #cbd5e1;
+}
+
+.table-responsive {
+    overflow-x: auto;
+    border-radius: 14px;
+    border: 1px solid #e9edf2;
+    background: white;
+    margin-top: 6px;
+}
+
+#liquidityTable {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    min-width: 900px;
+    white-space: nowrap;
+}
+
+#liquidityTable th {
+    background: #f8fafc;
+    color: #1e293b;
+    font-weight: 700;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 14px 10px;
+    border-bottom: 2px solid #d1d9e6;
+    text-align: center;
+}
+
+#liquidityTable td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eef2f6;
+    text-align: center;
+    color: #1e293b;
+    background: white;
+}
+
+.row-label {
+    font-weight: 600;
+    text-align: left;
+    padding-left: 14px;
+    background: #fafcff;
+    color: #0b1e33;
+}
+
+.section-header td {
+    background: #f1f6fd;
+    font-weight: 700;
+    color: #1e3a5f;
+    border-top: 2px solid #cbd5e1;
+    border-bottom: 2px solid #cbd5e1;
+    padding: 10px 8px;
+    letter-spacing: 0.2px;
+}
+
+.section-header i {
+    margin-right: 8px;
+    color: #4361ee;
+}
+
+.total-row td {
+    background: #eaf5f0;
+    font-weight: 700;
+    border-top: 2px solid #2b6e4f;
+    border-bottom: 2px solid #2b6e4f;
+    color: #0b3b2a;
+}
+
+.surplus-row td {
+    background: #eaf3ff;
+    font-weight: 600;
+    border-top: 1px solid #94b9ff;
+    border-bottom: 1px solid #94b9ff;
+}
+
+.empty-cell {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.footer-note {
+    margin-top: 18px;
+    display: flex;
+    justify-content: flex-end;
+    color: #64748b;
+    font-size: 0.75rem;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 16px;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+    .liquidity-container {
+        padding: 12px;
+    }
+    .liquidity-header h1 {
+        font-size: 1.2rem;
+    }
+    .upload-btn {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+    }
+    #liquidityTable {
+        font-size: 0.7rem;
+        min-width: 700px;
+    }
+    #liquidityTable th,
+    #liquidityTable td {
+        padding: 6px 4px;
+    }
+}
+
+@media print {
+    .liquidity-container {
+        padding: 0;
+        box-shadow: none;
+    }
+    .table-responsive {
+        border: 1px solid #ccc;
+    }
+    .upload-btn {
+        display: none !important;
+    }
+}
