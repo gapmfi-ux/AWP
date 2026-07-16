@@ -3,7 +3,6 @@
     'use strict';
 
     // ---------- EMPTY DATA STRUCTURE ----------
-    // All values are empty strings. Structure matches the week-ending template.
     const LIQUIDITY_DATA = [
         { label: 'TOTAL DEPOSITS LIABILITY', values: ['', '', '', '', '', '', ''], bold: true, icon: 'arrow-up' },
         { isSection: true, label: 'LIQUIDITY REQUIREMENTS' },
@@ -38,6 +37,56 @@
 
     let currentData = [];
 
+    // ---------- GET WEEK DATES ----------
+    function getWeekDates() {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+        
+        // Calculate Monday of this week
+        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+        const monday = new Date(today);
+        monday.setDate(today.getDate() - diffToMonday);
+        
+        const weekDates = [];
+        for (let i = 0; i < 7; i++) {
+            const date = new Date(monday);
+            date.setDate(monday.getDate() + i);
+            weekDates.push(date);
+        }
+        return weekDates;
+    }
+
+    function formatDateHeader(date) {
+        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        return days[date.getDay()] + ' ' + date.getDate();
+    }
+
+    function formatWeekEnding(date) {
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return month + ' ' + day + ', ' + year;
+    }
+
+    // ---------- UPDATE COLUMN HEADERS WITH DATES ----------
+    function updateColumnHeadersWithDates() {
+        const weekDates = getWeekDates();
+        const dayNames = weekDates.map(d => formatDateHeader(d));
+        
+        for (let i = 1; i <= 7; i++) {
+            const col = document.getElementById('col' + i);
+            if (col) col.textContent = dayNames[i - 1];
+        }
+        
+        // Update week ending display
+        const lastDay = weekDates[weekDates.length - 1];
+        const weekEnding = formatWeekEnding(lastDay);
+        updateWeekEnding(weekEnding);
+        
+        return dayNames;
+    }
+
     // ---------- RENDER TABLE ----------
     function renderTable(data) {
         const tbody = document.getElementById('tableBody');
@@ -56,7 +105,7 @@
 
             let labelHtml = item.label;
             if (item.icon) {
-                labelHtml = `<i class="fas fa-${item.icon}" style="margin-right:6px;color:#2b6e4f;"></i> ${labelHtml}`;
+                labelHtml = `<i class="fas fa-${item.icon}" style="margin-right:4px;color:#2b6e4f;"></i> ${labelHtml}`;
             }
             if (item.bold) labelHtml = `<strong>${labelHtml}</strong>`;
 
@@ -83,29 +132,12 @@
         currentData = data;
     }
 
-    // ---------- UPDATE COLUMN HEADERS ----------
-    function updateColumnHeaders(days) {
-        if (!days || days.length !== 7) return;
-        for (let i = 1; i <= 7; i++) {
-            const col = document.getElementById('col' + i);
-            if (col) col.textContent = days[i - 1];
-        }
-    }
-
     // ---------- UPDATE WEEK ENDING DISPLAY ----------
     function updateWeekEnding(weekEnding) {
         const displays = document.querySelectorAll('#weekEndingDisplay, #footerWeekEnding');
         displays.forEach(el => {
             if (el) el.textContent = weekEnding;
         });
-    }
-
-    // ---------- SET DEFAULT WEEK ENDING ----------
-    function setDefaultWeekEnding() {
-        const today = new Date();
-        const options = { month: 'short', day: 'numeric', year: 'numeric' };
-        const formatted = today.toLocaleDateString('en-US', options).toUpperCase();
-        updateWeekEnding(formatted);
     }
 
     // ---------- UPLOAD HANDLER ----------
@@ -138,6 +170,7 @@
                             parsedData = json;
                         }
                     } catch (jsonErr) {
+                        // Try CSV
                         const lines = content.split('\n').filter(line => line.trim() !== '');
                         if (lines.length > 1) {
                             const dataRows = lines.slice(1).map(line => {
@@ -160,7 +193,12 @@
                     if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
                         renderTable(parsedData);
                         if (weekEnding) updateWeekEnding(weekEnding);
-                        if (columnHeaders && columnHeaders.length === 7) updateColumnHeaders(columnHeaders);
+                        if (columnHeaders && columnHeaders.length === 7) {
+                            for (let i = 1; i <= 7; i++) {
+                                const col = document.getElementById('col' + i);
+                                if (col) col.textContent = columnHeaders[i - 1];
+                            }
+                        }
                         showToast('✅ Data uploaded successfully!', 'success');
                     } else {
                         showToast('Could not parse file. Use JSON with "data" array or CSV (label + 7 columns).', 'error');
@@ -182,9 +220,9 @@
             toast.id = 'liquidityToast';
             toast.style.cssText = `
                 position: fixed; bottom: 20px; right: 20px;
-                padding: 12px 24px; border-radius: 8px;
-                z-index: 9999; font-weight: 600; font-size: 14px;
-                max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                padding: 10px 20px; border-radius: 8px;
+                z-index: 9999; font-weight: 600; font-size: 13px;
+                max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 transition: all 0.3s ease; transform: translateY(20px); opacity: 0;
                 pointer-events: none;
             `;
@@ -210,19 +248,19 @@
         toast._timer = setTimeout(() => {
             toast.style.transform = 'translateY(20px)';
             toast.style.opacity = '0';
-        }, 4000);
+        }, 3500);
     }
 
     // ---------- EXPORT GLOBALLY ----------
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
+        updateColumnHeadersWithDates();
         renderTable(LIQUIDITY_DATA);
         setupUpload();
-        setDefaultWeekEnding();
     };
 
     // For console/testing
-    window.updateLiquidityHeaders = updateColumnHeaders;
+    window.updateLiquidityHeaders = updateColumnHeadersWithDates;
     window.updateLiquidityWeekEnding = updateWeekEnding;
     window.renderLiquidityTable = renderTable;
     window.showLiquidityToast = showToast;
