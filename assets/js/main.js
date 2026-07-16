@@ -356,7 +356,7 @@ function loadModule(moduleName) {
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
     'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
-     'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
+    'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
     'dashboard': null
   };
   
@@ -425,7 +425,7 @@ function closeSidebarMobile() {
 }
 
 // ============================================
-// MODULE INITIALIZERS (Placeholders)
+// MODULE INITIALIZERS
 // ============================================
 
 function initPVModule() {
@@ -463,14 +463,15 @@ function initSubscriptionAddModule() {
 function initSubscriptionScheduleModule() {
   console.log('Subscription Schedule module loaded');
 }
-// Add to the module initializers section
+
 function initDailyLiquidityModule() {
-    console.log('Daily Liquidity module loaded');
-    // The actual init is in dailyliquidity.js
-    if (typeof window.initDailyLiquidityModule === 'function') {
-        window.initDailyLiquidityModule();
-    }
+  console.log('Daily Liquidity module loaded');
+  // The actual init is in dailyliquidity.js
+  if (typeof window.initDailyLiquidityModule === 'function') {
+    window.initDailyLiquidityModule();
+  }
 }
+
 // ============================================
 // USER FUNCTIONS
 // ============================================
@@ -540,6 +541,7 @@ window.initInvestmentModule = initInvestmentModule;
 window.initInvestmentReportModule = initInvestmentReportModule;
 window.initSubscriptionAddModule = initSubscriptionAddModule;
 window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
+window.initDailyLiquidityModule = initDailyLiquidityModule;
 window.formatDate = formatDate;
 window.getToday = getToday;
 window.getStartOfYear = getStartOfYear;
