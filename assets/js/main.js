@@ -356,6 +356,7 @@ function loadModule(moduleName) {
     'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
     'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
+     'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
     'dashboard': null
   };
   
