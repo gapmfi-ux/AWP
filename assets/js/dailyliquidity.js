@@ -273,7 +273,7 @@ function uploadToTrialBalance(weekEnding, fileData) {
             
             console.log('Uploading file:', fileData.name, 'Week Ending:', formattedDate);
             
-            // Call API to upload Excel
+            // Use API.request directly
             API.request('uploadExcelToTrialBalance', payload)
                 .then(function(response) {
                     hideLoadingModal();
@@ -281,8 +281,6 @@ function uploadToTrialBalance(weekEnding, fileData) {
                     if (response && response.success) {
                         showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
                         closeUploadModal();
-                        // Load the imported data
-                        importFromTrialBalance(formattedDate);
                     } else {
                         showToast('Error uploading: ' + (response?.error || 'Unknown error'), 'error');
                     }
@@ -306,6 +304,7 @@ function uploadToTrialBalance(weekEnding, fileData) {
     
     reader.readAsDataURL(fileData);
 }
+    
     // ---------- IMPORT FROM TRIAL BALANCE ----------
     function importFromTrialBalance(weekEnding) {
         if (isLoading) return;
