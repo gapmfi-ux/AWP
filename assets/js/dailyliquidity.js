@@ -1,4 +1,3 @@
-// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
