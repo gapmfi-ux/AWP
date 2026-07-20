@@ -243,39 +243,45 @@
         }, 3500);
     }
 
-    // ---------- UPLOAD TO TRIAL BALANCE ----------
-    function uploadToTrialBalance(weekEnding, fileData) {
-        if (isLoading) return;
-        
-        if (typeof API === 'undefined' || !API) {
-            showToast('API not available. Cannot upload data.', 'error');
-            return;
-        }
+// ---------- UPLOAD TO TRIAL BALANCE ----------
+function uploadToTrialBalance(weekEnding, fileData) {
+    if (isLoading) return;
+    
+    if (typeof API === 'undefined' || !API) {
+        showToast('API not available. Cannot upload data.', 'error');
+        return;
+    }
 
-        const date = new Date(weekEnding);
-        const formattedDate = date.toISOString().split('T')[0];
+    const date = new Date(weekEnding);
+    const formattedDate = date.toISOString().split('T')[0];
 
-        showLoadingModal('Uploading Excel to Trial Balance...');
+    showLoadingModal('Uploading Excel to Trial Balance...');
 
-        // Convert file to base64
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const base64 = e.target.result.split(',')[1];
-                
-                // POST to server using the new POST-based API method
-                API.uploadExcelToTrialBalance({
-                    base64: base64,
-                    filename: fileData.name,
-                    weekEnding: formattedDate
-                })
+    // Convert file to base64
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            // Get the base64 string without the data URL prefix
+            const base64String = e.target.result.split(',')[1];
+            
+            // Prepare the data payload
+            const payload = {
+                base64: base64String,
+                filename: fileData.name,
+                weekEnding: formattedDate
+            };
+            
+            console.log('Uploading file:', fileData.name, 'Week Ending:', formattedDate);
+            
+            // Call API to upload Excel
+            API.request('uploadExcelToTrialBalance', payload)
                 .then(function(response) {
                     hideLoadingModal();
                     
                     if (response && response.success) {
                         showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
                         closeUploadModal();
-                        // Load the imported data (server saved JSON or parsed data)
+                        // Load the imported data
                         importFromTrialBalance(formattedDate);
                     } else {
                         showToast('Error uploading: ' + (response?.error || 'Unknown error'), 'error');
@@ -286,15 +292,20 @@
                     console.error('Upload error:', error);
                     showToast('Error uploading: ' + (error.message || error), 'error');
                 });
-            } catch (err) {
-                hideLoadingModal();
-                showToast('Error processing file: ' + err.message, 'error');
-            }
-        };
-        
-        reader.readAsDataURL(fileData);
-    }
-
+        } catch (err) {
+            hideLoadingModal();
+            console.error('File processing error:', err);
+            showToast('Error processing file: ' + err.message, 'error');
+        }
+    };
+    
+    reader.onerror = function() {
+        hideLoadingModal();
+        showToast('Error reading file', 'error');
+    };
+    
+    reader.readAsDataURL(fileData);
+}
     // ---------- IMPORT FROM TRIAL BALANCE ----------
     function importFromTrialBalance(weekEnding) {
         if (isLoading) return;
