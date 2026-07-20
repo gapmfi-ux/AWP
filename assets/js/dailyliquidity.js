@@ -37,7 +37,7 @@
 
     let currentData = [];
     let isLoading = false;
-    let isFileSelected = false;
+    let isSourceSelected = false;
 
     // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
@@ -292,17 +292,12 @@
         const cancelBtn = document.getElementById('uploadCancelBtn');
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         const uploadWeekEnding = document.getElementById('uploadWeekEnding');
-        const fileSelectBtn = document.getElementById('uploadFileSelectBtn');
         const fileArea = document.getElementById('uploadFileArea');
         const fileInfo = document.getElementById('uploadFileInfo');
         const fileRemove = document.getElementById('uploadFileRemove');
         const statusDiv = document.getElementById('uploadStatus');
         const statusIcon = document.getElementById('uploadStatusIcon');
         const statusMessage = document.getElementById('uploadStatusMessage');
-        const previewDiv = document.getElementById('uploadPreview');
-        const previewHead = document.getElementById('uploadPreviewHead');
-        const previewBody = document.getElementById('uploadPreviewBody');
-        const previewCount = document.getElementById('uploadPreviewCount');
 
         // Open modal
         uploadBtn.addEventListener('click', function() {
@@ -312,8 +307,7 @@
                 uploadWeekEnding.value = currentDate || '';
             }
             statusDiv.style.display = 'none';
-            previewDiv.style.display = 'none';
-            isFileSelected = false;
+            isSourceSelected = false;
             confirmBtn.disabled = true;
             fileArea.style.display = 'block';
             fileInfo.style.display = 'none';
@@ -322,15 +316,14 @@
         function closeUploadModal() {
             modal.style.display = 'none';
             statusDiv.style.display = 'none';
-            previewDiv.style.display = 'none';
             confirmBtn.disabled = true;
-            isFileSelected = false;
+            isSourceSelected = false;
         }
 
         // Close modal functions
-        closeBtn.addEventListener('click', closeUploadModal);
-        cancelBtn.addEventListener('click', closeUploadModal);
-        overlay.addEventListener('click', closeUploadModal);
+        if (closeBtn) closeBtn.addEventListener('click', closeUploadModal);
+        if (cancelBtn) cancelBtn.addEventListener('click', closeUploadModal);
+        if (overlay) overlay.addEventListener('click', closeUploadModal);
 
         // Close on Escape key
         document.addEventListener('keydown', function(e) {
@@ -339,81 +332,58 @@
             }
         });
 
-        // Select Trial Balance - simulates file selection
-        fileSelectBtn.addEventListener('click', function() {
-            isFileSelected = true;
+        // Click on file area to "select" Trial Balance
+        if (fileArea) {
+            fileArea.addEventListener('click', function() {
+                selectTrialBalanceSource();
+            });
+        }
+
+        // Function to select Trial Balance source
+        function selectTrialBalanceSource() {
+            isSourceSelected = true;
             fileArea.style.display = 'none';
             fileInfo.style.display = 'flex';
             confirmBtn.disabled = false;
-            
-            // Show preview with sample data structure
-            showPreview();
-        });
+            showToast('✅ Trial Balance sheet selected as data source', 'success');
+        }
 
         // Remove file selection
-        fileRemove.addEventListener('click', function() {
-            isFileSelected = false;
-            fileArea.style.display = 'block';
-            fileInfo.style.display = 'none';
-            previewDiv.style.display = 'none';
-            confirmBtn.disabled = true;
-        });
-
-        // Show preview
-        function showPreview() {
-            previewDiv.style.display = 'block';
-            previewCount.textContent = 'Trial Balance data';
-
-            let headHtml = '<tr><th>Description</th>';
-            const weekDates = getWeekDatesFromEnding(uploadWeekEnding.value || document.getElementById('weekEndingDate').value);
-            const dayNames = weekDates.map(d => formatDateHeader(d));
-            for (let i = 0; i < 7; i++) {
-                headHtml += `<th>${dayNames[i] || 'Day ' + (i+1)}</th>`;
-            }
-            headHtml += '</tr>';
-            previewHead.innerHTML = headHtml;
-
-            // Show sample preview rows
-            let bodyHtml = '';
-            const sampleData = EMPTY_ROWS.slice(0, 5);
-            sampleData.forEach(item => {
-                if (!item.isSection) {
-                    bodyHtml += '<tr>';
-                    bodyHtml += `<td><strong>${item.label || ''}</strong></td>`;
-                    for (let i = 0; i < 7; i++) {
-                        bodyHtml += `<td>—</td>`;
-                    }
-                    bodyHtml += '</tr>';
-                }
+        if (fileRemove) {
+            fileRemove.addEventListener('click', function() {
+                isSourceSelected = false;
+                fileArea.style.display = 'block';
+                fileInfo.style.display = 'none';
+                confirmBtn.disabled = true;
             });
-            bodyHtml += `<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">Data will be loaded from Trial Balance sheet</td></tr>`;
-            previewBody.innerHTML = bodyHtml;
         }
 
         // Confirm upload
-        confirmBtn.addEventListener('click', function() {
-            const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
-            
-            if (!weekEnding) {
-                showToast('Please select a week ending date', 'error');
-                return;
-            }
+        if (confirmBtn) {
+            confirmBtn.addEventListener('click', function() {
+                const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
+                
+                if (!weekEnding) {
+                    showToast('Please select a week ending date', 'error');
+                    return;
+                }
 
-            if (!isFileSelected) {
-                showToast('Please select Trial Balance data source', 'error');
-                return;
-            }
+                if (!isSourceSelected) {
+                    showToast('Please select Trial Balance as data source', 'error');
+                    return;
+                }
 
-            // Show status
-            statusDiv.style.display = 'flex';
-            statusIcon.className = 'upload-status-icon';
-            statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            statusMessage.textContent = 'Uploading data from Trial Balance...';
-            confirmBtn.disabled = true;
+                // Show status
+                statusDiv.style.display = 'flex';
+                statusIcon.className = 'upload-status-icon';
+                statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                statusMessage.textContent = 'Uploading data from Trial Balance...';
+                confirmBtn.disabled = true;
 
-            // Perform upload
-            uploadFromTrialBalance(weekEnding);
-        });
+                // Perform upload
+                uploadFromTrialBalance(weekEnding);
+            });
+        }
     }
 
     // ---------- HANDLE DATE CHANGE ----------
