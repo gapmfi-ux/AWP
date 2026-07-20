@@ -1,8 +1,8 @@
 <div class="liquidity-container">
-    <!-- header with import button and date selector -->
+    <!-- header with upload button and date selector -->
     <div class="liquidity-header">
         <div class="liquidity-header-left">
-            <button class="import-btn" id="importBtn" title="Import data from Trial Balance">
+            <button class="upload-btn" id="uploadBtn" title="Import data from Trial Balance">
                 <i class="fas fa-cloud-download-alt"></i> Import
             </button>
             <h1><i class="fas fa-water"></i> Daily Liquidity</h1>
@@ -10,9 +10,6 @@
         <div class="week-selector">
             <label for="weekEndingDate"><i class="far fa-calendar-alt"></i> Week Ending:</label>
             <input type="date" id="weekEndingDate" value="">
-            <button class="refresh-btn" id="refreshBtn" title="Refresh data">
-                <i class="fas fa-sync-alt"></i>
-            </button>
         </div>
     </div>
 
@@ -39,8 +36,61 @@
 
     <div class="footer-note">
         <span><i class="far fa-calendar-check"></i> Week ending: <span id="footerWeekEnding">Loading...</span></span>
-        <span><i class="fas fa-info-circle"></i> Data from Trial Balance sheet</span>
+        <span><i class="fas fa-info-circle"></i> Import data from Trial Balance sheet</span>
         <span><i class="fas fa-print" style="cursor:pointer;" onclick="window.print();"></i> Print</span>
+    </div>
+</div>
+
+<!-- Import Modal -->
+<div class="upload-modal" id="uploadModal" style="display: none;">
+    <div class="upload-modal-overlay" id="uploadModalOverlay"></div>
+    <div class="upload-modal-content">
+        <div class="upload-modal-header">
+            <h3><i class="fas fa-cloud-download-alt"></i> Import from Trial Balance</h3>
+            <button class="upload-modal-close" id="uploadModalClose" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="upload-modal-body">
+            <div class="upload-modal-field">
+                <label for="importWeekEnding"><i class="far fa-calendar-alt"></i> Week Ending Date:</label>
+                <input type="date" id="importWeekEnding" value="">
+            </div>
+            <div class="upload-modal-field">
+                <div class="import-info-box">
+                    <i class="fas fa-database"></i>
+                    <div>
+                        <strong>Import from Trial Balance</strong>
+                        <p>Data will be imported from the Trial Balance sheet in Google Sheets.</p>
+                        <small>Sheet ID: 1TNwNLs39i64GiW247fvB5-XHCs4uuGoz13DDkhmoe2k</small>
+                    </div>
+                </div>
+            </div>
+            <div class="import-preview" id="importPreview" style="display: none;">
+                <div class="import-preview-header">
+                    <span><i class="fas fa-eye"></i> Preview</span>
+                    <span class="import-preview-count" id="importPreviewCount">0 rows</span>
+                </div>
+                <div class="import-preview-table-wrapper">
+                    <table class="import-preview-table" id="importPreviewTable">
+                        <thead id="importPreviewHead"></thead>
+                        <tbody id="importPreviewBody"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="upload-status" id="uploadStatus" style="display: none;">
+                <div class="upload-status-icon" id="uploadStatusIcon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="upload-status-message" id="uploadStatusMessage">Processing...</div>
+            </div>
+            <div class="upload-modal-actions">
+                <button class="upload-modal-btn cancel" id="uploadCancelBtn">Cancel</button>
+                <button class="upload-modal-btn upload" id="uploadConfirmBtn">
+                    <i class="fas fa-cloud-download-alt"></i> Import Data
+                </button>
+            </div>
+        </div>
     </div>
 </div>
 
