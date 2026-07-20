@@ -514,17 +514,26 @@
             }
         });
 
-        // File input change
+        // File input change - THIS IS THE KEY FIX
         if (fileInput) {
             fileInput.addEventListener('change', function(e) {
+                e.stopPropagation();
                 if (this.files && this.files.length > 0) {
                     handleFileSelect(this.files[0]);
                 }
             });
         }
 
-        // Drag and drop
+        // Click on file area triggers file input
         if (fileArea) {
+            fileArea.addEventListener('click', function(e) {
+                // Don't trigger if clicking on the file input itself
+                if (e.target.tagName !== 'INPUT') {
+                    if (fileInput) fileInput.click();
+                }
+            });
+
+            // Drag and drop
             fileArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 this.classList.add('dragover');
