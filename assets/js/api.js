@@ -286,6 +286,31 @@ async getInvestmentByCode(investmentCode, options = {}) {
       newAnnualCost 
     }, options);
   }
+  // In api.js, add these methods to the ApiService class
+
+  // ============================================
+  // DAILY LIQUIDITY API
+  // ============================================
+
+  async saveLiquidityData(data, options = {}) {
+    this.log('saveLiquidityData called with:', data);
+    return this.request('saveLiquidityData', data, options);
+  }
+
+  async loadLiquidityData(weekEnding, options = {}) {
+    this.log('loadLiquidityData called for week ending:', weekEnding);
+    return this.request('loadLiquidityData', { weekEnding }, options);
+  }
+
+  async getAvailableWeekEndings(options = {}) {
+    this.log('getAvailableWeekEndings called');
+    return this.request('getAvailableWeekEndings', {}, options);
+  }
+
+  async deleteLiquidityData(weekEnding, options = {}) {
+    this.log('deleteLiquidityData called for week ending:', weekEnding);
+    return this.request('deleteLiquidityData', { weekEnding }, options);
+  }
   
   // ============================================
   // TEST CONNECTION
