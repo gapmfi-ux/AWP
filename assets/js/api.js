@@ -318,6 +318,16 @@ async getInvestmentByCode(investmentCode, options = {}) {
     this.log('uploadExcelToTrialBalance called with:', data);
     return this.request('uploadExcelToTrialBalance', data, options);
   }
+
+  async uploadExcelToTrialBalance(data, options = {}) {
+    this.log('uploadExcelToTrialBalance called with:', data);
+    return this.request('uploadExcelToTrialBalance', data, options);
+  }
+
+  async importLiquidityFromTrialBalance(weekEnding, options = {}) {
+    this.log('importLiquidityFromTrialBalance called for week ending:', weekEnding);
+    return this.request('importLiquidityFromTrialBalance', { weekEnding }, options);
+  }
   
   // ============================================
   // TEST CONNECTION
