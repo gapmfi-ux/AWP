@@ -1,4 +1,4 @@
-// Daily Liquidity Module
+// Daily Liquidity Module - Updated with Google Sheet saving
 (function() {
     'use strict';
 
@@ -40,7 +40,7 @@
     let uploadedHeaders = null;
     let uploadedWeekEnding = null;
 
-    // ---------- GET WEEK DATES (Thursday to Wednesday) ----------
+    // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
         const endDate = new Date(weekEndingDate);
         endDate.setHours(0, 0, 0, 0);
@@ -84,7 +84,7 @@
         return month + ' ' + day + ', ' + year;
     }
 
-    // ---------- UPDATE COLUMN HEADERS WITH DATES ----------
+    // ---------- UPDATE COLUMN HEADERS ----------
     function updateColumnHeadersWithDates(weekEndingDate) {
         const weekDates = getWeekDatesFromEnding(weekEndingDate);
         const dayNames = weekDates.map(d => formatDateHeader(d));
@@ -167,8 +167,78 @@
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             updateColumnHeadersWithDates(datePicker.value);
-            renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+            // Load data for the selected week
+            loadDataFromSheet(datePicker.value);
         }
+    }
+
+    // ---------- LOAD DATA FROM SHEET ----------
+    function loadDataFromSheet(weekEnding) {
+        if (typeof API === 'undefined' || !API) {
+            console.log('API not available, using local data');
+            renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+            return;
+        }
+
+        // Format week ending for lookup (YYYY-MM-DD)
+        const date = new Date(weekEnding);
+        const formattedDate = date.toISOString().split('T')[0];
+
+        showToast('Loading data from sheet...', 'info');
+
+        API.loadLiquidityData(formattedDate)
+            .then(function(response) {
+                if (response && response.success && response.data && response.data.length > 0) {
+                    renderTable(response.data);
+                    showToast('✅ Data loaded from sheet (' + response.data.length + ' rows)', 'success');
+                } else {
+                    // No data found, use local data
+                    renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+                    if (response && response.message) {
+                        showToast(response.message, 'info');
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error('Error loading data from sheet:', error);
+                renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+                showToast('Could not load data from sheet', 'error');
+            });
+    }
+
+    // ---------- SAVE DATA TO SHEET ----------
+    function saveDataToSheet(data, weekEnding) {
+        if (typeof API === 'undefined' || !API) {
+            showToast('API not available. Data not saved.', 'error');
+            return Promise.reject('API not available');
+        }
+
+        // Format week ending
+        const date = new Date(weekEnding);
+        const formattedDate = date.toISOString().split('T')[0];
+
+        const payload = {
+            rows: data,
+            weekEnding: formattedDate
+        };
+
+        showToast('Saving data to sheet...', 'info');
+
+        return API.saveLiquidityData(payload)
+            .then(function(response) {
+                if (response && response.success) {
+                    showToast('✅ Data saved to sheet successfully!', 'success');
+                    return response;
+                } else {
+                    showToast('Error saving data: ' + (response?.error || 'Unknown error'), 'error');
+                    throw new Error(response?.error || 'Save failed');
+                }
+            })
+            .catch(function(error) {
+                console.error('Error saving to sheet:', error);
+                showToast('Error saving data: ' + error.message, 'error');
+                throw error;
+            });
     }
 
     // ---------- SET DEFAULT DATE ----------
@@ -216,23 +286,19 @@
         // Open modal
         uploadBtn.addEventListener('click', function() {
             modal.style.display = 'flex';
-            // Set default date in modal
             const currentDate = document.getElementById('weekEndingDate').value;
             if (uploadWeekEnding) {
                 uploadWeekEnding.value = currentDate || '';
             }
-            // Reset state
             selectedFile = null;
             parsedPreviewData = null;
             fileInput.value = '';
             fileInfo.style.display = 'none';
             preview.style.display = 'none';
             confirmBtn.disabled = true;
-            // Reset file area
             fileArea.style.display = 'block';
         });
 
-        // Close modal functions
         function closeModal() {
             modal.style.display = 'none';
         }
@@ -241,21 +307,18 @@
         cancelBtn.addEventListener('click', closeModal);
         overlay.addEventListener('click', closeModal);
 
-        // Close on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && modal.style.display === 'flex') {
                 closeModal();
             }
         });
 
-        // File selection via click
         fileInput.addEventListener('change', function(e) {
             if (this.files && this.files.length > 0) {
                 handleFileSelect(this.files[0]);
             }
         });
 
-        // File selection via drag and drop
         fileArea.addEventListener('dragover', function(e) {
             e.preventDefault();
             this.classList.add('dragover');
@@ -274,7 +337,6 @@
             }
         });
 
-        // Remove file
         fileRemove.addEventListener('click', function() {
             selectedFile = null;
             parsedPreviewData = null;
@@ -285,14 +347,12 @@
             confirmBtn.disabled = true;
         });
 
-        // Handle file selection
         function handleFileSelect(file) {
             selectedFile = file;
             fileName.textContent = file.name;
             fileInfo.style.display = 'flex';
             fileArea.style.display = 'none';
             
-            // Parse and preview file
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -300,7 +360,6 @@
                     let parsedData = null;
                     let headers = null;
 
-                    // Try JSON
                     try {
                         const json = JSON.parse(content);
                         if (json.data && Array.isArray(json.data)) {
@@ -313,7 +372,6 @@
                             parsedData = json;
                         }
                     } catch (jsonErr) {
-                        // Try CSV
                         const lines = content.split('\n').filter(line => line.trim() !== '');
                         if (lines.length > 1) {
                             const headerRow = lines[0].split(',').map(h => h.trim());
@@ -349,12 +407,10 @@
             reader.readAsText(file);
         }
 
-        // Show preview
         function showPreview(data, headers) {
             preview.style.display = 'block';
             previewCount.textContent = data.length + ' rows';
 
-            // Build header
             let headHtml = '<tr><th>Description</th>';
             const weekDates = getWeekDatesFromEnding(uploadWeekEnding.value || document.getElementById('weekEndingDate').value);
             const dayNames = weekDates.map(d => formatDateHeader(d));
@@ -364,7 +420,6 @@
             headHtml += '</tr>';
             previewHead.innerHTML = headHtml;
 
-            // Build body (show first 5 rows)
             let bodyHtml = '';
             const previewRows = data.slice(0, 5);
             previewRows.forEach(item => {
@@ -383,54 +438,55 @@
             previewBody.innerHTML = bodyHtml;
         }
 
-        // Confirm upload
+        // Confirm upload - Save to Google Sheet
         confirmBtn.addEventListener('click', function() {
             if (!parsedPreviewData || parsedPreviewData.length === 0) {
                 showToast('No data to upload.', 'error');
                 return;
             }
 
-            // Get week ending from modal
             const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
             
-            // Update headers if provided
-            if (uploadedHeaders && uploadedHeaders.length === 7) {
-                for (let i = 1; i <= 7; i++) {
-                    const col = document.getElementById('col' + i);
-                    if (col) col.textContent = uploadedHeaders[i - 1];
-                }
-            } else {
-                // Update with dates
-                updateColumnHeadersWithDates(weekEnding);
-            }
+            // Save to Google Sheet
+            saveDataToSheet(parsedPreviewData, weekEnding)
+                .then(function(response) {
+                    if (response && response.success) {
+                        // Update headers if provided
+                        if (uploadedHeaders && uploadedHeaders.length === 7) {
+                            for (let i = 1; i <= 7; i++) {
+                                const col = document.getElementById('col' + i);
+                                if (col) col.textContent = uploadedHeaders[i - 1];
+                            }
+                        } else {
+                            updateColumnHeadersWithDates(weekEnding);
+                        }
 
-            // Update week ending display
-            if (uploadedWeekEnding) {
-                updateWeekEnding(uploadedWeekEnding);
-            } else {
-                const weekDates = getWeekDatesFromEnding(weekEnding);
-                const lastDay = weekDates[weekDates.length - 1];
-                updateWeekEnding(formatWeekEnding(lastDay));
-            }
+                        if (uploadedWeekEnding) {
+                            updateWeekEnding(uploadedWeekEnding);
+                        } else {
+                            const weekDates = getWeekDatesFromEnding(weekEnding);
+                            const lastDay = weekDates[weekDates.length - 1];
+                            updateWeekEnding(formatWeekEnding(lastDay));
+                        }
 
-            // Update date picker
-            const datePicker = document.getElementById('weekEndingDate');
-            if (datePicker && weekEnding) {
-                const date = new Date(weekEnding);
-                if (!isNaN(date.getTime())) {
-                    const year = date.getFullYear();
-                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                    const day = String(date.getDate()).padStart(2, '0');
-                    datePicker.value = year + '-' + month + '-' + day;
-                }
-            }
+                        const datePicker = document.getElementById('weekEndingDate');
+                        if (datePicker && weekEnding) {
+                            const date = new Date(weekEnding);
+                            if (!isNaN(date.getTime())) {
+                                const year = date.getFullYear();
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const day = String(date.getDate()).padStart(2, '0');
+                                datePicker.value = year + '-' + month + '-' + day;
+                            }
+                        }
 
-            // Render the uploaded data
-            renderTable(parsedPreviewData);
-            
-            // Close modal
-            closeModal();
-            showToast('✅ Data uploaded successfully!', 'success');
+                        renderTable(parsedPreviewData);
+                        closeModal();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Upload failed:', error);
+                });
         });
     }
 
@@ -485,13 +541,15 @@
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.addEventListener('change', handleDateChange);
+            // Load data for the default date
+            setTimeout(function() {
+                loadDataFromSheet(datePicker.value);
+            }, 500);
         }
     };
 
-    // For console/testing
-    window.updateLiquidityHeaders = updateColumnHeadersWithDates;
-    window.updateLiquidityWeekEnding = updateWeekEnding;
-    window.renderLiquidityTable = renderTable;
-    window.showLiquidityToast = showToast;
+    // Expose save function for console/testing
+    window.saveLiquidityData = saveDataToSheet;
+    window.loadLiquidityData = loadDataFromSheet;
 
 })();
