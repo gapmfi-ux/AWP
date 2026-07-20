@@ -36,32 +36,31 @@
     ];
 
     let currentData = [];
+    let uploadedData = null;
+    let uploadedHeaders = null;
+    let uploadedWeekEnding = null;
 
     // ---------- GET WEEK DATES (Thursday to Wednesday) ----------
     function getWeekDatesFromEnding(weekEndingDate) {
         const endDate = new Date(weekEndingDate);
         endDate.setHours(0, 0, 0, 0);
         
-        // If no date provided, use today
         if (isNaN(endDate.getTime())) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
-            // Find the Wednesday of the current week
-            const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
+            const dayOfWeek = today.getDay();
             const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
             const wednesday = new Date(today);
             wednesday.setDate(today.getDate() + diffToWednesday);
             return getWeekDatesFromEnding(wednesday);
         }
         
-        // Find the Wednesday (end of week)
-        const dayOfWeek = endDate.getDay(); // 0 = Sunday, 3 = Wednesday
+        const dayOfWeek = endDate.getDay();
         const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
         const wednesday = new Date(endDate);
         wednesday.setDate(endDate.getDate() + diffToWednesday);
         wednesday.setHours(0, 0, 0, 0);
         
-        // Get 6 days before Wednesday (Thursday)
         const weekDates = [];
         for (let i = 6; i >= 0; i--) {
             const date = new Date(wednesday);
@@ -95,12 +94,10 @@
             if (col) col.textContent = dayNames[i - 1];
         }
         
-        // Update week ending display
         const lastDay = weekDates[weekDates.length - 1];
         const weekEnding = formatWeekEnding(lastDay);
         updateWeekEnding(weekEnding);
         
-        // Update the date picker value
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             const year = lastDay.getFullYear();
@@ -170,37 +167,148 @@
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             updateColumnHeadersWithDates(datePicker.value);
-            // Re-render table with current data (preserves values)
             renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
         }
     }
 
-    // ---------- UPLOAD HANDLER ----------
-    function setupUpload() {
+    // ---------- SET DEFAULT DATE ----------
+    function setDefaultDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayOfWeek = today.getDay();
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(today);
+        wednesday.setDate(today.getDate() + diffToWednesday);
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = wednesday.getFullYear();
+            const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+            const day = String(wednesday.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return wednesday;
+    }
+
+    // ---------- UPLOAD MODAL ----------
+    function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        if (!uploadBtn || !fileInput) return;
+        const modal = document.getElementById('uploadModal');
+        const overlay = document.getElementById('uploadModalOverlay');
+        const closeBtn = document.getElementById('uploadModalClose');
+        const cancelBtn = document.getElementById('uploadCancelBtn');
+        const confirmBtn = document.getElementById('uploadConfirmBtn');
+        const fileInput = document.getElementById('uploadFileInput');
+        const fileArea = document.getElementById('uploadFileArea');
+        const fileInfo = document.getElementById('uploadFileInfo');
+        const fileName = document.getElementById('uploadFileName');
+        const fileRemove = document.getElementById('uploadFileRemove');
+        const preview = document.getElementById('uploadPreview');
+        const previewHead = document.getElementById('uploadPreviewHead');
+        const previewBody = document.getElementById('uploadPreviewBody');
+        const previewCount = document.getElementById('uploadPreviewCount');
+        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
 
-        uploadBtn.addEventListener('click', () => fileInput.click());
+        let selectedFile = null;
+        let parsedPreviewData = null;
 
+        // Open modal
+        uploadBtn.addEventListener('click', function() {
+            modal.style.display = 'flex';
+            // Set default date in modal
+            const currentDate = document.getElementById('weekEndingDate').value;
+            if (uploadWeekEnding) {
+                uploadWeekEnding.value = currentDate || '';
+            }
+            // Reset state
+            selectedFile = null;
+            parsedPreviewData = null;
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            preview.style.display = 'none';
+            confirmBtn.disabled = true;
+            // Reset file area
+            fileArea.style.display = 'block';
+        });
+
+        // Close modal functions
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        closeBtn.addEventListener('click', closeModal);
+        cancelBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', closeModal);
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                closeModal();
+            }
+        });
+
+        // File selection via click
         fileInput.addEventListener('change', function(e) {
-            const file = this.files[0];
-            if (!file) return;
+            if (this.files && this.files.length > 0) {
+                handleFileSelect(this.files[0]);
+            }
+        });
 
+        // File selection via drag and drop
+        fileArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('dragover');
+        });
+
+        fileArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+        });
+
+        fileArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('dragover');
+            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                handleFileSelect(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Remove file
+        fileRemove.addEventListener('click', function() {
+            selectedFile = null;
+            parsedPreviewData = null;
+            fileInput.value = '';
+            fileInfo.style.display = 'none';
+            preview.style.display = 'none';
+            fileArea.style.display = 'block';
+            confirmBtn.disabled = true;
+        });
+
+        // Handle file selection
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileInfo.style.display = 'flex';
+            fileArea.style.display = 'none';
+            
+            // Parse and preview file
             const reader = new FileReader();
-            reader.onload = function(ev) {
+            reader.onload = function(e) {
                 try {
-                    const content = ev.target.result;
+                    const content = e.target.result;
                     let parsedData = null;
-                    let weekEnding = null;
-                    let columnHeaders = null;
+                    let headers = null;
 
+                    // Try JSON
                     try {
                         const json = JSON.parse(content);
                         if (json.data && Array.isArray(json.data)) {
                             parsedData = json.data;
-                            weekEnding = json.weekEnding || null;
-                            columnHeaders = json.headers || null;
+                            headers = json.headers || null;
+                            if (json.weekEnding) {
+                                uploadedWeekEnding = json.weekEnding;
+                            }
                         } else if (Array.isArray(json)) {
                             parsedData = json;
                         }
@@ -208,15 +316,14 @@
                         // Try CSV
                         const lines = content.split('\n').filter(line => line.trim() !== '');
                         if (lines.length > 1) {
-                            const dataRows = lines.slice(1).map(line => {
+                            const headerRow = lines[0].split(',').map(h => h.trim());
+                            headers = headerRow;
+                            parsedData = lines.slice(1).map(line => {
                                 const cols = line.split(',').map(c => c.trim());
-                                return cols;
-                            });
-                            parsedData = dataRows.map(row => {
-                                if (row.length >= 8) {
+                                if (cols.length >= 8) {
                                     return {
-                                        label: row[0],
-                                        values: row.slice(1, 8),
+                                        label: cols[0],
+                                        values: cols.slice(1, 8),
                                         bold: false
                                     };
                                 }
@@ -226,36 +333,104 @@
                     }
 
                     if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
-                        renderTable(parsedData);
-                        if (weekEnding) {
-                            const datePicker = document.getElementById('weekEndingDate');
-                            if (datePicker) {
-                                const date = new Date(weekEnding);
-                                if (!isNaN(date.getTime())) {
-                                    const year = date.getFullYear();
-                                    const month = String(date.getMonth() + 1).padStart(2, '0');
-                                    const day = String(date.getDate()).padStart(2, '0');
-                                    datePicker.value = year + '-' + month + '-' + day;
-                                    updateColumnHeadersWithDates(datePicker.value);
-                                }
-                            }
-                        }
-                        if (columnHeaders && columnHeaders.length === 7) {
-                            for (let i = 1; i <= 7; i++) {
-                                const col = document.getElementById('col' + i);
-                                if (col) col.textContent = columnHeaders[i - 1];
-                            }
-                        }
-                        showToast('✅ Data uploaded successfully!', 'success');
+                        parsedPreviewData = parsedData;
+                        uploadedHeaders = headers;
+                        showPreview(parsedData, headers);
+                        confirmBtn.disabled = false;
                     } else {
-                        showToast('Could not parse file. Use JSON with "data" array or CSV (label + 7 columns).', 'error');
+                        showToast('Could not parse file. Please check the format.', 'error');
+                        confirmBtn.disabled = true;
                     }
                 } catch (err) {
                     showToast('Error reading file: ' + err.message, 'error');
+                    confirmBtn.disabled = true;
                 }
-                fileInput.value = '';
             };
             reader.readAsText(file);
+        }
+
+        // Show preview
+        function showPreview(data, headers) {
+            preview.style.display = 'block';
+            previewCount.textContent = data.length + ' rows';
+
+            // Build header
+            let headHtml = '<tr><th>Description</th>';
+            const weekDates = getWeekDatesFromEnding(uploadWeekEnding.value || document.getElementById('weekEndingDate').value);
+            const dayNames = weekDates.map(d => formatDateHeader(d));
+            for (let i = 0; i < 7; i++) {
+                headHtml += `<th>${headers && headers[i] ? headers[i] : dayNames[i] || 'Day ' + (i+1)}</th>`;
+            }
+            headHtml += '</tr>';
+            previewHead.innerHTML = headHtml;
+
+            // Build body (show first 5 rows)
+            let bodyHtml = '';
+            const previewRows = data.slice(0, 5);
+            previewRows.forEach(item => {
+                bodyHtml += '<tr>';
+                bodyHtml += `<td><strong>${item.label || ''}</strong></td>`;
+                if (item.values && item.values.length === 7) {
+                    item.values.forEach(val => {
+                        bodyHtml += `<td>${val || '—'}</td>`;
+                    });
+                }
+                bodyHtml += '</tr>';
+            });
+            if (data.length > 5) {
+                bodyHtml += `<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">... and ${data.length - 5} more rows</td></tr>`;
+            }
+            previewBody.innerHTML = bodyHtml;
+        }
+
+        // Confirm upload
+        confirmBtn.addEventListener('click', function() {
+            if (!parsedPreviewData || parsedPreviewData.length === 0) {
+                showToast('No data to upload.', 'error');
+                return;
+            }
+
+            // Get week ending from modal
+            const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
+            
+            // Update headers if provided
+            if (uploadedHeaders && uploadedHeaders.length === 7) {
+                for (let i = 1; i <= 7; i++) {
+                    const col = document.getElementById('col' + i);
+                    if (col) col.textContent = uploadedHeaders[i - 1];
+                }
+            } else {
+                // Update with dates
+                updateColumnHeadersWithDates(weekEnding);
+            }
+
+            // Update week ending display
+            if (uploadedWeekEnding) {
+                updateWeekEnding(uploadedWeekEnding);
+            } else {
+                const weekDates = getWeekDatesFromEnding(weekEnding);
+                const lastDay = weekDates[weekDates.length - 1];
+                updateWeekEnding(formatWeekEnding(lastDay));
+            }
+
+            // Update date picker
+            const datePicker = document.getElementById('weekEndingDate');
+            if (datePicker && weekEnding) {
+                const date = new Date(weekEnding);
+                if (!isNaN(date.getTime())) {
+                    const year = date.getFullYear();
+                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                    const day = String(date.getDate()).padStart(2, '0');
+                    datePicker.value = year + '-' + month + '-' + day;
+                }
+            }
+
+            // Render the uploaded data
+            renderTable(parsedPreviewData);
+            
+            // Close modal
+            closeModal();
+            showToast('✅ Data uploaded successfully!', 'success');
         });
     }
 
@@ -298,37 +473,15 @@
         }, 3500);
     }
 
-    // ---------- SET DEFAULT DATE (Current Wednesday) ----------
-    function setDefaultDate() {
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const dayOfWeek = today.getDay();
-        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
-        const wednesday = new Date(today);
-        wednesday.setDate(today.getDate() + diffToWednesday);
-        
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker) {
-            const year = wednesday.getFullYear();
-            const month = String(wednesday.getMonth() + 1).padStart(2, '0');
-            const day = String(wednesday.getDate()).padStart(2, '0');
-            datePicker.value = year + '-' + month + '-' + day;
-        }
-        
-        return wednesday;
-    }
-
     // ---------- EXPORT GLOBALLY ----------
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
         
-        // Set default date and update headers
         const defaultDate = setDefaultDate();
         updateColumnHeadersWithDates(defaultDate);
         renderTable(LIQUIDITY_DATA);
-        setupUpload();
+        setupUploadModal();
         
-        // Add event listener for date change
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.addEventListener('change', handleDateChange);
