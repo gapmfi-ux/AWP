@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Updated with Google Sheet saving
+// Daily Liquidity Module - Updated with Excel/CSV upload and Google Sheet save
 (function() {
     'use strict';
 
@@ -167,7 +167,6 @@
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             updateColumnHeadersWithDates(datePicker.value);
-            // Load data for the selected week
             loadDataFromSheet(datePicker.value);
         }
     }
@@ -180,11 +179,8 @@
             return;
         }
 
-        // Format week ending for lookup (YYYY-MM-DD)
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
-
-        showToast('Loading data from sheet...', 'info');
 
         API.loadLiquidityData(formattedDate)
             .then(function(response) {
@@ -192,7 +188,6 @@
                     renderTable(response.data);
                     showToast('✅ Data loaded from sheet (' + response.data.length + ' rows)', 'success');
                 } else {
-                    // No data found, use local data
                     renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
                     if (response && response.message) {
                         showToast(response.message, 'info');
@@ -213,7 +208,6 @@
             return Promise.reject('API not available');
         }
 
-        // Format week ending
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
 
@@ -261,6 +255,92 @@
         return wednesday;
     }
 
+    // ---------- EXCEL/CSV PARSER ----------
+    function parseExcelFile(file) {
+        return new Promise(function(resolve, reject) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let parsedData = null;
+                    let headers = null;
+                    let weekEnding = null;
+
+                    // Check if it's a CSV file
+                    if (file.name.toLowerCase().endsWith('.csv')) {
+                        const text = new TextDecoder('utf-8').decode(content);
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        if (lines.length > 1) {
+                            const headerRow = lines[0].split(',').map(h => h.trim());
+                            headers = headerRow;
+                            parsedData = lines.slice(1).map(line => {
+                                const cols = line.split(',').map(c => c.trim());
+                                if (cols.length >= 8) {
+                                    return {
+                                        label: cols[0],
+                                        values: cols.slice(1, 8),
+                                        bold: false
+                                    };
+                                }
+                                return null;
+                            }).filter(item => item !== null);
+                        }
+                    } else {
+                        // Try JSON (for Excel exports as JSON)
+                        try {
+                            const json = JSON.parse(new TextDecoder('utf-8').decode(content));
+                            if (json.data && Array.isArray(json.data)) {
+                                parsedData = json.data;
+                                headers = json.headers || null;
+                                weekEnding = json.weekEnding || null;
+                            } else if (Array.isArray(json)) {
+                                parsedData = json;
+                            }
+                        } catch (jsonErr) {
+                            // If not JSON, try reading as text and parsing as CSV
+                            const text = new TextDecoder('utf-8').decode(content);
+                            const lines = text.split('\n').filter(line => line.trim() !== '');
+                            if (lines.length > 1) {
+                                const headerRow = lines[0].split('\t').map(h => h.trim());
+                                headers = headerRow;
+                                parsedData = lines.slice(1).map(line => {
+                                    const cols = line.split('\t').map(c => c.trim());
+                                    if (cols.length >= 8) {
+                                        return {
+                                            label: cols[0],
+                                            values: cols.slice(1, 8),
+                                            bold: false
+                                        };
+                                    }
+                                    return null;
+                                }).filter(item => item !== null);
+                            }
+                        }
+                    }
+
+                    if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
+                        resolve({
+                            data: parsedData,
+                            headers: headers,
+                            weekEnding: weekEnding
+                        });
+                    } else {
+                        reject(new Error('Could not parse file. Please check the format.'));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            
+            reader.onerror = function() {
+                reject(new Error('Error reading file'));
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
     // ---------- UPLOAD MODAL ----------
     function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
@@ -274,14 +354,10 @@
         const fileInfo = document.getElementById('uploadFileInfo');
         const fileName = document.getElementById('uploadFileName');
         const fileRemove = document.getElementById('uploadFileRemove');
-        const preview = document.getElementById('uploadPreview');
-        const previewHead = document.getElementById('uploadPreviewHead');
-        const previewBody = document.getElementById('uploadPreviewBody');
-        const previewCount = document.getElementById('uploadPreviewCount');
         const uploadWeekEnding = document.getElementById('uploadWeekEnding');
 
         let selectedFile = null;
-        let parsedPreviewData = null;
+        let parsedData = null;
 
         // Open modal
         uploadBtn.addEventListener('click', function() {
@@ -291,10 +367,9 @@
                 uploadWeekEnding.value = currentDate || '';
             }
             selectedFile = null;
-            parsedPreviewData = null;
+            parsedData = null;
             fileInput.value = '';
             fileInfo.style.display = 'none';
-            preview.style.display = 'none';
             confirmBtn.disabled = true;
             fileArea.style.display = 'block';
         });
@@ -313,12 +388,14 @@
             }
         });
 
+        // File selection via click
         fileInput.addEventListener('change', function(e) {
             if (this.files && this.files.length > 0) {
                 handleFileSelect(this.files[0]);
             }
         });
 
+        // Drag and drop
         fileArea.addEventListener('dragover', function(e) {
             e.preventDefault();
             this.classList.add('dragover');
@@ -337,110 +414,42 @@
             }
         });
 
+        // Remove file
         fileRemove.addEventListener('click', function() {
             selectedFile = null;
-            parsedPreviewData = null;
+            parsedData = null;
             fileInput.value = '';
             fileInfo.style.display = 'none';
-            preview.style.display = 'none';
             fileArea.style.display = 'block';
             confirmBtn.disabled = true;
         });
 
+        // Handle file selection
         function handleFileSelect(file) {
             selectedFile = file;
             fileName.textContent = file.name;
             fileInfo.style.display = 'flex';
             fileArea.style.display = 'none';
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const content = e.target.result;
-                    let parsedData = null;
-                    let headers = null;
+            confirmBtn.disabled = true;
 
-                    try {
-                        const json = JSON.parse(content);
-                        if (json.data && Array.isArray(json.data)) {
-                            parsedData = json.data;
-                            headers = json.headers || null;
-                            if (json.weekEnding) {
-                                uploadedWeekEnding = json.weekEnding;
-                            }
-                        } else if (Array.isArray(json)) {
-                            parsedData = json;
-                        }
-                    } catch (jsonErr) {
-                        const lines = content.split('\n').filter(line => line.trim() !== '');
-                        if (lines.length > 1) {
-                            const headerRow = lines[0].split(',').map(h => h.trim());
-                            headers = headerRow;
-                            parsedData = lines.slice(1).map(line => {
-                                const cols = line.split(',').map(c => c.trim());
-                                if (cols.length >= 8) {
-                                    return {
-                                        label: cols[0],
-                                        values: cols.slice(1, 8),
-                                        bold: false
-                                    };
-                                }
-                                return null;
-                            }).filter(item => item !== null);
-                        }
-                    }
-
-                    if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
-                        parsedPreviewData = parsedData;
-                        uploadedHeaders = headers;
-                        showPreview(parsedData, headers);
-                        confirmBtn.disabled = false;
-                    } else {
-                        showToast('Could not parse file. Please check the format.', 'error');
-                        confirmBtn.disabled = true;
-                    }
-                } catch (err) {
-                    showToast('Error reading file: ' + err.message, 'error');
+            // Parse the file
+            parseExcelFile(file)
+                .then(function(result) {
+                    parsedData = result.data;
+                    uploadedHeaders = result.headers;
+                    uploadedWeekEnding = result.weekEnding;
+                    confirmBtn.disabled = false;
+                    showToast('✅ File parsed successfully! ' + parsedData.length + ' rows found.', 'success');
+                })
+                .catch(function(err) {
+                    showToast('Error parsing file: ' + err.message, 'error');
                     confirmBtn.disabled = true;
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        function showPreview(data, headers) {
-            preview.style.display = 'block';
-            previewCount.textContent = data.length + ' rows';
-
-            let headHtml = '<tr><th>Description</th>';
-            const weekDates = getWeekDatesFromEnding(uploadWeekEnding.value || document.getElementById('weekEndingDate').value);
-            const dayNames = weekDates.map(d => formatDateHeader(d));
-            for (let i = 0; i < 7; i++) {
-                headHtml += `<th>${headers && headers[i] ? headers[i] : dayNames[i] || 'Day ' + (i+1)}</th>`;
-            }
-            headHtml += '</tr>';
-            previewHead.innerHTML = headHtml;
-
-            let bodyHtml = '';
-            const previewRows = data.slice(0, 5);
-            previewRows.forEach(item => {
-                bodyHtml += '<tr>';
-                bodyHtml += `<td><strong>${item.label || ''}</strong></td>`;
-                if (item.values && item.values.length === 7) {
-                    item.values.forEach(val => {
-                        bodyHtml += `<td>${val || '—'}</td>`;
-                    });
-                }
-                bodyHtml += '</tr>';
-            });
-            if (data.length > 5) {
-                bodyHtml += `<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">... and ${data.length - 5} more rows</td></tr>`;
-            }
-            previewBody.innerHTML = bodyHtml;
+                });
         }
 
         // Confirm upload - Save to Google Sheet
         confirmBtn.addEventListener('click', function() {
-            if (!parsedPreviewData || parsedPreviewData.length === 0) {
+            if (!parsedData || parsedData.length === 0) {
                 showToast('No data to upload.', 'error');
                 return;
             }
@@ -448,7 +457,7 @@
             const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
             
             // Save to Google Sheet
-            saveDataToSheet(parsedPreviewData, weekEnding)
+            saveDataToSheet(parsedData, weekEnding)
                 .then(function(response) {
                     if (response && response.success) {
                         // Update headers if provided
@@ -480,8 +489,9 @@
                             }
                         }
 
-                        renderTable(parsedPreviewData);
+                        renderTable(parsedData);
                         closeModal();
+                        showToast('✅ Data uploaded and saved to sheet!', 'success');
                     }
                 })
                 .catch(function(error) {
@@ -541,14 +551,13 @@
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.addEventListener('change', handleDateChange);
-            // Load data for the default date
             setTimeout(function() {
                 loadDataFromSheet(datePicker.value);
             }, 500);
         }
     };
 
-    // Expose save function for console/testing
+    // Expose functions for console/testing
     window.saveLiquidityData = saveDataToSheet;
     window.loadLiquidityData = loadDataFromSheet;
 
