@@ -1,20 +1,8 @@
-/**
- * Daily Liquidity Module - Enhanced Excel Upload & Trial Balance Integration
- * Handles uploading Excel files and importing data to Trial Balance sheet
- */
-
+// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
-    // Configuration
-    const CONFIG = {
-        MAX_FILE_SIZE: 5 * 1024 * 1024, // 5MB
-        SUPPORTED_FORMATS: ['xlsx', 'xls', 'csv'],
-        CHUNK_SIZE: 100 * 1024, // 100KB for processing
-        UPLOAD_TIMEOUT: 60000 // 60 seconds
-    };
-
-    // Empty table structure
+    // ---------- EMPTY TABLE STRUCTURE ----------
     const EMPTY_ROWS = [
         { label: 'TOTAL DEPOSITS LIABILITY', values: ['', '', '', '', '', '', ''], bold: true, icon: 'arrow-up' },
         { isSection: true, label: 'LIQUIDITY REQUIREMENTS' },
@@ -47,88 +35,11 @@
         { label: 'PPE/Networth', values: ['', '', '', '', '', '', ''], bold: true }
     ];
 
-    // State management
-    let state = {
-        currentData: [],
-        isLoading: false,
-        selectedFile: null,
-        uploadProgress: 0,
-        uploadAbortController: null
-    };
+    let currentData = [];
+    let isLoading = false;
+    let selectedFile = null;
 
-    // ========================================
-    // UTILITY FUNCTIONS
-    // ========================================
-
-    function log(message, data = null) {
-        console.log(`[Daily Liquidity] ${message}`, data || '');
-    }
-
-    function error(message, err = null) {
-        console.error(`[Daily Liquidity] ERROR: ${message}`, err || '');
-    }
-
-    function showToast(message, type = 'info') {
-        let toast = document.getElementById('liquidityToast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'liquidityToast';
-            toast.style.cssText = `
-                position: fixed; bottom: 20px; right: 20px;
-                padding: 12px 20px; border-radius: 8px;
-                z-index: 9999; font-weight: 600; font-size: 13px;
-                max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                transition: all 0.3s ease; transform: translateY(20px); opacity: 0;
-                pointer-events: none;
-            `;
-            document.body.appendChild(toast);
-        }
-
-        const styles = {
-            success: { bg: '#d1fae5', color: '#065f46', border: '#34d399' },
-            error: { bg: '#fee2e2', color: '#991b1b', border: '#f87171' },
-            warning: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' },
-            info: { bg: '#dbeafe', color: '#1e40af', border: '#60a5fa' }
-        };
-        const style = styles[type] || styles.info;
-
-        toast.style.background = style.bg;
-        toast.style.color = style.color;
-        toast.style.borderLeft = `4px solid ${style.border}`;
-        toast.style.pointerEvents = 'auto';
-        toast.textContent = message;
-        toast.style.transform = 'translateY(0)';
-        toast.style.opacity = '1';
-
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => {
-            toast.style.transform = 'translateY(20px)';
-            toast.style.opacity = '0';
-        }, 3500);
-    }
-
-    function showLoadingModal(message = 'Processing...') {
-        const modal = document.getElementById('loadingModal');
-        const msg = document.getElementById('loadingMessage');
-        if (modal) {
-            modal.style.display = 'flex';
-            if (msg) msg.textContent = message;
-        }
-        state.isLoading = true;
-    }
-
-    function hideLoadingModal() {
-        const modal = document.getElementById('loadingModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        state.isLoading = false;
-    }
-
-    // ========================================
-    // DATE UTILITIES
-    // ========================================
-
+    // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
         const endDate = new Date(weekEndingDate);
         endDate.setHours(0, 0, 0, 0);
@@ -172,10 +83,7 @@
         return month + ' ' + day + ', ' + year;
     }
 
-    // ========================================
-    // TABLE RENDERING
-    // ========================================
-
+    // ---------- UPDATE COLUMN HEADERS ----------
     function updateColumnHeadersWithDates(weekEndingDate) {
         const weekDates = getWeekDatesFromEnding(weekEndingDate);
         const dayNames = weekDates.map(d => formatDateHeader(d));
@@ -200,6 +108,7 @@
         return { weekDates, dayNames, weekEnding };
     }
 
+    // ---------- UPDATE WEEK ENDING DISPLAY ----------
     function updateWeekEnding(weekEnding) {
         const displays = document.querySelectorAll('#weekEndingDisplay, #footerWeekEnding');
         displays.forEach(el => {
@@ -207,15 +116,16 @@
         });
     }
 
+    // ---------- RENDER TABLE ----------
     function renderTable(data) {
         const tbody = document.getElementById('tableBody');
         if (!tbody) return;
+        let html = '';
 
         if (!data || data.length === 0) {
             data = EMPTY_ROWS;
         }
 
-        let html = '';
         data.forEach(item => {
             if (item.isSection) {
                 html += `<tr class="section-header"><td colspan="8"><i class="fas fa-${item.icon || 'folder-open'}"></i> ${item.label}</td></tr>`;
@@ -235,7 +145,7 @@
             let valueCells = '';
             if (item.values && item.values.length === 7) {
                 item.values.forEach((val) => {
-                    const displayVal = val && val.trim() !== '' ? val : '<span class="empty-cell">—</span>';
+                    const displayVal = val && String(val).trim() !== '' ? val : '<span class="empty-cell">—</span>';
                     let cls = 'numeric';
                     if (item.positive) cls += ' positive';
                     if (item.negative) cls += ' negative';
@@ -252,144 +162,145 @@
         });
 
         tbody.innerHTML = html;
-        state.currentData = data;
+        currentData = data;
     }
 
-    // ========================================
-    // FILE VALIDATION
-    // ========================================
+    // ---------- LOADING MODAL ----------
+    function showLoadingModal(message) {
+        const modal = document.getElementById('loadingModal');
+        const msg = document.getElementById('loadingMessage');
+        if (modal) {
+            modal.style.display = 'flex';
+            if (msg) msg.textContent = message || 'Loading data...';
+        }
+        isLoading = true;
+    }
 
-    function validateFile(file) {
-        const errors = [];
+    function hideLoadingModal() {
+        const modal = document.getElementById('loadingModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        isLoading = false;
+    }
 
-        // Check file size
-        if (file.size > CONFIG.MAX_FILE_SIZE) {
-            errors.push(`File size exceeds ${CONFIG.MAX_FILE_SIZE / 1024 / 1024}MB limit (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
+    // ---------- SET DEFAULT DATE ----------
+    function setDefaultDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayOfWeek = today.getDay();
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(today);
+        wednesday.setDate(today.getDate() + diffToWednesday);
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = wednesday.getFullYear();
+            const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+            const day = String(wednesday.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return wednesday;
+    }
+
+    // ---------- TOAST MESSAGE ----------
+    function showToast(message, type) {
+        let toast = document.getElementById('liquidityToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'liquidityToast';
+            toast.style.cssText = `
+                position: fixed; bottom: 20px; right: 20px;
+                padding: 10px 20px; border-radius: 8px;
+                z-index: 9999; font-weight: 600; font-size: 13px;
+                max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                transition: all 0.3s ease; transform: translateY(20px); opacity: 0;
+                pointer-events: none;
+            `;
+            document.body.appendChild(toast);
         }
 
-        // Check file type
-        const ext = file.name.split('.').pop().toLowerCase();
-        if (!CONFIG.SUPPORTED_FORMATS.includes(ext)) {
-            errors.push(`Unsupported file format. Supported: ${CONFIG.SUPPORTED_FORMATS.join(', ')}`);
-        }
-
-        // Check file name
-        if (!file.name || file.name.trim() === '') {
-            errors.push('Invalid file name');
-        }
-
-        return {
-            valid: errors.length === 0,
-            errors: errors
+        const colors = {
+            success: { bg: '#d1fae5', color: '#065f46', border: '#34d399' },
+            error: { bg: '#fee2e2', color: '#991b1b', border: '#f87171' },
+            info: { bg: '#dbeafe', color: '#1e40af', border: '#60a5fa' }
         };
+        const style = colors[type] || colors.info;
+
+        toast.style.background = style.bg;
+        toast.style.color = style.color;
+        toast.style.borderLeft = `4px solid ${style.border}`;
+        toast.style.pointerEvents = 'auto';
+        toast.textContent = message;
+        toast.style.transform = 'translateY(0)';
+        toast.style.opacity = '1';
+
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => {
+            toast.style.transform = 'translateY(20px)';
+            toast.style.opacity = '0';
+        }, 3500);
     }
 
-    // ========================================
-    // EXCEL UPLOAD & IMPORT
-    // ========================================
-
+    // ---------- UPLOAD TO TRIAL BALANCE ----------
     function uploadToTrialBalance(weekEnding, fileData) {
-        if (state.isLoading) {
-            showToast('Upload already in progress', 'warning');
-            return;
-        }
-
-        // Validate file
-        const validation = validateFile(fileData);
-        if (!validation.valid) {
-            showToast(validation.errors.join('; '), 'error');
-            return;
-        }
-
+        if (isLoading) return;
+        
         if (typeof API === 'undefined' || !API) {
-            showToast('API not available', 'error');
+            showToast('API not available. Cannot upload data.', 'error');
             return;
         }
 
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
 
-        showLoadingModal(`Uploading ${fileData.name} (${(fileData.size / 1024).toFixed(2)}KB)...`);
-        log(`Starting upload: ${fileData.name} for week ${formattedDate}`);
+        showLoadingModal('Uploading Excel to Trial Balance...');
 
-        // Read file as base64
+        // Convert file to base64
         const reader = new FileReader();
-        
-        reader.onprogress = function(e) {
-            if (e.lengthComputable) {
-                state.uploadProgress = Math.round((e.loaded / e.total) * 100);
-                log(`Upload progress: ${state.uploadProgress}%`);
-            }
-        };
-
         reader.onload = function(e) {
             try {
-                const base64Data = e.target.result.split(',')[1];
-
-                if (!base64Data) {
-                    throw new Error('Failed to encode file data');
-                }
-
-                log(`File encoded successfully (${base64Data.length} bytes)`);
-
-                // Call API with timeout
-                const uploadPromise = API.uploadExcelToTrialBalance({
-                    base64: base64Data,
+                const base64 = e.target.result.split(',')[1];
+                
+                // POST to server using the new POST-based API method
+                API.uploadExcelToTrialBalance({
+                    base64: base64,
                     filename: fileData.name,
                     weekEnding: formattedDate
+                })
+                .then(function(response) {
+                    hideLoadingModal();
+                    
+                    if (response && response.success) {
+                        showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                        closeUploadModal();
+                        // Load the imported data (server saved JSON or parsed data)
+                        importFromTrialBalance(formattedDate);
+                    } else {
+                        showToast('Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(function(error) {
+                    hideLoadingModal();
+                    console.error('Upload error:', error);
+                    showToast('Error uploading: ' + (error.message || error), 'error');
                 });
-
-                // Set timeout for upload
-                const timeoutPromise = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error('Upload timeout')), CONFIG.UPLOAD_TIMEOUT)
-                );
-
-                Promise.race([uploadPromise, timeoutPromise])
-                    .then(function(response) {
-                        hideLoadingModal();
-                        log('Upload response:', response);
-
-                        if (response && response.success) {
-                            showToast(`✅ Successfully uploaded ${fileData.name} and imported ${response.rowsImported || 0} rows`, 'success');
-                            closeUploadModal();
-                            
-                            // Refresh table with imported data
-                            setTimeout(() => {
-                                importFromTrialBalance(formattedDate);
-                            }, 500);
-                        } else {
-                            const errorMsg = response?.error || 'Unknown error occurred';
-                            error(`Upload failed: ${errorMsg}`);
-                            showToast(`Upload failed: ${errorMsg}`, 'error');
-                        }
-                    })
-                    .catch(function(err) {
-                        hideLoadingModal();
-                        error('Upload error:', err);
-                        showToast(`Upload error: ${err.message || 'Failed to upload file'}`, 'error');
-                    });
-
             } catch (err) {
                 hideLoadingModal();
-                error('File processing error:', err);
-                showToast(`Error processing file: ${err.message}`, 'error');
+                showToast('Error processing file: ' + err.message, 'error');
             }
         };
-
-        reader.onerror = function() {
-            hideLoadingModal();
-            error('File read error');
-            showToast('Failed to read file', 'error');
-        };
-
+        
         reader.readAsDataURL(fileData);
     }
 
+    // ---------- IMPORT FROM TRIAL BALANCE ----------
     function importFromTrialBalance(weekEnding) {
-        if (state.isLoading) return;
-
+        if (isLoading) return;
+        
         if (typeof API === 'undefined' || !API) {
-            showToast('API not available', 'error');
+            showToast('API not available. Cannot import data.', 'error');
             return;
         }
 
@@ -397,38 +308,33 @@
         const formattedDate = date.toISOString().split('T')[0];
 
         showLoadingModal('Importing data from Trial Balance...');
-        log(`Importing data for week: ${formattedDate}`);
 
         API.importLiquidityFromTrialBalance(formattedDate)
             .then(function(response) {
                 hideLoadingModal();
-                log('Import response:', response);
-
+                
                 if (response && response.success) {
                     if (response.data && response.data.length > 0) {
                         renderTable(response.data);
-                        showToast(`✅ Imported ${response.data.length} rows from Trial Balance`, 'success');
+                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
                     } else {
                         renderTable(EMPTY_ROWS);
-                        showToast('No data found for week. Showing empty template.', 'info');
+                        showToast('No data found for week ending ' + weekEnding, 'info');
                     }
                 } else {
                     renderTable(EMPTY_ROWS);
-                    showToast(`Import failed: ${response?.error || 'Unknown error'}`, 'error');
+                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
                 }
             })
-            .catch(function(err) {
+            .catch(function(error) {
                 hideLoadingModal();
-                error('Import error:', err);
+                console.error('Import error:', error);
                 renderTable(EMPTY_ROWS);
-                showToast(`Import error: ${err.message}`, 'error');
+                showToast('Error importing data: ' + error.message, 'error');
             });
     }
 
-    // ========================================
-    // MODAL MANAGEMENT
-    // ========================================
-
+    // ---------- UPLOAD MODAL ----------
     function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
         const modal = document.getElementById('uploadModal');
@@ -443,41 +349,39 @@
         const fileName = document.getElementById('uploadFileName');
         const fileRemove = document.getElementById('uploadFileRemove');
         const statusDiv = document.getElementById('uploadStatus');
+        const statusIcon = document.getElementById('uploadStatusIcon');
+        const statusMessage = document.getElementById('uploadStatusMessage');
 
         // Open modal
-        if (uploadBtn) {
-            uploadBtn.addEventListener('click', function() {
-                modal.style.display = 'flex';
-                const currentDate = document.getElementById('weekEndingDate').value;
-                if (uploadWeekEnding) {
-                    uploadWeekEnding.value = currentDate || '';
-                }
-                statusDiv.style.display = 'none';
-                state.selectedFile = null;
-                confirmBtn.disabled = true;
-                fileArea.style.display = 'block';
-                fileInfo.style.display = 'none';
-                fileInput.value = '';
-                log('Upload modal opened');
-            });
-        }
+        uploadBtn.addEventListener('click', function() {
+            modal.style.display = 'flex';
+            const currentDate = document.getElementById('weekEndingDate').value;
+            if (uploadWeekEnding) {
+                uploadWeekEnding.value = currentDate || '';
+            }
+            statusDiv.style.display = 'none';
+            selectedFile = null;
+            confirmBtn.disabled = true;
+            fileArea.style.display = 'block';
+            fileInfo.style.display = 'none';
+            fileInput.value = '';
+        });
 
         function closeUploadModal() {
             modal.style.display = 'none';
             statusDiv.style.display = 'none';
             confirmBtn.disabled = true;
-            state.selectedFile = null;
-            log('Upload modal closed');
+            selectedFile = null;
         }
 
-        // Close handlers
+        // Close modal functions
         if (closeBtn) closeBtn.addEventListener('click', closeUploadModal);
         if (cancelBtn) cancelBtn.addEventListener('click', closeUploadModal);
         if (overlay) overlay.addEventListener('click', closeUploadModal);
 
-        // ESC key
+        // Close on Escape key
         document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal && modal.style.display === 'flex') {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
                 closeUploadModal();
             }
         });
@@ -492,7 +396,7 @@
             });
         }
 
-        // File area click
+        // Click on file area triggers file input
         if (fileArea) {
             fileArea.addEventListener('click', function(e) {
                 if (e.target.tagName !== 'INPUT') {
@@ -522,30 +426,22 @@
 
         // Handle file selection
         function handleFileSelect(file) {
-            const validation = validateFile(file);
-            
-            if (!validation.valid) {
-                showToast(validation.errors.join('; '), 'error');
-                return;
-            }
-
-            state.selectedFile = file;
-            fileName.textContent = `${file.name} (${(file.size / 1024).toFixed(2)} KB)`;
+            selectedFile = file;
+            fileName.textContent = file.name;
             fileInfo.style.display = 'flex';
             fileArea.style.display = 'none';
             confirmBtn.disabled = false;
-            log(`File selected: ${file.name} (${file.size} bytes)`);
+            showToast('✅ File selected: ' + file.name, 'success');
         }
 
         // Remove file
         if (fileRemove) {
             fileRemove.addEventListener('click', function() {
-                state.selectedFile = null;
+                selectedFile = null;
                 fileInput.value = '';
                 fileInfo.style.display = 'none';
                 fileArea.style.display = 'block';
                 confirmBtn.disabled = true;
-                log('File removed');
             });
         }
 
@@ -553,77 +449,61 @@
         if (confirmBtn) {
             confirmBtn.addEventListener('click', function() {
                 const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
-
+                
                 if (!weekEnding) {
                     showToast('Please select a week ending date', 'error');
                     return;
                 }
 
-                if (!state.selectedFile) {
+                if (!selectedFile) {
                     showToast('Please select a file to upload', 'error');
                     return;
                 }
 
-                uploadToTrialBalance(weekEnding, state.selectedFile);
+                // Show status
+                statusDiv.style.display = 'flex';
+                statusIcon.className = 'upload-status-icon';
+                statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                statusMessage.textContent = 'Uploading to Trial Balance...';
+                confirmBtn.disabled = true;
+
+                // Upload to Trial Balance
+                uploadToTrialBalance(weekEnding, selectedFile);
             });
         }
-
-        // Export close function
-        window.closeUploadModal = closeUploadModal;
     }
 
-    // ========================================
-    // DATE CHANGE HANDLER
-    // ========================================
-
+    // ---------- HANDLE DATE CHANGE ----------
     function handleDateChange() {
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             updateColumnHeadersWithDates(datePicker.value);
-            // Auto-load data for selected date
-            importFromTrialBalance(datePicker.value);
         }
     }
 
-    // ========================================
-    // MODULE INITIALIZATION
-    // ========================================
-
+    // ---------- EXPORT GLOBALLY ----------
     window.initDailyLiquidityModule = function() {
-        log('Initializing Daily Liquidity Module');
-
-        try {
-            // Set default date
-            const defaultDate = new Date();
-            defaultDate.setHours(0, 0, 0, 0);
-            const dayOfWeek = defaultDate.getDay();
-            const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
-            const wednesday = new Date(defaultDate);
-            wednesday.setDate(defaultDate.getDate() + diffToWednesday);
-
-            // Update UI with default date
-            updateColumnHeadersWithDates(wednesday);
-            renderTable(EMPTY_ROWS);
-
-            // Setup upload modal
-            setupUploadModal();
-
-            // Setup date picker
-            const datePicker = document.getElementById('weekEndingDate');
-            if (datePicker) {
-                datePicker.addEventListener('change', handleDateChange);
-            }
-
-            log('Module initialized successfully');
-        } catch (err) {
-            error('Module initialization failed:', err);
-            showToast('Failed to initialize Daily Liquidity module', 'error');
+        console.log('Initializing Daily Liquidity Module');
+        
+        const defaultDate = setDefaultDate();
+        updateColumnHeadersWithDates(defaultDate);
+        renderTable(EMPTY_ROWS);
+        
+        // Setup Upload Modal
+        setupUploadModal();
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            datePicker.addEventListener('change', handleDateChange);
         }
     };
 
-    // Expose global functions
-    window.importLiquidityData = importFromTrialBalance;
-    window.uploadLiquidityFile = uploadToTrialBalance;
+    // Expose functions for console/testing
+    window.uploadLiquidityData = uploadToTrialBalance;
     window.renderLiquidityTable = renderTable;
+    window.closeUploadModal = function() {
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.style.display = 'none';
+    };
 
 })();
