@@ -291,7 +291,7 @@ async getInvestmentByCode(investmentCode, options = {}) {
  // In api.js, add these methods to the ApiService class
 
   // ============================================
-  // DAILY LIQUIDITY API
+  // DAILY LIQUIDITY API - small GET methods still use JSONP
   // ============================================
 
   async importLiquidityFromTrialBalance(weekEnding, options = {}) {
@@ -314,21 +314,41 @@ async getInvestmentByCode(investmentCode, options = {}) {
     return this.request('deleteLiquidityData', { weekEnding }, options);
   }
 
+  // ============================================
+  // UPLOAD EXCEL TO TRIAL BALANCE - USE POST (supports large base64 payloads)
+  // ============================================
   async uploadExcelToTrialBalance(data, options = {}) {
-    this.log('uploadExcelToTrialBalance called with:', data);
-    return this.request('uploadExcelToTrialBalance', data, options);
+    this.log('uploadExcelToTrialBalance (POST) called with:', data && data.filename);
+    const url = this.BASE_URL;
+    try {
+      // The server's doPost expects action and formData parameters (formData is a JSON string)
+      const body = new URLSearchParams();
+      body.append('action', 'uploadExcelToTrialBalance');
+      body.append('formData', JSON.stringify(data));
+      
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString()
+      });
+      
+      if (!resp.ok) {
+        throw new Error('HTTP ' + resp.status);
+      }
+      const json = await resp.json();
+      if (json) {
+        return json;
+      } else {
+        throw new Error('Empty response from server');
+      }
+    } catch (err) {
+      this.error('uploadExcelToTrialBalance POST failed:', err);
+      throw err;
+    }
   }
 
-  async uploadExcelToTrialBalance(data, options = {}) {
-    this.log('uploadExcelToTrialBalance called with:', data);
-    return this.request('uploadExcelToTrialBalance', data, options);
-  }
-
-  async importLiquidityFromTrialBalance(weekEnding, options = {}) {
-    this.log('importLiquidityFromTrialBalance called for week ending:', weekEnding);
-    return this.request('importLiquidityFromTrialBalance', { weekEnding }, options);
-  }
-  
   // ============================================
   // TEST CONNECTION
   // ============================================
