@@ -19,7 +19,7 @@
         { label: 'SURPLUS/(DEFICIT) TLA - TRR =', values: ['', '', '', '', '', '', ''], bold: true, surplusRow: true },
         { label: 'Primary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
         { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
-        { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], negative: true },
+        { label: 'Surplus/Deficit (with borrowings)*', values: ['', '', '', '', '', '', ''], negative: true },
         { label: 'Secondary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
         { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
         { label: 'Primary Reserve %', values: ['', '', '', '', '', '', ''] },
@@ -37,20 +37,36 @@
 
     let currentData = [];
 
-    // ---------- GET WEEK DATES ----------
-    function getWeekDates() {
-        const today = new Date();
-        const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ...
+    // ---------- GET WEEK DATES (Thursday to Wednesday) ----------
+    function getWeekDatesFromEnding(weekEndingDate) {
+        const endDate = new Date(weekEndingDate);
+        endDate.setHours(0, 0, 0, 0);
         
-        // Calculate Monday of this week
-        const diffToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const monday = new Date(today);
-        monday.setDate(today.getDate() - diffToMonday);
+        // If no date provided, use today
+        if (isNaN(endDate.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            // Find the Wednesday of the current week
+            const dayOfWeek = today.getDay(); // 0 = Sunday, 3 = Wednesday
+            const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+            const wednesday = new Date(today);
+            wednesday.setDate(today.getDate() + diffToWednesday);
+            return getWeekDatesFromEnding(wednesday);
+        }
         
+        // Find the Wednesday (end of week)
+        const dayOfWeek = endDate.getDay(); // 0 = Sunday, 3 = Wednesday
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(endDate);
+        wednesday.setDate(endDate.getDate() + diffToWednesday);
+        wednesday.setHours(0, 0, 0, 0);
+        
+        // Get 6 days before Wednesday (Thursday)
         const weekDates = [];
-        for (let i = 0; i < 7; i++) {
-            const date = new Date(monday);
-            date.setDate(monday.getDate() + i);
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(wednesday);
+            date.setDate(wednesday.getDate() - i);
+            date.setHours(0, 0, 0, 0);
             weekDates.push(date);
         }
         return weekDates;
@@ -70,8 +86,8 @@
     }
 
     // ---------- UPDATE COLUMN HEADERS WITH DATES ----------
-    function updateColumnHeadersWithDates() {
-        const weekDates = getWeekDates();
+    function updateColumnHeadersWithDates(weekEndingDate) {
+        const weekDates = getWeekDatesFromEnding(weekEndingDate);
         const dayNames = weekDates.map(d => formatDateHeader(d));
         
         for (let i = 1; i <= 7; i++) {
@@ -84,7 +100,24 @@
         const weekEnding = formatWeekEnding(lastDay);
         updateWeekEnding(weekEnding);
         
-        return dayNames;
+        // Update the date picker value
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = lastDay.getFullYear();
+            const month = String(lastDay.getMonth() + 1).padStart(2, '0');
+            const day = String(lastDay.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return { weekDates, dayNames, weekEnding };
+    }
+
+    // ---------- UPDATE WEEK ENDING DISPLAY ----------
+    function updateWeekEnding(weekEnding) {
+        const displays = document.querySelectorAll('#weekEndingDisplay, #footerWeekEnding');
+        displays.forEach(el => {
+            if (el) el.textContent = weekEnding;
+        });
     }
 
     // ---------- RENDER TABLE ----------
@@ -132,12 +165,14 @@
         currentData = data;
     }
 
-    // ---------- UPDATE WEEK ENDING DISPLAY ----------
-    function updateWeekEnding(weekEnding) {
-        const displays = document.querySelectorAll('#weekEndingDisplay, #footerWeekEnding');
-        displays.forEach(el => {
-            if (el) el.textContent = weekEnding;
-        });
+    // ---------- HANDLE DATE CHANGE ----------
+    function handleDateChange() {
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            updateColumnHeadersWithDates(datePicker.value);
+            // Re-render table with current data (preserves values)
+            renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+        }
     }
 
     // ---------- UPLOAD HANDLER ----------
@@ -192,7 +227,19 @@
 
                     if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
                         renderTable(parsedData);
-                        if (weekEnding) updateWeekEnding(weekEnding);
+                        if (weekEnding) {
+                            const datePicker = document.getElementById('weekEndingDate');
+                            if (datePicker) {
+                                const date = new Date(weekEnding);
+                                if (!isNaN(date.getTime())) {
+                                    const year = date.getFullYear();
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    datePicker.value = year + '-' + month + '-' + day;
+                                    updateColumnHeadersWithDates(datePicker.value);
+                                }
+                            }
+                        }
                         if (columnHeaders && columnHeaders.length === 7) {
                             for (let i = 1; i <= 7; i++) {
                                 const col = document.getElementById('col' + i);
@@ -251,12 +298,41 @@
         }, 3500);
     }
 
+    // ---------- SET DEFAULT DATE (Current Wednesday) ----------
+    function setDefaultDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayOfWeek = today.getDay();
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(today);
+        wednesday.setDate(today.getDate() + diffToWednesday);
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = wednesday.getFullYear();
+            const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+            const day = String(wednesday.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return wednesday;
+    }
+
     // ---------- EXPORT GLOBALLY ----------
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
-        updateColumnHeadersWithDates();
+        
+        // Set default date and update headers
+        const defaultDate = setDefaultDate();
+        updateColumnHeadersWithDates(defaultDate);
         renderTable(LIQUIDITY_DATA);
         setupUpload();
+        
+        // Add event listener for date change
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            datePicker.addEventListener('change', handleDateChange);
+        }
     };
 
     // For console/testing
