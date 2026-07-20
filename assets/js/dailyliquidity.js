@@ -267,4 +267,116 @@
                         // Close modal on success
                         closeImportModal();
                     } else {
-                        renderTable(
+                        renderTable(EMPTY_ROWS);
+                        showToast('No data found for week ending ' + weekEnding, 'info');
+                    }
+                } else {
+                    renderTable(EMPTY_ROWS);
+                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(function(error) {
+                hideLoadingModal();
+                console.error('Import error:', error);
+                renderTable(EMPTY_ROWS);
+                showToast('Error importing data: ' + error.message, 'error');
+            });
+    }
+
+    // ---------- IMPORT MODAL ----------
+    function setupImportModal() {
+        const uploadBtn = document.getElementById('uploadBtn');
+        const modal = document.getElementById('uploadModal');
+        const overlay = document.getElementById('uploadModalOverlay');
+        const closeBtn = document.getElementById('uploadModalClose');
+        const cancelBtn = document.getElementById('uploadCancelBtn');
+        const confirmBtn = document.getElementById('uploadConfirmBtn');
+        const importWeekEnding = document.getElementById('importWeekEnding');
+        const statusDiv = document.getElementById('uploadStatus');
+        const statusIcon = document.getElementById('uploadStatusIcon');
+        const statusMessage = document.getElementById('uploadStatusMessage');
+
+        // Open modal
+        uploadBtn.addEventListener('click', function() {
+            modal.style.display = 'flex';
+            const currentDate = document.getElementById('weekEndingDate').value;
+            if (importWeekEnding) {
+                importWeekEnding.value = currentDate || '';
+            }
+            statusDiv.style.display = 'none';
+            confirmBtn.disabled = false;
+        });
+
+        function closeImportModal() {
+            modal.style.display = 'none';
+            statusDiv.style.display = 'none';
+            confirmBtn.disabled = false;
+        }
+
+        // Close modal functions
+        closeBtn.addEventListener('click', closeImportModal);
+        cancelBtn.addEventListener('click', closeImportModal);
+        overlay.addEventListener('click', closeImportModal);
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                closeImportModal();
+            }
+        });
+
+        // Confirm import
+        confirmBtn.addEventListener('click', function() {
+            const weekEnding = importWeekEnding.value || document.getElementById('weekEndingDate').value;
+            
+            if (!weekEnding) {
+                showToast('Please select a week ending date', 'error');
+                return;
+            }
+
+            // Show status
+            statusDiv.style.display = 'flex';
+            statusIcon.className = 'upload-status-icon';
+            statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            statusMessage.textContent = 'Importing data from Trial Balance...';
+            confirmBtn.disabled = true;
+
+            // Perform import
+            importFromTrialBalance(weekEnding);
+        });
+    }
+
+    // ---------- HANDLE DATE CHANGE ----------
+    function handleDateChange() {
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            updateColumnHeadersWithDates(datePicker.value);
+        }
+    }
+
+    // ---------- EXPORT GLOBALLY ----------
+    window.initDailyLiquidityModule = function() {
+        console.log('Initializing Daily Liquidity Module');
+        
+        const defaultDate = setDefaultDate();
+        updateColumnHeadersWithDates(defaultDate);
+        renderTable(EMPTY_ROWS);
+        
+        // Setup Import Modal
+        setupImportModal();
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            datePicker.addEventListener('change', handleDateChange);
+        }
+    };
+
+    // Expose functions for console/testing
+    window.importLiquidityData = importFromTrialBalance;
+    window.renderLiquidityTable = renderTable;
+    window.closeImportModal = function() {
+        const modal = document.getElementById('uploadModal');
+        if (modal) modal.style.display = 'none';
+    };
+
+})();
