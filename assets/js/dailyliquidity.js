@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Import from Trial Balance
+// Daily Liquidity Module - Import from Trial Balance with Modal
 (function() {
     'use strict';
 
@@ -183,53 +183,6 @@
         isLoading = false;
     }
 
-    // ---------- IMPORT FROM TRIAL BALANCE ----------
-    function importFromTrialBalance(weekEnding) {
-        if (isLoading) return;
-        
-        if (typeof API === 'undefined' || !API) {
-            showToast('API not available. Cannot import data.', 'error');
-            return;
-        }
-
-        const date = new Date(weekEnding);
-        const formattedDate = date.toISOString().split('T')[0];
-
-        showLoadingModal('Importing data from Trial Balance...');
-
-        API.importLiquidityFromTrialBalance(formattedDate)
-            .then(function(response) {
-                hideLoadingModal();
-                
-                if (response && response.success) {
-                    if (response.data && response.data.length > 0) {
-                        renderTable(response.data);
-                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
-                    } else {
-                        renderTable(EMPTY_ROWS);
-                        showToast('No data found for week ending ' + weekEnding, 'info');
-                    }
-                } else {
-                    renderTable(EMPTY_ROWS);
-                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
-                }
-            })
-            .catch(function(error) {
-                hideLoadingModal();
-                console.error('Import error:', error);
-                renderTable(EMPTY_ROWS);
-                showToast('Error importing data: ' + error.message, 'error');
-            });
-    }
-
-    // ---------- HANDLE DATE CHANGE ----------
-    function handleDateChange() {
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker) {
-            updateColumnHeadersWithDates(datePicker.value);
-        }
-    }
-
     // ---------- SET DEFAULT DATE ----------
     function setDefaultDate() {
         const today = new Date();
@@ -289,46 +242,29 @@
         }, 3500);
     }
 
-    // ---------- EXPORT GLOBALLY ----------
-    window.initDailyLiquidityModule = function() {
-        console.log('Initializing Daily Liquidity Module');
+    // ---------- IMPORT FROM TRIAL BALANCE ----------
+    function importFromTrialBalance(weekEnding) {
+        if (isLoading) return;
         
-        const defaultDate = setDefaultDate();
-        updateColumnHeadersWithDates(defaultDate);
-        renderTable(EMPTY_ROWS);
-        
-        // Setup Import button (replacing the old Upload button)
-        const importBtn = document.getElementById('importBtn');
-        if (importBtn) {
-            importBtn.addEventListener('click', function() {
-                const datePicker = document.getElementById('weekEndingDate');
-                if (datePicker) {
-                    importFromTrialBalance(datePicker.value);
-                }
-            });
+        if (typeof API === 'undefined' || !API) {
+            showToast('API not available. Cannot import data.', 'error');
+            return;
         }
 
-        // Setup Refresh button
-        const refreshBtn = document.getElementById('refreshBtn');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                const datePicker = document.getElementById('weekEndingDate');
-                if (datePicker) {
-                    updateColumnHeadersWithDates(datePicker.value);
-                    renderTable(EMPTY_ROWS);
-                    showToast('Table refreshed', 'info');
-                }
-            });
-        }
-        
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker) {
-            datePicker.addEventListener('change', handleDateChange);
-        }
-    };
+        const date = new Date(weekEnding);
+        const formattedDate = date.toISOString().split('T')[0];
 
-    // Expose functions for console/testing
-    window.importLiquidityData = importFromTrialBalance;
-    window.renderLiquidityTable = renderTable;
+        showLoadingModal('Importing data from Trial Balance...');
 
-})();
+        API.importLiquidityFromTrialBalance(formattedDate)
+            .then(function(response) {
+                hideLoadingModal();
+                
+                if (response && response.success) {
+                    if (response.data && response.data.length > 0) {
+                        renderTable(response.data);
+                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
+                        // Close modal on success
+                        closeImportModal();
+                    } else {
+                        renderTable(
