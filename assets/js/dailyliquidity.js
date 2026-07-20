@@ -1,9 +1,9 @@
-// Daily Liquidity Module - Updated with Excel/CSV upload and Google Sheet save
+// Daily Liquidity Module - Import from Trial Balance
 (function() {
     'use strict';
 
-    // ---------- EMPTY DATA STRUCTURE ----------
-    const LIQUIDITY_DATA = [
+    // ---------- EMPTY TABLE STRUCTURE ----------
+    const EMPTY_ROWS = [
         { label: 'TOTAL DEPOSITS LIABILITY', values: ['', '', '', '', '', '', ''], bold: true, icon: 'arrow-up' },
         { isSection: true, label: 'LIQUIDITY REQUIREMENTS' },
         { label: 'Primary Reserve required (8%)', values: ['', '', '', '', '', '', ''] },
@@ -36,9 +36,7 @@
     ];
 
     let currentData = [];
-    let uploadedData = null;
-    let uploadedHeaders = null;
-    let uploadedWeekEnding = null;
+    let isLoading = false;
 
     // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
@@ -123,6 +121,10 @@
         if (!tbody) return;
         let html = '';
 
+        if (!data || data.length === 0) {
+            data = EMPTY_ROWS;
+        }
+
         data.forEach(item => {
             if (item.isSection) {
                 html += `<tr class="section-header"><td colspan="8"><i class="fas fa-${item.icon || 'folder-open'}"></i> ${item.label}</td></tr>`;
@@ -144,8 +146,8 @@
                 item.values.forEach((val) => {
                     const displayVal = val && val.trim() !== '' ? val : '<span class="empty-cell">—</span>';
                     let cls = 'numeric';
-                    if (item.positive && val && !isNaN(parseFloat(val.replace(/,/g,'')))) cls += ' positive';
-                    if (item.negative && val && !isNaN(parseFloat(val.replace(/,/g,'')))) cls += ' negative';
+                    if (item.positive) cls += ' positive';
+                    if (item.negative) cls += ' negative';
                     valueCells += `<td class="${cls}">${displayVal}</td>`;
                 });
             } else {
@@ -162,77 +164,70 @@
         currentData = data;
     }
 
-    // ---------- HANDLE DATE CHANGE ----------
-    function handleDateChange() {
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker) {
-            updateColumnHeadersWithDates(datePicker.value);
-            loadDataFromSheet(datePicker.value);
+    // ---------- LOADING MODAL ----------
+    function showLoadingModal(message) {
+        const modal = document.getElementById('loadingModal');
+        const msg = document.getElementById('loadingMessage');
+        if (modal) {
+            modal.style.display = 'flex';
+            if (msg) msg.textContent = message || 'Loading data...';
         }
+        isLoading = true;
     }
 
-    // ---------- LOAD DATA FROM SHEET ----------
-    function loadDataFromSheet(weekEnding) {
+    function hideLoadingModal() {
+        const modal = document.getElementById('loadingModal');
+        if (modal) {
+            modal.style.display = 'none';
+        }
+        isLoading = false;
+    }
+
+    // ---------- IMPORT FROM TRIAL BALANCE ----------
+    function importFromTrialBalance(weekEnding) {
+        if (isLoading) return;
+        
         if (typeof API === 'undefined' || !API) {
-            console.log('API not available, using local data');
-            renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
+            showToast('API not available. Cannot import data.', 'error');
             return;
         }
 
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
 
-        API.loadLiquidityData(formattedDate)
+        showLoadingModal('Importing data from Trial Balance...');
+
+        API.importLiquidityFromTrialBalance(formattedDate)
             .then(function(response) {
-                if (response && response.success && response.data && response.data.length > 0) {
-                    renderTable(response.data);
-                    showToast('✅ Data loaded from sheet (' + response.data.length + ' rows)', 'success');
-                } else {
-                    renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
-                    if (response && response.message) {
-                        showToast(response.message, 'info');
+                hideLoadingModal();
+                
+                if (response && response.success) {
+                    if (response.data && response.data.length > 0) {
+                        renderTable(response.data);
+                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
+                    } else {
+                        renderTable(EMPTY_ROWS);
+                        showToast('No data found for week ending ' + weekEnding, 'info');
                     }
+                } else {
+                    renderTable(EMPTY_ROWS);
+                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
                 }
             })
             .catch(function(error) {
-                console.error('Error loading data from sheet:', error);
-                renderTable(currentData.length > 0 ? currentData : LIQUIDITY_DATA);
-                showToast('Could not load data from sheet', 'error');
+                hideLoadingModal();
+                console.error('Import error:', error);
+                renderTable(EMPTY_ROWS);
+                showToast('Error importing data: ' + error.message, 'error');
             });
     }
 
-    // ---------- SAVE DATA TO SHEET ----------
-    function saveDataToSheet(data, weekEnding) {
-        if (typeof API === 'undefined' || !API) {
-            showToast('API not available. Data not saved.', 'error');
-            return Promise.reject('API not available');
+    // ---------- HANDLE DATE CHANGE ----------
+    function handleDateChange() {
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            updateColumnHeadersWithDates(datePicker.value);
         }
-
-        const date = new Date(weekEnding);
-        const formattedDate = date.toISOString().split('T')[0];
-
-        const payload = {
-            rows: data,
-            weekEnding: formattedDate
-        };
-
-        showToast('Saving data to sheet...', 'info');
-
-        return API.saveLiquidityData(payload)
-            .then(function(response) {
-                if (response && response.success) {
-                    showToast('✅ Data saved to sheet successfully!', 'success');
-                    return response;
-                } else {
-                    showToast('Error saving data: ' + (response?.error || 'Unknown error'), 'error');
-                    throw new Error(response?.error || 'Save failed');
-                }
-            })
-            .catch(function(error) {
-                console.error('Error saving to sheet:', error);
-                showToast('Error saving data: ' + error.message, 'error');
-                throw error;
-            });
     }
 
     // ---------- SET DEFAULT DATE ----------
@@ -253,251 +248,6 @@
         }
         
         return wednesday;
-    }
-
-    // ---------- EXCEL/CSV PARSER ----------
-    function parseExcelFile(file) {
-        return new Promise(function(resolve, reject) {
-            const reader = new FileReader();
-            
-            reader.onload = function(e) {
-                try {
-                    const content = e.target.result;
-                    let parsedData = null;
-                    let headers = null;
-                    let weekEnding = null;
-
-                    // Check if it's a CSV file
-                    if (file.name.toLowerCase().endsWith('.csv')) {
-                        const text = new TextDecoder('utf-8').decode(content);
-                        const lines = text.split('\n').filter(line => line.trim() !== '');
-                        if (lines.length > 1) {
-                            const headerRow = lines[0].split(',').map(h => h.trim());
-                            headers = headerRow;
-                            parsedData = lines.slice(1).map(line => {
-                                const cols = line.split(',').map(c => c.trim());
-                                if (cols.length >= 8) {
-                                    return {
-                                        label: cols[0],
-                                        values: cols.slice(1, 8),
-                                        bold: false
-                                    };
-                                }
-                                return null;
-                            }).filter(item => item !== null);
-                        }
-                    } else {
-                        // Try JSON (for Excel exports as JSON)
-                        try {
-                            const json = JSON.parse(new TextDecoder('utf-8').decode(content));
-                            if (json.data && Array.isArray(json.data)) {
-                                parsedData = json.data;
-                                headers = json.headers || null;
-                                weekEnding = json.weekEnding || null;
-                            } else if (Array.isArray(json)) {
-                                parsedData = json;
-                            }
-                        } catch (jsonErr) {
-                            // If not JSON, try reading as text and parsing as CSV
-                            const text = new TextDecoder('utf-8').decode(content);
-                            const lines = text.split('\n').filter(line => line.trim() !== '');
-                            if (lines.length > 1) {
-                                const headerRow = lines[0].split('\t').map(h => h.trim());
-                                headers = headerRow;
-                                parsedData = lines.slice(1).map(line => {
-                                    const cols = line.split('\t').map(c => c.trim());
-                                    if (cols.length >= 8) {
-                                        return {
-                                            label: cols[0],
-                                            values: cols.slice(1, 8),
-                                            bold: false
-                                        };
-                                    }
-                                    return null;
-                                }).filter(item => item !== null);
-                            }
-                        }
-                    }
-
-                    if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
-                        resolve({
-                            data: parsedData,
-                            headers: headers,
-                            weekEnding: weekEnding
-                        });
-                    } else {
-                        reject(new Error('Could not parse file. Please check the format.'));
-                    }
-                } catch (err) {
-                    reject(err);
-                }
-            };
-            
-            reader.onerror = function() {
-                reject(new Error('Error reading file'));
-            };
-            
-            reader.readAsArrayBuffer(file);
-        });
-    }
-
-    // ---------- UPLOAD MODAL ----------
-    function setupUploadModal() {
-        const uploadBtn = document.getElementById('uploadBtn');
-        const modal = document.getElementById('uploadModal');
-        const overlay = document.getElementById('uploadModalOverlay');
-        const closeBtn = document.getElementById('uploadModalClose');
-        const cancelBtn = document.getElementById('uploadCancelBtn');
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-        const fileInput = document.getElementById('uploadFileInput');
-        const fileArea = document.getElementById('uploadFileArea');
-        const fileInfo = document.getElementById('uploadFileInfo');
-        const fileName = document.getElementById('uploadFileName');
-        const fileRemove = document.getElementById('uploadFileRemove');
-        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
-
-        let selectedFile = null;
-        let parsedData = null;
-
-        // Open modal
-        uploadBtn.addEventListener('click', function() {
-            modal.style.display = 'flex';
-            const currentDate = document.getElementById('weekEndingDate').value;
-            if (uploadWeekEnding) {
-                uploadWeekEnding.value = currentDate || '';
-            }
-            selectedFile = null;
-            parsedData = null;
-            fileInput.value = '';
-            fileInfo.style.display = 'none';
-            confirmBtn.disabled = true;
-            fileArea.style.display = 'block';
-        });
-
-        function closeModal() {
-            modal.style.display = 'none';
-        }
-
-        closeBtn.addEventListener('click', closeModal);
-        cancelBtn.addEventListener('click', closeModal);
-        overlay.addEventListener('click', closeModal);
-
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.style.display === 'flex') {
-                closeModal();
-            }
-        });
-
-        // File selection via click
-        fileInput.addEventListener('change', function(e) {
-            if (this.files && this.files.length > 0) {
-                handleFileSelect(this.files[0]);
-            }
-        });
-
-        // Drag and drop
-        fileArea.addEventListener('dragover', function(e) {
-            e.preventDefault();
-            this.classList.add('dragover');
-        });
-
-        fileArea.addEventListener('dragleave', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-        });
-
-        fileArea.addEventListener('drop', function(e) {
-            e.preventDefault();
-            this.classList.remove('dragover');
-            if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                handleFileSelect(e.dataTransfer.files[0]);
-            }
-        });
-
-        // Remove file
-        fileRemove.addEventListener('click', function() {
-            selectedFile = null;
-            parsedData = null;
-            fileInput.value = '';
-            fileInfo.style.display = 'none';
-            fileArea.style.display = 'block';
-            confirmBtn.disabled = true;
-        });
-
-        // Handle file selection
-        function handleFileSelect(file) {
-            selectedFile = file;
-            fileName.textContent = file.name;
-            fileInfo.style.display = 'flex';
-            fileArea.style.display = 'none';
-            confirmBtn.disabled = true;
-
-            // Parse the file
-            parseExcelFile(file)
-                .then(function(result) {
-                    parsedData = result.data;
-                    uploadedHeaders = result.headers;
-                    uploadedWeekEnding = result.weekEnding;
-                    confirmBtn.disabled = false;
-                    showToast('✅ File parsed successfully! ' + parsedData.length + ' rows found.', 'success');
-                })
-                .catch(function(err) {
-                    showToast('Error parsing file: ' + err.message, 'error');
-                    confirmBtn.disabled = true;
-                });
-        }
-
-        // Confirm upload - Save to Google Sheet
-        confirmBtn.addEventListener('click', function() {
-            if (!parsedData || parsedData.length === 0) {
-                showToast('No data to upload.', 'error');
-                return;
-            }
-
-            const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
-            
-            // Save to Google Sheet
-            saveDataToSheet(parsedData, weekEnding)
-                .then(function(response) {
-                    if (response && response.success) {
-                        // Update headers if provided
-                        if (uploadedHeaders && uploadedHeaders.length === 7) {
-                            for (let i = 1; i <= 7; i++) {
-                                const col = document.getElementById('col' + i);
-                                if (col) col.textContent = uploadedHeaders[i - 1];
-                            }
-                        } else {
-                            updateColumnHeadersWithDates(weekEnding);
-                        }
-
-                        if (uploadedWeekEnding) {
-                            updateWeekEnding(uploadedWeekEnding);
-                        } else {
-                            const weekDates = getWeekDatesFromEnding(weekEnding);
-                            const lastDay = weekDates[weekDates.length - 1];
-                            updateWeekEnding(formatWeekEnding(lastDay));
-                        }
-
-                        const datePicker = document.getElementById('weekEndingDate');
-                        if (datePicker && weekEnding) {
-                            const date = new Date(weekEnding);
-                            if (!isNaN(date.getTime())) {
-                                const year = date.getFullYear();
-                                const month = String(date.getMonth() + 1).padStart(2, '0');
-                                const day = String(date.getDate()).padStart(2, '0');
-                                datePicker.value = year + '-' + month + '-' + day;
-                            }
-                        }
-
-                        renderTable(parsedData);
-                        closeModal();
-                        showToast('✅ Data uploaded and saved to sheet!', 'success');
-                    }
-                })
-                .catch(function(error) {
-                    console.error('Upload failed:', error);
-                });
-        });
     }
 
     // ---------- TOAST MESSAGE ----------
@@ -545,20 +295,40 @@
         
         const defaultDate = setDefaultDate();
         updateColumnHeadersWithDates(defaultDate);
-        renderTable(LIQUIDITY_DATA);
-        setupUploadModal();
+        renderTable(EMPTY_ROWS);
+        
+        // Setup Import button (replacing the old Upload button)
+        const importBtn = document.getElementById('importBtn');
+        if (importBtn) {
+            importBtn.addEventListener('click', function() {
+                const datePicker = document.getElementById('weekEndingDate');
+                if (datePicker) {
+                    importFromTrialBalance(datePicker.value);
+                }
+            });
+        }
+
+        // Setup Refresh button
+        const refreshBtn = document.getElementById('refreshBtn');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                const datePicker = document.getElementById('weekEndingDate');
+                if (datePicker) {
+                    updateColumnHeadersWithDates(datePicker.value);
+                    renderTable(EMPTY_ROWS);
+                    showToast('Table refreshed', 'info');
+                }
+            });
+        }
         
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.addEventListener('change', handleDateChange);
-            setTimeout(function() {
-                loadDataFromSheet(datePicker.value);
-            }, 500);
         }
     };
 
     // Expose functions for console/testing
-    window.saveLiquidityData = saveDataToSheet;
-    window.loadLiquidityData = loadDataFromSheet;
+    window.importLiquidityData = importFromTrialBalance;
+    window.renderLiquidityTable = renderTable;
 
 })();
