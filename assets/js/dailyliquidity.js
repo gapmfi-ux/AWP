@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Import from Trial Balance with Modal
+// Daily Liquidity Module - Upload from Trial Balance
 (function() {
     'use strict';
 
@@ -37,6 +37,7 @@
 
     let currentData = [];
     let isLoading = false;
+    let isFileSelected = false;
 
     // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
@@ -242,19 +243,19 @@
         }, 3500);
     }
 
-    // ---------- IMPORT FROM TRIAL BALANCE ----------
-    function importFromTrialBalance(weekEnding) {
+    // ---------- UPLOAD FROM TRIAL BALANCE ----------
+    function uploadFromTrialBalance(weekEnding) {
         if (isLoading) return;
         
         if (typeof API === 'undefined' || !API) {
-            showToast('API not available. Cannot import data.', 'error');
+            showToast('API not available. Cannot upload data.', 'error');
             return;
         }
 
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
 
-        showLoadingModal('Importing data from Trial Balance...');
+        showLoadingModal('Uploading data from Trial Balance...');
 
         API.importLiquidityFromTrialBalance(formattedDate)
             .then(function(response) {
@@ -263,74 +264,143 @@
                 if (response && response.success) {
                     if (response.data && response.data.length > 0) {
                         renderTable(response.data);
-                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
-                        // Close modal on success
-                        closeImportModal();
+                        showToast('✅ Uploaded ' + response.data.length + ' rows from Trial Balance', 'success');
+                        closeUploadModal();
                     } else {
                         renderTable(EMPTY_ROWS);
                         showToast('No data found for week ending ' + weekEnding, 'info');
                     }
                 } else {
                     renderTable(EMPTY_ROWS);
-                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
+                    showToast('Error uploading data: ' + (response?.error || 'Unknown error'), 'error');
                 }
             })
             .catch(function(error) {
                 hideLoadingModal();
-                console.error('Import error:', error);
+                console.error('Upload error:', error);
                 renderTable(EMPTY_ROWS);
-                showToast('Error importing data: ' + error.message, 'error');
+                showToast('Error uploading data: ' + error.message, 'error');
             });
     }
 
-    // ---------- IMPORT MODAL ----------
-    function setupImportModal() {
+    // ---------- UPLOAD MODAL ----------
+    function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
         const modal = document.getElementById('uploadModal');
         const overlay = document.getElementById('uploadModalOverlay');
         const closeBtn = document.getElementById('uploadModalClose');
         const cancelBtn = document.getElementById('uploadCancelBtn');
         const confirmBtn = document.getElementById('uploadConfirmBtn');
-        const importWeekEnding = document.getElementById('importWeekEnding');
+        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
+        const fileSelectBtn = document.getElementById('uploadFileSelectBtn');
+        const fileArea = document.getElementById('uploadFileArea');
+        const fileInfo = document.getElementById('uploadFileInfo');
+        const fileRemove = document.getElementById('uploadFileRemove');
         const statusDiv = document.getElementById('uploadStatus');
         const statusIcon = document.getElementById('uploadStatusIcon');
         const statusMessage = document.getElementById('uploadStatusMessage');
+        const previewDiv = document.getElementById('uploadPreview');
+        const previewHead = document.getElementById('uploadPreviewHead');
+        const previewBody = document.getElementById('uploadPreviewBody');
+        const previewCount = document.getElementById('uploadPreviewCount');
 
         // Open modal
         uploadBtn.addEventListener('click', function() {
             modal.style.display = 'flex';
             const currentDate = document.getElementById('weekEndingDate').value;
-            if (importWeekEnding) {
-                importWeekEnding.value = currentDate || '';
+            if (uploadWeekEnding) {
+                uploadWeekEnding.value = currentDate || '';
             }
             statusDiv.style.display = 'none';
-            confirmBtn.disabled = false;
+            previewDiv.style.display = 'none';
+            isFileSelected = false;
+            confirmBtn.disabled = true;
+            fileArea.style.display = 'block';
+            fileInfo.style.display = 'none';
         });
 
-        function closeImportModal() {
+        function closeUploadModal() {
             modal.style.display = 'none';
             statusDiv.style.display = 'none';
-            confirmBtn.disabled = false;
+            previewDiv.style.display = 'none';
+            confirmBtn.disabled = true;
+            isFileSelected = false;
         }
 
         // Close modal functions
-        closeBtn.addEventListener('click', closeImportModal);
-        cancelBtn.addEventListener('click', closeImportModal);
-        overlay.addEventListener('click', closeImportModal);
+        closeBtn.addEventListener('click', closeUploadModal);
+        cancelBtn.addEventListener('click', closeUploadModal);
+        overlay.addEventListener('click', closeUploadModal);
 
         // Close on Escape key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && modal.style.display === 'flex') {
-                closeImportModal();
+                closeUploadModal();
             }
         });
 
-        // Confirm import
+        // Select Trial Balance - simulates file selection
+        fileSelectBtn.addEventListener('click', function() {
+            isFileSelected = true;
+            fileArea.style.display = 'none';
+            fileInfo.style.display = 'flex';
+            confirmBtn.disabled = false;
+            
+            // Show preview with sample data structure
+            showPreview();
+        });
+
+        // Remove file selection
+        fileRemove.addEventListener('click', function() {
+            isFileSelected = false;
+            fileArea.style.display = 'block';
+            fileInfo.style.display = 'none';
+            previewDiv.style.display = 'none';
+            confirmBtn.disabled = true;
+        });
+
+        // Show preview
+        function showPreview() {
+            previewDiv.style.display = 'block';
+            previewCount.textContent = 'Trial Balance data';
+
+            let headHtml = '<tr><th>Description</th>';
+            const weekDates = getWeekDatesFromEnding(uploadWeekEnding.value || document.getElementById('weekEndingDate').value);
+            const dayNames = weekDates.map(d => formatDateHeader(d));
+            for (let i = 0; i < 7; i++) {
+                headHtml += `<th>${dayNames[i] || 'Day ' + (i+1)}</th>`;
+            }
+            headHtml += '</tr>';
+            previewHead.innerHTML = headHtml;
+
+            // Show sample preview rows
+            let bodyHtml = '';
+            const sampleData = EMPTY_ROWS.slice(0, 5);
+            sampleData.forEach(item => {
+                if (!item.isSection) {
+                    bodyHtml += '<tr>';
+                    bodyHtml += `<td><strong>${item.label || ''}</strong></td>`;
+                    for (let i = 0; i < 7; i++) {
+                        bodyHtml += `<td>—</td>`;
+                    }
+                    bodyHtml += '</tr>';
+                }
+            });
+            bodyHtml += `<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">Data will be loaded from Trial Balance sheet</td></tr>`;
+            previewBody.innerHTML = bodyHtml;
+        }
+
+        // Confirm upload
         confirmBtn.addEventListener('click', function() {
-            const weekEnding = importWeekEnding.value || document.getElementById('weekEndingDate').value;
+            const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
             
             if (!weekEnding) {
                 showToast('Please select a week ending date', 'error');
+                return;
+            }
+
+            if (!isFileSelected) {
+                showToast('Please select Trial Balance data source', 'error');
                 return;
             }
 
@@ -338,11 +408,11 @@
             statusDiv.style.display = 'flex';
             statusIcon.className = 'upload-status-icon';
             statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            statusMessage.textContent = 'Importing data from Trial Balance...';
+            statusMessage.textContent = 'Uploading data from Trial Balance...';
             confirmBtn.disabled = true;
 
-            // Perform import
-            importFromTrialBalance(weekEnding);
+            // Perform upload
+            uploadFromTrialBalance(weekEnding);
         });
     }
 
@@ -362,8 +432,8 @@
         updateColumnHeadersWithDates(defaultDate);
         renderTable(EMPTY_ROWS);
         
-        // Setup Import Modal
-        setupImportModal();
+        // Setup Upload Modal
+        setupUploadModal();
         
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
@@ -372,9 +442,9 @@
     };
 
     // Expose functions for console/testing
-    window.importLiquidityData = importFromTrialBalance;
+    window.uploadLiquidityData = uploadFromTrialBalance;
     window.renderLiquidityTable = renderTable;
-    window.closeImportModal = function() {
+    window.closeUploadModal = function() {
         const modal = document.getElementById('uploadModal');
         if (modal) modal.style.display = 'none';
     };
