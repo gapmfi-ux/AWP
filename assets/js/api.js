@@ -314,7 +314,7 @@ async getInvestmentByCode(investmentCode, options = {}) {
     return this.request('deleteLiquidityData', { weekEnding }, options);
   }
 
-  // ============================================
+   // ============================================
   // UPLOAD EXCEL TO TRIAL BALANCE - USE POST (supports large base64 payloads)
   // ============================================
   async uploadExcelToTrialBalance(data, options = {}) {
@@ -325,30 +325,40 @@ async getInvestmentByCode(investmentCode, options = {}) {
       const body = new URLSearchParams();
       body.append('action', 'uploadExcelToTrialBalance');
       body.append('formData', JSON.stringify(data));
-      
+
+      // Use CORS mode explicitly and no credentials
       const resp = await fetch(url, {
         method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
         headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
+          'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+          'Accept': 'application/json'
         },
         body: body.toString()
       });
-      
+
+      // Debug: log status and attempt to log any CORS failure information
+      this.log('Fetch response status:', resp.status, resp.type);
+
       if (!resp.ok) {
-        throw new Error('HTTP ' + resp.status);
+        // Try to read body for diagnostics (may fail if opaque)
+        let text = '';
+        try { text = await resp.text(); } catch (e) { text = '<unavailable>'; }
+        throw new Error('HTTP ' + resp.status + ' - ' + text);
       }
+
       const json = await resp.json();
       if (json) {
         return json;
       } else {
-        throw new Error('Empty response from server');
+        throw new Error('Empty JSON response from server');
       }
     } catch (err) {
       this.error('uploadExcelToTrialBalance POST failed:', err);
       throw err;
     }
   }
-
   // ============================================
   // TEST CONNECTION
   // ============================================
