@@ -1,5 +1,5 @@
 <div class="liquidity-container">
-    <!-- header with upload button -->
+    <!-- header with upload button and date selector -->
     <div class="liquidity-header">
         <div class="liquidity-header-left">
             <button class="upload-btn" id="uploadBtn" title="Upload liquidity data (JSON/CSV)">
@@ -7,7 +7,10 @@
             </button>
             <h1><i class="fas fa-water"></i> Daily Liquidity</h1>
         </div>
-        <div class="week-badge"><i class="far fa-calendar-alt"></i> Week ending: <span id="weekEndingDisplay">Loading...</span></div>
+        <div class="week-selector">
+            <label for="weekEndingDate"><i class="far fa-calendar-alt"></i> Week Ending:</label>
+            <input type="date" id="weekEndingDate" value="">
+        </div>
     </div>
 
     <!-- main table -->
@@ -15,14 +18,14 @@
         <table id="liquidityTable">
             <thead>
                 <tr>
-                    <th style="text-align:left; padding-left:14px; min-width:170px;">Description</th>
-                    <th id="col1">Day 1</th>
-                    <th id="col2">Day 2</th>
-                    <th id="col3">Day 3</th>
-                    <th id="col4">Day 4</th>
-                    <th id="col5">Day 5</th>
-                    <th id="col6">Day 6</th>
-                    <th id="col7">Day 7</th>
+                    <th style="text-align:left; padding-left:8px; min-width:140px; width:160px;">Description</th>
+                    <th id="col1">Thu</th>
+                    <th id="col2">Fri</th>
+                    <th id="col3">Sat</th>
+                    <th id="col4">Sun</th>
+                    <th id="col5">Mon</th>
+                    <th id="col6">Tue</th>
+                    <th id="col7">Wed</th>
                 </tr>
             </thead>
             <tbody id="tableBody">
@@ -32,8 +35,8 @@
     </div>
 
     <div class="footer-note">
-        <span><i class="far fa-calendar-check"></i> Data as of week ending <span id="footerWeekEnding">Loading...</span></span>
-        <span><i class="fas fa-info-circle"></i> All figures in GH₵ (Ghana Cedis)</span>
+        <span><i class="far fa-calendar-check"></i> Week ending: <span id="footerWeekEnding">Loading...</span></span>
+        <span><i class="fas fa-info-circle"></i> All figures in GH₵</span>
         <span><i class="fas fa-print" style="cursor:pointer;" onclick="window.print();"></i> Print</span>
     </div>
 </div>
