@@ -286,7 +286,7 @@ async getInvestmentByCode(investmentCode, options = {}) {
       newAnnualCost 
     }, options);
   }
-  // In api.js, add these methods to the ApiService class
+
 
   // ============================================
   // DAILY LIQUIDITY API
