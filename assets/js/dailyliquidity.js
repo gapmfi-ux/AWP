@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Upload from Trial Balance
+// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
@@ -37,7 +37,8 @@
 
     let currentData = [];
     let isLoading = false;
-    let isSourceSelected = false;
+    let selectedFile = null;
+    let parsedFileData = null;
 
     // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
@@ -243,8 +244,132 @@
         }, 3500);
     }
 
-    // ---------- UPLOAD FROM TRIAL BALANCE ----------
-    function uploadFromTrialBalance(weekEnding) {
+    // ---------- PARSE FILE AND SHOW PREVIEW ----------
+    function parseFileAndPreview(file) {
+        return new Promise(function(resolve, reject) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let parsedData = null;
+                    let headers = null;
+                    let rowData = [];
+
+                    // Try JSON first
+                    try {
+                        const json = JSON.parse(content);
+                        if (json.data && Array.isArray(json.data)) {
+                            parsedData = json.data;
+                            headers = json.headers || null;
+                        } else if (Array.isArray(json)) {
+                            parsedData = json;
+                        }
+                    } catch (jsonErr) {
+                        // Try CSV
+                        const text = new TextDecoder('utf-8').decode(content);
+                        const lines = text.split('\n').filter(line => line.trim() !== '');
+                        if (lines.length > 1) {
+                            const headerRow = lines[0].split(',').map(h => h.trim());
+                            headers = headerRow;
+                            parsedData = lines.slice(1).map(line => {
+                                const cols = line.split(',').map(c => c.trim());
+                                if (cols.length >= 8) {
+                                    return {
+                                        label: cols[0] || '',
+                                        values: cols.slice(1, 8).map(v => v || ''),
+                                        bold: false
+                                    };
+                                }
+                                return null;
+                            }).filter(item => item !== null);
+                        }
+                    }
+
+                    if (parsedData && Array.isArray(parsedData) && parsedData.length > 0) {
+                        // Build preview rows
+                        const previewRows = parsedData.slice(0, 5);
+                        previewRows.forEach(function(item, index) {
+                            if (item && !item.isSection) {
+                                rowData.push({
+                                    label: item.label || 'Row ' + (index + 1),
+                                    values: item.values || ['', '', '', '', '', '', '']
+                                });
+                            }
+                        });
+
+                        resolve({
+                            data: parsedData,
+                            headers: headers || ['Description', 'Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5', 'Day 6', 'Day 7'],
+                            previewRows: rowData,
+                            totalRows: parsedData.length,
+                            isSectionData: parsedData.some(function(item) { return item.isSection; })
+                        });
+                    } else {
+                        reject(new Error('Could not parse file. Please check the format.'));
+                    }
+                } catch (err) {
+                    reject(err);
+                }
+            };
+            
+            reader.onerror = function() {
+                reject(new Error('Error reading file'));
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+    }
+
+    // ---------- SHOW PREVIEW IN MODAL ----------
+    function showPreview(previewData) {
+        const previewDiv = document.getElementById('uploadPreview');
+        const previewHead = document.getElementById('uploadPreviewHead');
+        const previewBody = document.getElementById('uploadPreviewBody');
+        const previewCount = document.getElementById('uploadPreviewCount');
+
+        if (!previewDiv) return;
+
+        previewDiv.style.display = 'block';
+        previewCount.textContent = previewData.totalRows + ' rows';
+
+        // Build header
+        let headHtml = '<tr>';
+        previewData.headers.forEach(function(header) {
+            headHtml += `<th>${header}</th>`;
+        });
+        headHtml += '</tr>';
+        previewHead.innerHTML = headHtml;
+
+        // Build body
+        let bodyHtml = '';
+        if (previewData.previewRows && previewData.previewRows.length > 0) {
+            previewData.previewRows.forEach(function(item) {
+                bodyHtml += '<tr>';
+                bodyHtml += `<td><strong>${item.label || ''}</strong></td>`;
+                if (item.values && item.values.length === 7) {
+                    item.values.forEach(function(val) {
+                        bodyHtml += `<td>${val || '—'}</td>`;
+                    });
+                } else {
+                    for (var i = 0; i < 7; i++) {
+                        bodyHtml += '<td>—</td>';
+                    }
+                }
+                bodyHtml += '</tr>';
+            });
+        } else {
+            bodyHtml += '<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">No preview data available</td></tr>';
+        }
+
+        if (previewData.totalRows > 5) {
+            bodyHtml += `<tr><td colspan="8" style="text-align:center;color:#94a3b8;font-style:italic;">... and ${previewData.totalRows - 5} more rows</td></tr>`;
+        }
+        previewBody.innerHTML = bodyHtml;
+    }
+
+    // ---------- UPLOAD TO TRIAL BALANCE ----------
+    function uploadToTrialBalance(weekEnding, fileData) {
         if (isLoading) return;
         
         if (typeof API === 'undefined' || !API) {
@@ -255,7 +380,59 @@
         const date = new Date(weekEnding);
         const formattedDate = date.toISOString().split('T')[0];
 
-        showLoadingModal('Uploading data from Trial Balance...');
+        showLoadingModal('Uploading Excel to Trial Balance...');
+
+        // Convert file to base64
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const base64 = e.target.result.split(',')[1];
+                
+                // Call API to upload Excel
+                API.uploadExcelToTrialBalance({
+                    base64: base64,
+                    filename: fileData.name,
+                    weekEnding: formattedDate
+                })
+                .then(function(response) {
+                    hideLoadingModal();
+                    
+                    if (response && response.success) {
+                        showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                        closeUploadModal();
+                        // Refresh the table with imported data
+                        importFromTrialBalance(formattedDate);
+                    } else {
+                        showToast('Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                    }
+                })
+                .catch(function(error) {
+                    hideLoadingModal();
+                    console.error('Upload error:', error);
+                    showToast('Error uploading: ' + error.message, 'error');
+                });
+            } catch (err) {
+                hideLoadingModal();
+                showToast('Error processing file: ' + err.message, 'error');
+            }
+        };
+        
+        reader.readAsDataURL(fileData);
+    }
+
+    // ---------- IMPORT FROM TRIAL BALANCE ----------
+    function importFromTrialBalance(weekEnding) {
+        if (isLoading) return;
+        
+        if (typeof API === 'undefined' || !API) {
+            showToast('API not available. Cannot import data.', 'error');
+            return;
+        }
+
+        const date = new Date(weekEnding);
+        const formattedDate = date.toISOString().split('T')[0];
+
+        showLoadingModal('Importing data from Trial Balance...');
 
         API.importLiquidityFromTrialBalance(formattedDate)
             .then(function(response) {
@@ -264,22 +441,21 @@
                 if (response && response.success) {
                     if (response.data && response.data.length > 0) {
                         renderTable(response.data);
-                        showToast('✅ Uploaded ' + response.data.length + ' rows from Trial Balance', 'success');
-                        closeUploadModal();
+                        showToast('✅ Imported ' + response.data.length + ' rows from Trial Balance', 'success');
                     } else {
                         renderTable(EMPTY_ROWS);
                         showToast('No data found for week ending ' + weekEnding, 'info');
                     }
                 } else {
                     renderTable(EMPTY_ROWS);
-                    showToast('Error uploading data: ' + (response?.error || 'Unknown error'), 'error');
+                    showToast('Error importing data: ' + (response?.error || 'Unknown error'), 'error');
                 }
             })
             .catch(function(error) {
                 hideLoadingModal();
-                console.error('Upload error:', error);
+                console.error('Import error:', error);
                 renderTable(EMPTY_ROWS);
-                showToast('Error uploading data: ' + error.message, 'error');
+                showToast('Error importing data: ' + error.message, 'error');
             });
     }
 
@@ -292,8 +468,10 @@
         const cancelBtn = document.getElementById('uploadCancelBtn');
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         const uploadWeekEnding = document.getElementById('uploadWeekEnding');
+        const fileInput = document.getElementById('uploadFileInput');
         const fileArea = document.getElementById('uploadFileArea');
         const fileInfo = document.getElementById('uploadFileInfo');
+        const fileName = document.getElementById('uploadFileName');
         const fileRemove = document.getElementById('uploadFileRemove');
         const statusDiv = document.getElementById('uploadStatus');
         const statusIcon = document.getElementById('uploadStatusIcon');
@@ -307,17 +485,21 @@
                 uploadWeekEnding.value = currentDate || '';
             }
             statusDiv.style.display = 'none';
-            isSourceSelected = false;
+            document.getElementById('uploadPreview').style.display = 'none';
+            selectedFile = null;
+            parsedFileData = null;
             confirmBtn.disabled = true;
             fileArea.style.display = 'block';
             fileInfo.style.display = 'none';
+            fileInput.value = '';
         });
 
         function closeUploadModal() {
             modal.style.display = 'none';
             statusDiv.style.display = 'none';
             confirmBtn.disabled = true;
-            isSourceSelected = false;
+            selectedFile = null;
+            parsedFileData = null;
         }
 
         // Close modal functions
@@ -332,28 +514,68 @@
             }
         });
 
-        // Click on file area to "select" Trial Balance
-        if (fileArea) {
-            fileArea.addEventListener('click', function() {
-                selectTrialBalanceSource();
+        // File input change
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                if (this.files && this.files.length > 0) {
+                    handleFileSelect(this.files[0]);
+                }
             });
         }
 
-        // Function to select Trial Balance source
-        function selectTrialBalanceSource() {
-            isSourceSelected = true;
-            fileArea.style.display = 'none';
-            fileInfo.style.display = 'flex';
-            confirmBtn.disabled = false;
-            showToast('✅ Trial Balance sheet selected as data source', 'success');
+        // Drag and drop
+        if (fileArea) {
+            fileArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+
+            fileArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+
+            fileArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
         }
 
-        // Remove file selection
+        // Handle file selection
+        function handleFileSelect(file) {
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileInfo.style.display = 'flex';
+            fileArea.style.display = 'none';
+            confirmBtn.disabled = true;
+
+            // Parse file and show preview
+            parseFileAndPreview(file)
+                .then(function(result) {
+                    parsedFileData = result;
+                    showPreview(result);
+                    confirmBtn.disabled = false;
+                    showToast('✅ File parsed successfully! ' + result.totalRows + ' rows found.', 'success');
+                })
+                .catch(function(err) {
+                    showToast('Error parsing file: ' + err.message, 'error');
+                    confirmBtn.disabled = true;
+                    document.getElementById('uploadPreview').style.display = 'none';
+                });
+        }
+
+        // Remove file
         if (fileRemove) {
             fileRemove.addEventListener('click', function() {
-                isSourceSelected = false;
-                fileArea.style.display = 'block';
+                selectedFile = null;
+                parsedFileData = null;
+                fileInput.value = '';
                 fileInfo.style.display = 'none';
+                fileArea.style.display = 'block';
+                document.getElementById('uploadPreview').style.display = 'none';
                 confirmBtn.disabled = true;
             });
         }
@@ -368,8 +590,8 @@
                     return;
                 }
 
-                if (!isSourceSelected) {
-                    showToast('Please select Trial Balance as data source', 'error');
+                if (!selectedFile) {
+                    showToast('Please select a file to upload', 'error');
                     return;
                 }
 
@@ -377,11 +599,11 @@
                 statusDiv.style.display = 'flex';
                 statusIcon.className = 'upload-status-icon';
                 statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                statusMessage.textContent = 'Uploading data from Trial Balance...';
+                statusMessage.textContent = 'Uploading to Trial Balance...';
                 confirmBtn.disabled = true;
 
-                // Perform upload
-                uploadFromTrialBalance(weekEnding);
+                // Upload to Trial Balance
+                uploadToTrialBalance(weekEnding, selectedFile);
             });
         }
     }
@@ -412,7 +634,7 @@
     };
 
     // Expose functions for console/testing
-    window.uploadLiquidityData = uploadFromTrialBalance;
+    window.uploadLiquidityData = uploadToTrialBalance;
     window.renderLiquidityTable = renderTable;
     window.closeUploadModal = function() {
         const modal = document.getElementById('uploadModal');
