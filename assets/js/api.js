@@ -313,6 +313,11 @@ async getInvestmentByCode(investmentCode, options = {}) {
     this.log('deleteLiquidityData called for week ending:', weekEnding);
     return this.request('deleteLiquidityData', { weekEnding }, options);
   }
+
+  async uploadExcelToTrialBalance(data, options = {}) {
+    this.log('uploadExcelToTrialBalance called with:', data);
+    return this.request('uploadExcelToTrialBalance', data, options);
+  }
   
   // ============================================
   // TEST CONNECTION
