@@ -1,3 +1,4 @@
+// api.js
 class ApiService {
   constructor() {
     // UPDATE THIS with your Google Apps Script Web App URL
@@ -16,7 +17,7 @@ class ApiService {
     console.error('[API]', ...args);
   }
 
-  // Generic request method (JSONP)
+  // Generic request method (JSONP) - unchanged for small GET calls
   async request(action, data = {}, options = {}) {
     const showLoading = options.showLoading !== false;
     
@@ -86,6 +87,38 @@ class ApiService {
   }
 
   // ============================================
+  // POST helper for large payloads (used by upload)
+  // ============================================
+  async postForm(action, formData) {
+    try {
+      // formData must be a FormData instance; append action
+      if (!(formData instanceof FormData)) {
+        throw new Error('postForm requires a FormData instance');
+      }
+      formData.append('action', action);
+
+      const resp = await fetch(this.BASE_URL, {
+        method: 'POST',
+        body: formData,
+        credentials: 'omit'
+      });
+
+      if (!resp.ok) {
+        const text = await resp.text().catch(() => '');
+        throw new Error(`HTTP ${resp.status} ${resp.statusText} ${text}`);
+      }
+      const json = await resp.json();
+      if (json && json.success === false) {
+        throw new Error(json.error || 'Server returned success:false');
+      }
+      return json;
+    } catch (err) {
+      this.error('postForm error:', err);
+      throw err;
+    }
+  }
+
+  // ============================================
   // USER API
   // ============================================
   
@@ -95,11 +128,11 @@ class ApiService {
 
   // ============================================
   // PAYMENT VOUCHER API
+  // (unchanged)
   // ============================================
   
   async processForm(formData, options = {}) {
     this.log('processForm called with:', formData);
-    // Send formData directly, not wrapped in another object
     return this.request('processForm', formData, options);
   }
   
@@ -117,14 +150,13 @@ class ApiService {
   
   async updateVoucher(formData, options = {}) {
     this.log('updateVoucher called with:', formData);
-    // Send formData directly, not wrapped in another object
     return this.request('updateVoucher', formData, options);
   }
 
   // ============================================
-  // INVENTORY API
+  // INVENTORY API (unchanged)
   // ============================================
-  
+
   async generateInventoryCategoryCode(options = {}) {
     return this.request('generateInventoryCategoryCode', {}, options);
   }
@@ -163,9 +195,9 @@ class ApiService {
   }
 
   // ============================================
-  // FIXED ASSETS API
+  // FIXED ASSETS API (unchanged)
   // ============================================
-  
+
   async generateAssetCode(assetType, options = {}) {
     return this.request('generateAssetCode', { assetType }, options);
   }
@@ -193,9 +225,9 @@ class ApiService {
   }
 
   // ============================================
-  // INVESTMENT API
+  // INVESTMENT API (unchanged)
   // ============================================
-  
+
   async generateInvestmentCode(investmentType, options = {}) {
     return this.request('generateInvestmentCode', { investmentType }, options);
   }
@@ -223,14 +255,15 @@ class ApiService {
   async getAllInvestments(options = {}) {
     return this.request('getAllInvestments', {}, options);
   }
-async getInvestmentByCode(investmentCode, options = {}) {
-  return this.request('getInvestmentByCode', { investmentCode }, options);
-}
+  async getInvestmentByCode(investmentCode, options = {}) {
+    return this.request('getInvestmentByCode', { investmentCode }, options);
+  }
   async updateInvestmentRedeemDate(investmentCode, redeemDate, options = {}) {
-  return this.request('updateInvestmentRedeemDate', { investmentCode, redeemDate }, options);
-}
+    return this.request('updateInvestmentRedeemDate', { investmentCode, redeemDate }, options);
+  }
+
   // ============================================
-  // SUBSCRIPTION API
+  // SUBSCRIPTION API (unchanged)
   // ============================================
 
   async getSubscriptionCategories(options = {}) {
@@ -287,18 +320,34 @@ async getInvestmentByCode(investmentCode, options = {}) {
     }, options);
   }
 
-
- // In api.js, add these methods to the ApiService class
-
   // ============================================
   // DAILY LIQUIDITY API
+  // - uploadExcelToTrialBalance uses POST FormData (for large base64)
+  // - import liquidity still uses JSONP (lightweight)
   // ============================================
+
+  async uploadExcelToTrialBalance(data = {}) {
+    this.log('uploadExcelToTrialBalance called with:', data);
+    try {
+      const form = new FormData();
+      // Add fields: action will be appended by postForm, but doPost expects action param - we append here as well
+      form.append('base64', data.base64 || '');
+      form.append('filename', data.filename || 'upload.xlsx');
+      form.append('weekEnding', data.weekEnding || '');
+      // Use the helper to POST form data (postForm will append action)
+      const response = await this.postForm('uploadExcelToTrialBalance', form);
+      return response;
+    } catch (err) {
+      this.error('uploadExcelToTrialBalance error:', err);
+      throw err;
+    }
+  }
 
   async importLiquidityFromTrialBalance(weekEnding, options = {}) {
     this.log('importLiquidityFromTrialBalance called for week ending:', weekEnding);
     return this.request('importLiquidityFromTrialBalance', { weekEnding }, options);
   }
-
+  
   async getLiquidityWeekEndings(options = {}) {
     this.log('getLiquidityWeekEndings called');
     return this.request('getLiquidityWeekEndings', {}, options);
@@ -314,21 +363,6 @@ async getInvestmentByCode(investmentCode, options = {}) {
     return this.request('deleteLiquidityData', { weekEnding }, options);
   }
 
-  async uploadExcelToTrialBalance(data, options = {}) {
-    this.log('uploadExcelToTrialBalance called with:', data);
-    return this.request('uploadExcelToTrialBalance', data, options);
-  }
-
-  async uploadExcelToTrialBalance(data, options = {}) {
-    this.log('uploadExcelToTrialBalance called with:', data);
-    return this.request('uploadExcelToTrialBalance', data, options);
-  }
-
-  async importLiquidityFromTrialBalance(weekEnding, options = {}) {
-    this.log('importLiquidityFromTrialBalance called for week ending:', weekEnding);
-    return this.request('importLiquidityFromTrialBalance', { weekEnding }, options);
-  }
-  
   // ============================================
   // TEST CONNECTION
   // ============================================
@@ -369,7 +403,6 @@ window.API = new ApiService();
 // For backward compatibility with modules still using callGAS
 window.callGAS = async function(action, data = {}) {
   console.warn('callGAS is deprecated. Use API.[method] instead.');
-  
   const actionMap = {
     'getUserInfo': () => API.getUserInfo(),
     'processForm': () => API.processForm(data),
