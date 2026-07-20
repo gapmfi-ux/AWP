@@ -41,10 +41,10 @@
     font-size: 1.1rem;
 }
 
-.import-btn, .refresh-btn {
+.upload-btn {
     background: #eef2ff;
     border: 1px solid #c7d2fe;
-    padding: 5px 12px;
+    padding: 5px 14px;
     border-radius: 30px;
     font-weight: 600;
     font-size: 0.75rem;
@@ -56,14 +56,15 @@
     gap: 6px;
 }
 
-.import-btn:hover, .refresh-btn:hover {
+.upload-btn:hover {
     background: #dbeafe;
     border-color: #818cf8;
+    transform: translateY(-1px);
 }
 
-.import-btn i, .refresh-btn i {
+.upload-btn i {
     color: #4361ee;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
 }
 
 .week-selector {
@@ -104,15 +105,6 @@
     outline: none;
     border-color: #4361ee;
     box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
-}
-
-.refresh-btn {
-    padding: 4px 8px;
-    font-size: 0.7rem;
-}
-
-.refresh-btn i {
-    font-size: 0.7rem;
 }
 
 .table-responsive {
@@ -219,6 +211,311 @@
 }
 
 /* ============================================
+   IMPORT MODAL STYLES
+   ============================================ */
+.upload-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.upload-modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
+
+.upload-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    max-width: 540px;
+    width: 92%;
+    max-height: 90vh;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    animation: modalSlideIn 0.25s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes modalSlideIn {
+    from {
+        transform: translateY(-30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.upload-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.upload-modal-header h3 {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.upload-modal-header h3 i {
+    color: #4361ee;
+}
+
+.upload-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: 0.2s;
+}
+
+.upload-modal-close:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+}
+
+.upload-modal-body {
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.upload-modal-field {
+    margin-bottom: 16px;
+}
+
+.upload-modal-field label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.75rem;
+    color: #1e293b;
+    margin-bottom: 6px;
+}
+
+.upload-modal-field label i {
+    color: #4361ee;
+    margin-right: 4px;
+}
+
+.upload-modal-field input[type="date"] {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    background: white;
+    color: #1e293b;
+}
+
+.upload-modal-field input[type="date"]:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+.import-info-box {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f0f7ff;
+    border-radius: 10px;
+    border: 1px solid #dbeafe;
+}
+
+.import-info-box i {
+    font-size: 1.5rem;
+    color: #4361ee;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.import-info-box div {
+    flex: 1;
+}
+
+.import-info-box strong {
+    display: block;
+    font-size: 0.85rem;
+    color: #1e293b;
+    margin-bottom: 2px;
+}
+
+.import-info-box p {
+    font-size: 0.8rem;
+    color: #475569;
+    margin: 0 0 4px 0;
+}
+
+.import-info-box small {
+    font-size: 0.7rem;
+    color: #64748b;
+}
+
+.import-preview {
+    margin-top: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.import-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.import-preview-header i {
+    color: #4361ee;
+}
+
+.import-preview-count {
+    color: #64748b;
+    font-weight: 400;
+}
+
+.import-preview-table-wrapper {
+    overflow-x: auto;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.import-preview-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.7rem;
+}
+
+.import-preview-table th {
+    background: #f1f5f9;
+    padding: 5px 8px;
+    text-align: left;
+    font-weight: 600;
+    color: #1e293b;
+    border-bottom: 1px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.import-preview-table td {
+    padding: 4px 8px;
+    border-bottom: 1px solid #eef2f6;
+    color: #334155;
+    font-size: 0.7rem;
+}
+
+.upload-status {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    margin-top: 12px;
+}
+
+.upload-status-icon {
+    font-size: 1.2rem;
+    color: #4361ee;
+    flex-shrink: 0;
+}
+
+.upload-status-icon.success {
+    color: #06d6a0;
+}
+
+.upload-status-icon.error {
+    color: #ef476f;
+}
+
+.upload-status-message {
+    font-size: 0.85rem;
+    color: #1e293b;
+}
+
+.upload-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    flex-shrink: 0;
+}
+
+.upload-modal-btn {
+    padding: 8px 20px;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.upload-modal-btn.cancel {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.upload-modal-btn.cancel:hover {
+    background: #e2e8f0;
+}
+
+.upload-modal-btn.upload {
+    background: linear-gradient(135deg, #4361ee, #7209b7);
+    color: white;
+}
+
+.upload-modal-btn.upload:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+}
+
+.upload-modal-btn.upload:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ============================================
    LOADING MODAL
    ============================================ */
 .loading-modal {
@@ -231,7 +528,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 10000;
+    z-index: 9999;
     backdrop-filter: blur(2px);
 }
 
@@ -290,8 +587,8 @@
         min-width: 100px;
         font-size: 0.7rem;
     }
-    .import-btn, .refresh-btn {
-        padding: 4px 10px;
+    .upload-btn {
+        padding: 4px 12px;
         font-size: 0.7rem;
     }
     #liquidityTable {
@@ -306,6 +603,26 @@
         font-size: 0.65rem;
         padding-left: 4px !important;
     }
+
+    .upload-modal-content {
+        width: 95%;
+        max-height: 95vh;
+    }
+    .upload-modal-body {
+        padding: 14px;
+    }
+    .import-info-box {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .upload-modal-actions {
+        flex-direction: column;
+    }
+    .upload-modal-btn {
+        justify-content: center;
+        padding: 10px;
+    }
 }
 
 @media print {
@@ -316,10 +633,13 @@
     .table-responsive {
         border: 1px solid #ccc;
     }
-    .import-btn, .refresh-btn {
+    .upload-btn {
         display: none !important;
     }
     .week-selector {
+        display: none !important;
+    }
+    .upload-modal {
         display: none !important;
     }
     .loading-modal {
