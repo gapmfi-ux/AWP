@@ -224,7 +224,8 @@
         const colors = {
             success: { bg: '#d1fae5', color: '#065f46', border: '#34d399' },
             error: { bg: '#fee2e2', color: '#991b1b', border: '#f87171' },
-            info: { bg: '#dbeafe', color: '#1e40af', border: '#60a5fa' }
+            info: { bg: '#dbeafe', color: '#1e40af', border: '#60a5fa' },
+            warning: { bg: '#fef3c7', color: '#92400e', border: '#fbbf24' }
         };
         const style = colors[type] || colors.info;
 
@@ -257,41 +258,88 @@
             try {
                 const base64String = e.target.result.split(',')[1];
                 
-                // Log the data being sent
                 console.log('Uploading file:', fileData.name);
                 console.log('Base64 length:', base64String.length);
                 console.log('Week Ending:', weekEnding);
                 
-                // Use google.script.run directly
-                google.script.run
-                    .withSuccessHandler(function(response) {
+                // Use the API service
+                if (window.DailyLiquidityApi) {
+                    // Using the split API
+                    window.DailyLiquidityApi.uploadExcelToTrialBalance(base64String, fileData.name, weekEnding)
+                        .then(function(response) {
+                            hideLoadingModal();
+                            console.log('Upload response:', response);
+                            
+                            if (response && response.success) {
+                                showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                                closeUploadModal();
+                                showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
+                            } else {
+                                showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                            }
+                        })
+                        .catch(function(error) {
+                            hideLoadingModal();
+                            console.error('Upload error:', error);
+                            showToast('❌ Error uploading: ' + (error.message || error), 'error');
+                        });
+                } else if (window.API && window.API.uploadExcelToTrialBalance) {
+                    // Using the unified API
+                    window.API.uploadExcelToTrialBalance({ 
+                        base64: base64String, 
+                        filename: fileData.name, 
+                        weekEnding: weekEnding 
+                    })
+                    .then(function(response) {
                         hideLoadingModal();
                         console.log('Upload response:', response);
                         
                         if (response && response.success) {
                             showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
                             closeUploadModal();
+                            showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
                         } else {
-                            showToast('Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                            showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
                         }
                     })
-                    .withFailureHandler(function(error) {
+                    .catch(function(error) {
                         hideLoadingModal();
                         console.error('Upload error:', error);
-                        showToast('Error uploading: ' + (error.message || error), 'error');
-                    })
-                    .uploadExcelToTrialBalance(base64String, fileData.name, weekEnding);
+                        showToast('❌ Error uploading: ' + (error.message || error), 'error');
+                    });
+                } else {
+                    // Fallback to google.script.run
+                    google.script.run
+                        .withSuccessHandler(function(response) {
+                            hideLoadingModal();
+                            console.log('Upload response:', response);
+                            
+                            if (response && response.success) {
+                                showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                                closeUploadModal();
+                                showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
+                            } else {
+                                showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                            }
+                        })
+                        .withFailureHandler(function(error) {
+                            hideLoadingModal();
+                            console.error('Upload error:', error);
+                            showToast('❌ Error uploading: ' + (error.message || error), 'error');
+                        })
+                        .uploadExcelToTrialBalance(base64String, fileData.name, weekEnding);
+                }
                     
             } catch (err) {
                 hideLoadingModal();
                 console.error('File processing error:', err);
-                showToast('Error processing file: ' + err.message, 'error');
+                showToast('❌ Error processing file: ' + err.message, 'error');
             }
         };
         
         reader.onerror = function() {
             hideLoadingModal();
-            showToast('Error reading file', 'error');
+            showToast('❌ Error reading file', 'error');
         };
         
         reader.readAsDataURL(fileData);
@@ -389,6 +437,22 @@
 
         // Handle file selection
         function handleFileSelect(file) {
+            // Check if it's an Excel file
+            const validTypes = [
+                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'application/vnd.ms-excel',
+                'text/csv'
+            ];
+            const validExtensions = ['.xlsx', '.xls', '.csv'];
+            
+            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
+            const isValidType = validTypes.includes(file.type) || validExtensions.includes(fileExt);
+            
+            if (!isValidType) {
+                showToast('❌ Please select an Excel or CSV file', 'error');
+                return;
+            }
+            
             selectedFile = file;
             fileName.textContent = file.name;
             fileInfo.style.display = 'flex';
@@ -414,12 +478,12 @@
                 const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
                 
                 if (!weekEnding) {
-                    showToast('Please select a week ending date', 'error');
+                    showToast('⚠️ Please select a week ending date', 'warning');
                     return;
                 }
 
                 if (!selectedFile) {
-                    showToast('Please select a file to upload', 'error');
+                    showToast('⚠️ Please select a file to upload', 'warning');
                     return;
                 }
 
@@ -430,7 +494,7 @@
                 statusMessage.textContent = 'Uploading to Trial Balance...';
                 confirmBtn.disabled = true;
 
-                // Upload to Trial Balance using google.script.run
+                // Upload to Trial Balance
                 uploadToTrialBalance(weekEnding, selectedFile);
             });
         }
