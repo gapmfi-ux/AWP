@@ -245,82 +245,67 @@
     }
 
     // ============================================
-    // UPLOAD FUNCTION - Using FormData approach (same as testCode.gs)
+    // UPLOAD FUNCTION - Direct POST (like testCode.gs)
     // ============================================
     function uploadToTrialBalance(weekEnding, fileData) {
         if (isLoading) return;
         
         showLoadingModal('Uploading Excel to Trial Balance...');
 
+        // Convert file to base64
         const reader = new FileReader();
-
-        reader.onload = async function(e) {
+        reader.onload = function(e) {
             try {
-                // Get the base64 data (remove the data URL prefix)
-                const base64Data = e.target.result.split(',')[1];
+                const base64String = e.target.result.split(',')[1];
                 
-                // Create FormData - same as testindex.html approach
-                const formData = new FormData();
-                formData.append('action', 'uploadExcelToTrialBalance');
-                formData.append('filename', fileData.name);
-                formData.append('mimeType', fileData.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-                formData.append('data', base64Data);
-                formData.append('weekEnding', weekEnding);
-
                 console.log('Uploading file:', fileData.name);
-                console.log('File size:', fileData.size);
-                console.log('Base64 length:', base64Data.length);
+                console.log('Base64 length:', base64String.length);
                 console.log('Week Ending:', weekEnding);
-
-                // Get the API URL from config.js
-                const apiUrl = window.APP_CONFIG?.API_URL || window.API?.BASE_URL;
                 
-                if (!apiUrl) {
-                    throw new Error('API URL not configured. Please check config.js');
-                }
-
-                console.log('Using API URL:', apiUrl);
-
-                // Use fetch with FormData
-                const response = await fetch(apiUrl, {
+                // Create FormData like testindex.html
+                const form = new FormData();
+                form.append('action', 'uploadExcelToTrialBalance');
+                form.append('filename', fileData.name);
+                form.append('mimeType', fileData.type);
+                form.append('data', base64String);
+                form.append('weekEnding', weekEnding);
+                
+                // Direct POST request
+                fetch(window.APP_CONFIG.API_URL, {
                     method: 'POST',
-                    body: formData
-                });
-
-                const responseText = await response.text();
-                let result;
-                try {
-                    result = JSON.parse(responseText);
-                } catch (parseError) {
-                    throw new Error('Server returned invalid response: ' + responseText.substring(0, 100));
-                }
-
-                hideLoadingModal();
-                console.log('Upload response:', result);
-                
-                if (result && result.success !== false) {
-                    showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
-                    closeUploadModal();
-                    if (result.rowsImported) {
-                        showToast('Rows imported: ' + result.rowsImported, 'info');
+                    body: form
+                })
+                .then(response => response.json())
+                .then(result => {
+                    hideLoadingModal();
+                    console.log('Upload response:', result);
+                    
+                    if (result && result.success) {
+                        showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                        closeUploadModal();
+                        showToast('Rows imported: ' + (result.rowsImported || 0), 'info');
+                    } else {
+                        showToast('❌ Error uploading: ' + (result?.error || 'Unknown error'), 'error');
                     }
-                } else {
-                    const errorMsg = result?.error || result?.message || 'Unknown error occurred';
-                    showToast('❌ Error uploading: ' + errorMsg, 'error');
-                }
-
+                })
+                .catch(error => {
+                    hideLoadingModal();
+                    console.error('Upload error:', error);
+                    showToast('❌ Error uploading: ' + (error.message || error), 'error');
+                });
+                    
             } catch (err) {
                 hideLoadingModal();
-                console.error('Upload error:', err);
-                showToast('❌ Error uploading: ' + (err.message || err), 'error');
+                console.error('File processing error:', err);
+                showToast('❌ Error processing file: ' + err.message, 'error');
             }
         };
-
+        
         reader.onerror = function() {
             hideLoadingModal();
             showToast('❌ Error reading file', 'error');
         };
-
+        
         reader.readAsDataURL(fileData);
     }
 
@@ -339,8 +324,6 @@
         const fileName = document.getElementById('uploadFileName');
         const fileRemove = document.getElementById('uploadFileRemove');
         const statusDiv = document.getElementById('uploadStatus');
-        const statusIcon = document.getElementById('uploadStatusIcon');
-        const statusMessage = document.getElementById('uploadStatusMessage');
 
         // Open modal
         uploadBtn.addEventListener('click', function() {
@@ -416,7 +399,6 @@
 
         // Handle file selection
         function handleFileSelect(file) {
-            // Check if it's an Excel file
             const validTypes = [
                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'application/vnd.ms-excel',
@@ -466,14 +448,7 @@
                     return;
                 }
 
-                // Show status
-                statusDiv.style.display = 'flex';
-                statusIcon.className = 'upload-status-icon';
-                statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                statusMessage.textContent = 'Uploading to Trial Balance...';
                 confirmBtn.disabled = true;
-
-                // Upload to Trial Balance
                 uploadToTrialBalance(weekEnding, selectedFile);
             });
         }
