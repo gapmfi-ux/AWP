@@ -245,103 +245,88 @@
     }
 
     // ============================================
-    // UPLOAD FUNCTION - Using google.script.run
+    // UPLOAD FUNCTION - Using FormData approach (same as testCode.gs)
     // ============================================
     function uploadToTrialBalance(weekEnding, fileData) {
         if (isLoading) return;
         
         showLoadingModal('Uploading Excel to Trial Balance...');
 
-        // Convert file to base64
         const reader = new FileReader();
-        reader.onload = function(e) {
+
+        reader.onload = async function(e) {
             try {
-                const base64String = e.target.result.split(',')[1];
+                // Get the base64 data (remove the data URL prefix)
+                const base64Data = e.target.result.split(',')[1];
                 
+                // Create FormData - same as testindex.html approach
+                const formData = new FormData();
+                formData.append('action', 'uploadExcelToTrialBalance');
+                formData.append('filename', fileData.name);
+                formData.append('mimeType', fileData.type || 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+                formData.append('data', base64Data);
+                formData.append('weekEnding', weekEnding);
+
                 console.log('Uploading file:', fileData.name);
-                console.log('Base64 length:', base64String.length);
+                console.log('File size:', fileData.size);
+                console.log('Base64 length:', base64Data.length);
                 console.log('Week Ending:', weekEnding);
-                
-                // Use the API service
-                if (window.DailyLiquidityApi) {
-                    // Using the split API
-                    window.DailyLiquidityApi.uploadExcelToTrialBalance(base64String, fileData.name, weekEnding)
-                        .then(function(response) {
-                            hideLoadingModal();
-                            console.log('Upload response:', response);
-                            
-                            if (response && response.success) {
-                                showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
-                                closeUploadModal();
-                                showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
-                            } else {
-                                showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+
+                // Use the API service with FormData
+                const response = await fetch(window.API.BASE_URL, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const responseText = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(responseText);
+                } catch (parseError) {
+                    // If response is not JSON, check if it's HTML (iframe response)
+                    if (responseText.includes('uploadResult')) {
+                        // Try to extract the result from the HTML
+                        const match = responseText.match(/result\s*=\s*JSON\.parse\('([^']*)'\)/);
+                        if (match && match[1]) {
+                            try {
+                                result = JSON.parse(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
+                            } catch (e) {
+                                throw new Error('Failed to parse server response');
                             }
-                        })
-                        .catch(function(error) {
-                            hideLoadingModal();
-                            console.error('Upload error:', error);
-                            showToast('❌ Error uploading: ' + (error.message || error), 'error');
-                        });
-                } else if (window.API && window.API.uploadExcelToTrialBalance) {
-                    // Using the unified API
-                    window.API.uploadExcelToTrialBalance({ 
-                        base64: base64String, 
-                        filename: fileData.name, 
-                        weekEnding: weekEnding 
-                    })
-                    .then(function(response) {
-                        hideLoadingModal();
-                        console.log('Upload response:', response);
-                        
-                        if (response && response.success) {
-                            showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
-                            closeUploadModal();
-                            showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
                         } else {
-                            showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
+                            throw new Error('Server returned HTML instead of JSON');
                         }
-                    })
-                    .catch(function(error) {
-                        hideLoadingModal();
-                        console.error('Upload error:', error);
-                        showToast('❌ Error uploading: ' + (error.message || error), 'error');
-                    });
-                } else {
-                    // Fallback to google.script.run
-                    google.script.run
-                        .withSuccessHandler(function(response) {
-                            hideLoadingModal();
-                            console.log('Upload response:', response);
-                            
-                            if (response && response.success) {
-                                showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
-                                closeUploadModal();
-                                showToast('Rows imported: ' + (response.rowsImported || 0), 'info');
-                            } else {
-                                showToast('❌ Error uploading: ' + (response?.error || 'Unknown error'), 'error');
-                            }
-                        })
-                        .withFailureHandler(function(error) {
-                            hideLoadingModal();
-                            console.error('Upload error:', error);
-                            showToast('❌ Error uploading: ' + (error.message || error), 'error');
-                        })
-                        .uploadExcelToTrialBalance(base64String, fileData.name, weekEnding);
+                    } else {
+                        throw new Error('Server returned invalid response: ' + responseText.substring(0, 100));
+                    }
                 }
-                    
+
+                hideLoadingModal();
+                console.log('Upload response:', result);
+                
+                if (result && result.success !== false) {
+                    showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
+                    closeUploadModal();
+                    if (result.rowsImported) {
+                        showToast('Rows imported: ' + result.rowsImported, 'info');
+                    }
+                } else {
+                    const errorMsg = result?.error || result?.message || 'Unknown error occurred';
+                    showToast('❌ Error uploading: ' + errorMsg, 'error');
+                }
+
             } catch (err) {
                 hideLoadingModal();
-                console.error('File processing error:', err);
-                showToast('❌ Error processing file: ' + err.message, 'error');
+                console.error('Upload error:', err);
+                showToast('❌ Error uploading: ' + (err.message || err), 'error');
             }
         };
-        
+
         reader.onerror = function() {
             hideLoadingModal();
             showToast('❌ Error reading file', 'error');
         };
-        
+
         reader.readAsDataURL(fileData);
     }
 
