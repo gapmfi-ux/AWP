@@ -272,8 +272,17 @@
                 console.log('Base64 length:', base64Data.length);
                 console.log('Week Ending:', weekEnding);
 
-                // Use the API service with FormData
-                const response = await fetch(window.API.BASE_URL, {
+                // Get the API URL from config.js
+                const apiUrl = window.APP_CONFIG?.API_URL || window.API?.BASE_URL;
+                
+                if (!apiUrl) {
+                    throw new Error('API URL not configured. Please check config.js');
+                }
+
+                console.log('Using API URL:', apiUrl);
+
+                // Use fetch with FormData
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     body: formData
                 });
@@ -283,22 +292,7 @@
                 try {
                     result = JSON.parse(responseText);
                 } catch (parseError) {
-                    // If response is not JSON, check if it's HTML (iframe response)
-                    if (responseText.includes('uploadResult')) {
-                        // Try to extract the result from the HTML
-                        const match = responseText.match(/result\s*=\s*JSON\.parse\('([^']*)'\)/);
-                        if (match && match[1]) {
-                            try {
-                                result = JSON.parse(match[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\'));
-                            } catch (e) {
-                                throw new Error('Failed to parse server response');
-                            }
-                        } else {
-                            throw new Error('Server returned HTML instead of JSON');
-                        }
-                    } else {
-                        throw new Error('Server returned invalid response: ' + responseText.substring(0, 100));
-                    }
+                    throw new Error('Server returned invalid response: ' + responseText.substring(0, 100));
                 }
 
                 hideLoadingModal();
