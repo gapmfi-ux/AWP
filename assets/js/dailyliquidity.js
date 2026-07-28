@@ -247,7 +247,7 @@
     // ============================================
     // UPLOAD BUTTON - Opens External Upload Handler
     // ============================================
-    function setupUploadModal() {
+    function setupUploadButton() {
         const uploadBtn = document.getElementById('uploadBtn');
         
         if (uploadBtn) {
@@ -256,13 +256,18 @@
                 
                 if (!uploadHandlerUrl || uploadHandlerUrl.includes('YOUR_UPLOAD_HANDLER_DEPLOYMENT_ID')) {
                     showToast('❌ Upload handler not configured. Please set UPLOAD_HANDLER_URL in config.js', 'error');
+                    console.error('UPLOAD_HANDLER_URL is not configured in config.js');
                     return;
                 }
                 
                 // Open upload handler in new window/popup
-                window.open(uploadHandlerUrl, 'dailyLiquidityUpload', 'width=600,height=700,resizable=yes,scrollbars=yes');
+                const popup = window.open(uploadHandlerUrl, 'dailyLiquidityUpload', 'width=600,height=700,resizable=yes,scrollbars=yes');
                 
-                showToast('📤 Opening upload handler...', 'info');
+                if (popup) {
+                    showToast('📤 Opening upload handler...', 'info');
+                } else {
+                    showToast('❌ Could not open upload window. Check browser popup settings.', 'error');
+                }
             });
         }
     }
@@ -278,12 +283,13 @@
     // ---------- INITIALIZE MODULE ----------
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
+        console.log('Upload Handler URL:', window.APP_CONFIG.UPLOAD_HANDLER_URL);
         
         const defaultDate = setDefaultDate();
         updateColumnHeadersWithDates(defaultDate);
         renderTable(EMPTY_ROWS);
         
-        setupUploadModal();
+        setupUploadButton();
         
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
