@@ -1,6 +1,4 @@
-// Daily Liquidity Module - Upload Excel to Trial Balance (fixed)
-// - Adds in-page upload modal handling (select, drag/drop, remove)
-// - Confirms by reading file as base64 and POSTing to UPLOAD_HANDLER_URL in a new popup window
+// Daily Liquidity Module - Upload Excel to Trial Balance (full updated script)
 (function() {
     'use strict';
 
@@ -39,7 +37,9 @@
 
     let currentData = [];
     let isLoading = false;
-    let selectedFile = null;
+
+    // ---------- UPLOAD STATE (closure-scoped) ----------
+    let __dl_selectedFile = null; // { name, type, base64 }
 
     // ---------- GET WEEK DATES ----------
     function getWeekDatesFromEnding(weekEndingDate) {
@@ -247,212 +247,242 @@
     }
 
     // ============================================
-    // UPLOAD BUTTON / MODAL - In-page handling
-    // - Select / drag-drop file
-    // - Confirm reads file as base64, creates form, and posts to upload handler in a new popup window
+    // UPLOAD: In-app modal implementation
     // ============================================
+
     function setupUploadButton() {
         const uploadBtn = document.getElementById('uploadBtn');
-        const uploadModal = document.getElementById('uploadModal');
-        const uploadModalOverlay = document.getElementById('uploadModalOverlay');
-        const uploadModalClose = document.getElementById('uploadModalClose');
+        
+        if (!uploadBtn) return;
 
-        const uploadFileArea = document.getElementById('uploadFileArea');
-        const uploadFileInput = document.getElementById('uploadFileInput');
-        const uploadFileInfo = document.getElementById('uploadFileInfo');
-        const uploadFileName = document.getElementById('uploadFileName');
-        const uploadFileRemove = document.getElementById('uploadFileRemove');
-        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
-        const uploadStatus = document.getElementById('uploadStatus');
-        const uploadStatusIcon = document.getElementById('uploadStatusIcon');
-        const uploadStatusMessage = document.getElementById('uploadStatusMessage');
-        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
-
-        if (!uploadBtn || !uploadModal) {
-            console.warn('Upload modal or button not found in DOM.');
-            return;
-        }
-
-        // Open modal
-        function openUploadModal() {
-            if (uploadModal) uploadModal.style.display = 'block';
-            // reset state
-            if (uploadFileInfo) uploadFileInfo.style.display = 'none';
-            if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
-            selectedFile = null;
-            if (uploadStatus) uploadStatus.style.display = 'none';
-            if (uploadWeekEnding) uploadWeekEnding.value = document.getElementById('weekEndingDate')?.value || '';
-        }
-
-        // Close modal
-        function closeUploadModal() {
-            if (uploadModal) uploadModal.style.display = 'none';
-            if (uploadFileInput) uploadFileInput.value = '';
-            selectedFile = null;
-            if (uploadFileInfo) uploadFileInfo.style.display = 'none';
-            if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
-            if (uploadStatus) uploadStatus.style.display = 'none';
-        }
-
-        // File selected handler
-        function onFileSelected(file) {
-            if (!file) return;
-            selectedFile = file;
-            if (uploadFileName) uploadFileName.textContent = file.name;
-            if (uploadFileInfo) uploadFileInfo.style.display = 'flex';
-            if (uploadConfirmBtn) uploadConfirmBtn.disabled = false;
-        }
-
-        // wire up the main button to open the modal
         uploadBtn.addEventListener('click', function() {
+            // Open the in-app modal instead of a popup
             openUploadModal();
         });
 
-        // overlay and close button
-        if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUploadModal);
+        // Close buttons
+        const uploadModalClose = document.getElementById('uploadModalClose');
+        const uploadModalOverlay = document.getElementById('uploadModalOverlay');
+        const uploadCancelBtn = document.getElementById('uploadCancelBtn');
+
         if (uploadModalClose) uploadModalClose.addEventListener('click', closeUploadModal);
+        if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUploadModal);
+        if (uploadCancelBtn) uploadCancelBtn.addEventListener('click', closeUploadModal);
 
-        // click on area to open file picker
-        if (uploadFileArea) uploadFileArea.addEventListener('click', function() {
-            if (uploadFileInput) uploadFileInput.click();
-        });
+        // File input handlers
+        const uploadFileInput = document.getElementById('uploadFileInput');
+        const uploadFileArea = document.getElementById('uploadFileArea');
+        const uploadFileRemove = document.getElementById('uploadFileRemove');
 
-        // drag & drop support
         if (uploadFileArea) {
-            ['dragenter', 'dragover'].forEach(evt =>
-                uploadFileArea.addEventListener(evt, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    uploadFileArea.classList.add('drag-over');
-                })
-            );
-            ['dragleave', 'drop'].forEach(evt =>
-                uploadFileArea.addEventListener(evt, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    uploadFileArea.classList.remove('drag-over');
-                })
-            );
-            uploadFileArea.addEventListener('drop', function(e) {
-                const dt = e.dataTransfer;
-                if (dt && dt.files && dt.files.length) {
-                    onFileSelected(dt.files[0]);
-                }
+            uploadFileArea.addEventListener('click', () => { if (uploadFileInput) uploadFileInput.click(); });
+            // drag & drop support
+            uploadFileArea.addEventListener('dragover', (e) => { e.preventDefault(); uploadFileArea.classList.add('dragover'); });
+            uploadFileArea.addEventListener('dragleave', (e) => { e.preventDefault(); uploadFileArea.classList.remove('dragover'); });
+            uploadFileArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadFileArea.classList.remove('dragover');
+                const file = e.dataTransfer.files && e.dataTransfer.files[0];
+                if (file) handleFile(file);
             });
         }
 
-        // file input change
-        if (uploadFileInput) uploadFileInput.addEventListener('change', function(e) {
-            const file = e.target.files && e.target.files[0];
-            if (file) onFileSelected(file);
-        });
-
-        // remove selected file
-        if (uploadFileRemove) uploadFileRemove.addEventListener('click', function(e) {
-            e.preventDefault();
-            if (uploadFileInput) uploadFileInput.value = '';
-            selectedFile = null;
-            if (uploadFileInfo) uploadFileInfo.style.display = 'none';
-            if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
-        });
-
-        // Helper: convert File to base64 (data part only)
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onerror = () => reject(new Error('FileReader error'));
-                reader.onload = () => {
-                    // result is like "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,AAAA..."
-                    const result = reader.result;
-                    const idx = result.indexOf(',');
-                    if (idx >= 0) {
-                        resolve(result.substring(idx + 1));
-                    } else {
-                        resolve(result);
-                    }
-                };
-                reader.readAsDataURL(file);
+        if (uploadFileInput) {
+            uploadFileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (file) handleFile(file);
             });
         }
 
-        // Confirm upload: reads file and posts to upload handler in a new window using a form (avoids CORS)
-        if (uploadConfirmBtn) uploadConfirmBtn.addEventListener('click', async function() {
-            if (!selectedFile) {
-                showToast('Please select a file before uploading', 'error');
-                return;
-            }
+        if (uploadFileRemove) {
+            uploadFileRemove.addEventListener('click', (e) => {
+                e.preventDefault();
+                clearSelectedFile();
+            });
+        }
 
-            // Optional: show a brief processing indicator inside the modal
-            if (uploadStatus) {
-                uploadStatus.style.display = 'flex';
-                if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-                if (uploadStatusMessage) uploadStatusMessage.textContent = 'Preparing upload...';
-            }
+        // Confirm upload
+        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+        if (uploadConfirmBtn) {
+            uploadConfirmBtn.addEventListener('click', function() {
+                const weekEndingInput = document.getElementById('uploadWeekEnding');
+                const weekEnding = weekEndingInput ? weekEndingInput.value : '';
+                startUploadProcess(weekEnding);
+            });
+        }
+    }
 
-            const uploadHandlerUrl = window.APP_CONFIG && window.APP_CONFIG.UPLOAD_HANDLER_URL;
-            if (!uploadHandlerUrl || uploadHandlerUrl.includes('YOUR_UPLOAD_HANDLER_DEPLOYMENT_ID')) {
-                showToast('Upload handler not configured. Set UPLOAD_HANDLER_URL in config.js', 'error');
-                console.error('UPLOAD_HANDLER_URL is not configured in config.js');
-                if (uploadStatus) uploadStatus.style.display = 'none';
-                return;
-            }
+    function openUploadModal() {
+        const modal = document.getElementById('uploadModal');
+        if (!modal) return;
+        modal.style.display = 'block';
 
-            // Read file as base64
+        // reset state
+        clearSelectedFile();
+        const uploadStatus = document.getElementById('uploadStatus');
+        if (uploadStatus) uploadStatus.style.display = 'none';
+
+        // enable confirm only after file chosen
+        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+        if (uploadConfirmBtn) {
+            uploadConfirmBtn.disabled = true;
+        }
+
+        // set default week ending (copy the page's date selector)
+        const pageWeekEnding = document.getElementById('weekEndingDate');
+        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
+        if (pageWeekEnding && uploadWeekEnding) uploadWeekEnding.value = pageWeekEnding.value || '';
+    }
+
+    function closeUploadModal() {
+        const modal = document.getElementById('uploadModal');
+        if (!modal) return;
+        modal.style.display = 'none';
+    }
+
+    function clearSelectedFile() {
+        __dl_selectedFile = null;
+        const info = document.getElementById('uploadFileInfo');
+        const fileNameSpan = document.getElementById('uploadFileName');
+        const fileInput = document.getElementById('uploadFileInput');
+        const fileArea = document.getElementById('uploadFileArea');
+        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+
+        if (info) info.style.display = 'none';
+        if (fileNameSpan) fileNameSpan.textContent = 'No file selected';
+        if (fileInput) fileInput.value = '';
+        if (fileArea) fileArea.style.display = 'block';
+        if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
+    }
+
+    function handleFile(file) {
+        // Accept only .xlsx, .xls, .csv (same as input accept)
+        const fileNameSpan = document.getElementById('uploadFileName');
+        const info = document.getElementById('uploadFileInfo');
+        const fileArea = document.getElementById('uploadFileArea');
+        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const result = evt.target.result; // data:...;base64,AAAA...
+            // strip data:*/*;base64, prefix if present
+            let base64 = result;
+            const idx = result.indexOf('base64,');
+            if (idx !== -1) base64 = result.substring(idx + 7);
+
+            __dl_selectedFile = {
+                name: file.name,
+                type: file.type || 'application/octet-stream',
+                base64: base64
+            };
+
+            if (fileNameSpan) fileNameSpan.textContent = file.name;
+            if (info) info.style.display = 'flex';
+            if (fileArea) fileArea.style.display = 'none';
+            if (uploadConfirmBtn) uploadConfirmBtn.disabled = false;
+        };
+
+        // read as data URL so we get base64 easily
+        reader.readAsDataURL(file);
+    }
+
+    async function startUploadProcess(weekEnding) {
+        if (!__dl_selectedFile) {
+            showToast('No file selected for upload', 'error');
+            return;
+        }
+
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadStatusIcon = document.getElementById('uploadStatusIcon');
+        const uploadStatusMessage = document.getElementById('uploadStatusMessage');
+        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+
+        if (uploadStatus) uploadStatus.style.display = 'flex';
+        if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+        if (uploadStatusMessage) uploadStatusMessage.textContent = 'Uploading...';
+        if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
+
+        try {
+            const url = window.APP_CONFIG && window.APP_CONFIG.UPLOAD_HANDLER_URL;
+            if (!url) throw new Error('Upload handler URL not configured');
+
+            // Prepare form-encoded body expected by Apps Script doPost (e.parameter)
+            const params = new URLSearchParams();
+            params.append('filename', __dl_selectedFile.name);
+            params.append('mimeType', __dl_selectedFile.type);
+            params.append('data', __dl_selectedFile.base64);
+            params.append('weekEnding', weekEnding || '');
+
+            const resp = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+                },
+                body: params.toString()
+            });
+
+            // Apps Script returns JSON as ContentService JSON - read text then parse
+            const text = await resp.text();
+            let json;
             try {
-                const base64Data = await fileToBase64(selectedFile);
-
-                // Build a temporary form and submit it to a new popup window
-                const targetName = 'dailyLiquidityUpload';
-                // Open a named window first (some browsers block forms opening new windows unless window.open called)
-                const popup = window.open('', targetName, 'width=700,height=760,resizable=yes,scrollbars=yes');
-
-                // Create form
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.enctype = 'application/x-www-form-urlencoded';
-                form.action = uploadHandlerUrl;
-                form.target = targetName;
-                form.style.display = 'none';
-
-                // Helper to append hidden inputs
-                function addInput(name, value) {
-                    const input = document.createElement('input');
-                    input.type = 'hidden';
-                    input.name = name;
-                    input.value = value;
-                    form.appendChild(input);
-                }
-
-                addInput('filename', selectedFile.name);
-                addInput('mimeType', selectedFile.type || 'application/octet-stream');
-                addInput('data', base64Data);
-                // pass weekEnding if provided in upload modal
-                const weekVal = uploadWeekEnding ? (uploadWeekEnding.value || document.getElementById('weekEndingDate')?.value || '') : (document.getElementById('weekEndingDate')?.value || '');
-                addInput('weekEnding', weekVal);
-
-                document.body.appendChild(form);
-
-                // Submit
-                form.submit();
-
-                // Clean up
-                setTimeout(() => {
-                    try {
-                        form.remove();
-                        if (popup && popup.focus) popup.focus();
-                    } catch (e) { /* ignore cleanup errors */ }
-                }, 800);
-
-                // Close modal
-                if (uploadModal) uploadModal.style.display = 'none';
-                showToast('Upload started in new window. Complete the process there.', 'info');
-
-            } catch (error) {
-                console.error('Upload preparation failed:', error);
-                showToast('Failed to prepare file for upload: ' + error.message, 'error');
-                if (uploadStatus) uploadStatus.style.display = 'none';
+                json = JSON.parse(text);
+            } catch (e) {
+                // If server returned HTML (error) show it
+                throw new Error('Unexpected server response: ' + text.substring(0, 500));
             }
-        });
+
+            if (!json || json.success === false) {
+                const err = json && json.error ? json.error : 'Upload failed';
+                throw new Error(err);
+            }
+
+            // Success - show success modal (not a full page)
+            if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i>';
+            if (uploadStatusMessage) uploadStatusMessage.textContent = json.message || 'Upload successful';
+
+            // Close upload modal and show success modal with details
+            setTimeout(() => {
+                closeUploadModal();
+                showUploadSuccessModal(json);
+            }, 700);
+
+        } catch (error) {
+            if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-times-circle" style="color:#dc2626;"></i>';
+            if (uploadStatusMessage) uploadStatusMessage.textContent = 'Error: ' + (error.message || error.toString());
+            console.error('Upload error:', error);
+            showToast('Upload failed: ' + (error.message || 'Unknown error'), 'error');
+            if (uploadConfirmBtn) uploadConfirmBtn.disabled = false;
+        }
+    }
+
+    // Simple success modal
+    function showUploadSuccessModal(result) {
+        const modal = document.getElementById('uploadSuccessModal');
+        const title = document.getElementById('uploadSuccessTitle');
+        const body = document.getElementById('uploadSuccessBody');
+
+        if (!modal) {
+            // fallback toast
+            showToast(result && result.message ? result.message : 'Upload successful', 'success');
+            return;
+        }
+
+        if (title) title.textContent = 'Upload Successful';
+        if (body) {
+            body.innerHTML = `
+                <p>${result.message || 'File uploaded successfully.'}</p>
+                <ul style="margin-left:16px;">
+                    <li><strong>File:</strong> ${result.filename || ( __dl_selectedFile && __dl_selectedFile.name ) || ''}</li>
+                    <li><strong>Rows:</strong> ${result.rowsImported || 'N/A'}</li>
+                    <li><strong>Sheet:</strong> ${result.sheetName || result.sheetId || 'Trial Balance'}</li>
+                </ul>
+            `;
+        }
+
+        modal.style.display = 'flex';
+
+        const closeBtn = document.getElementById('uploadSuccessClose');
+        if (closeBtn) closeBtn.onclick = () => { modal.style.display = 'none'; };
     }
 
     // ---------- HANDLE DATE CHANGE ----------
