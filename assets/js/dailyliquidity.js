@@ -1,4 +1,6 @@
-
+// Daily Liquidity Module - Upload Excel to Trial Balance (fixed)
+// - Adds in-page upload modal handling (select, drag/drop, remove)
+// - Confirms by reading file as base64 and POSTing to UPLOAD_HANDLER_URL in a new popup window
 (function() {
     'use strict';
 
