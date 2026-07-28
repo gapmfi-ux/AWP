@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Upload Excel to Trial Balance
+// Daily Liquidity Module - Using proven upload pattern from testCode.gs
 (function() {
     'use strict';
 
@@ -245,24 +245,24 @@
     }
 
     // ============================================
-    // UPLOAD FUNCTION - Direct POST (like testCode.gs)
+    // UPLOAD FUNCTION - Direct POST (testCode.gs pattern)
     // ============================================
     function uploadToTrialBalance(weekEnding, fileData) {
         if (isLoading) return;
         
         showLoadingModal('Uploading Excel to Trial Balance...');
 
-        // Convert file to base64
         const reader = new FileReader();
         reader.onload = function(e) {
             try {
+                // Extract base64 data (remove data URL prefix)
                 const base64String = e.target.result.split(',')[1];
                 
                 console.log('Uploading file:', fileData.name);
                 console.log('Base64 length:', base64String.length);
                 console.log('Week Ending:', weekEnding);
                 
-                // Create FormData like testindex.html
+                // Create FormData object like testindex.html
                 const form = new FormData();
                 form.append('action', 'uploadExcelToTrialBalance');
                 form.append('filename', fileData.name);
@@ -270,7 +270,7 @@
                 form.append('data', base64String);
                 form.append('weekEnding', weekEnding);
                 
-                // Direct POST request
+                // Direct POST request to API URL
                 fetch(window.APP_CONFIG.API_URL, {
                     method: 'POST',
                     body: form
@@ -283,7 +283,9 @@
                     if (result && result.success) {
                         showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
                         closeUploadModal();
-                        showToast('Rows imported: ' + (result.rowsImported || 0), 'info');
+                        if (result.rowsImported) {
+                            showToast('📊 Rows imported: ' + result.rowsImported, 'info');
+                        }
                     } else {
                         showToast('❌ Error uploading: ' + (result?.error || 'Unknown error'), 'error');
                     }
@@ -309,7 +311,7 @@
         reader.readAsDataURL(fileData);
     }
 
-    // ---------- UPLOAD MODAL ----------
+    // ---------- UPLOAD MODAL SETUP ----------
     function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
         const modal = document.getElementById('uploadModal');
@@ -323,7 +325,6 @@
         const fileInfo = document.getElementById('uploadFileInfo');
         const fileName = document.getElementById('uploadFileName');
         const fileRemove = document.getElementById('uploadFileRemove');
-        const statusDiv = document.getElementById('uploadStatus');
 
         // Open modal
         uploadBtn.addEventListener('click', function() {
@@ -332,7 +333,6 @@
             if (uploadWeekEnding) {
                 uploadWeekEnding.value = currentDate || '';
             }
-            statusDiv.style.display = 'none';
             selectedFile = null;
             confirmBtn.disabled = true;
             fileArea.style.display = 'block';
@@ -342,7 +342,6 @@
 
         function closeUploadModal() {
             modal.style.display = 'none';
-            statusDiv.style.display = 'none';
             confirmBtn.disabled = true;
             selectedFile = null;
         }
@@ -462,7 +461,7 @@
         }
     }
 
-    // ---------- EXPORT GLOBALLY ----------
+    // ---------- INITIALIZE MODULE ----------
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
         
@@ -470,7 +469,6 @@
         updateColumnHeadersWithDates(defaultDate);
         renderTable(EMPTY_ROWS);
         
-        // Setup Upload Modal
         setupUploadModal();
         
         const datePicker = document.getElementById('weekEndingDate');
@@ -479,9 +477,7 @@
         }
     };
 
-    // Expose functions for console/testing
-    window.uploadLiquidityData = uploadToTrialBalance;
-    window.renderLiquidityTable = renderTable;
+    // Expose functions for testing
     window.closeUploadModal = function() {
         const modal = document.getElementById('uploadModal');
         if (modal) modal.style.display = 'none';
