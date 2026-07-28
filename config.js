@@ -5,9 +5,20 @@
 window.APP_CONFIG = {
   API_URL: 'https://script.google.com/macros/s/AKfycbyh-69v4qQbQYFJp6ZeHmnr_vOLuzBgRYjf0F2YeWa0W3k2RC_OMeCnT9V-Wq6Yu5G3/exec',
   
-  // Daily Liquidity Upload Handler (Separate Script)
-  UPLOAD_HANDLER_URL: 'https://script.google.com/macros/library/d/1u4S2Tn_n21fL_KpO0NWa2De5-u7OC-CWsD_0xddFcpMbsVEgF12hXC1z/1',
-  // ^^^ Replace YOUR_UPLOAD_HANDLER_DEPLOYMENT_ID with actual UploadHandler.gs deployment ID
+  // Daily Liquidity Upload Handler (Separate Script Deployment)
+  // ============================================
+  // SETUP INSTRUCTIONS:
+  // 1. Create a NEW Google Apps Script project
+  // 2. Copy all code from UploadHandler.gs into it
+  // 3. Click "Deploy" > "New deployment"
+  // 4. Select type: "Web app"
+  // 5. Execute as: [Your Google Account]
+  // 6. Who has access: "Anyone anonymous"
+  // 7. Click "Deploy"
+  // 8. Copy the deployment URL (looks like: https://script.google.com/macros/s/ABC123.../exec)
+  // 9. Paste it below:
+  UPLOAD_HANDLER_URL: 'https://script.google.com/macros/s/AKfycbyyC0cqGZg8NmUDYCrOu-SKCldBwNsfUcVr8Un42But1RjuUlYqdXc-gMu1eecYmRjk9g/exec',
+  // ============================================
   
   // Google Sheet IDs (keep these as they are)
   SHEETS: {
