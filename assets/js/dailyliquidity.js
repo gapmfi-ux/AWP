@@ -386,75 +386,95 @@
         reader.readAsDataURL(file);
     }
 
-    async function startUploadProcess(weekEnding) {
-        if (!__dl_selectedFile) {
-            showToast('No file selected for upload', 'error');
-            return;
-        }
+  // startUploadProcess: read file, base64 encode, post to upload handler in a popup
+async function startUploadProcess() {
+  try {
+    const fileInput = document.getElementById('uploadFileInput');
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      showToast('No file selected', 'error');
+      return;
+    }
+    const file = fileInput.files[0];
 
-        const uploadStatus = document.getElementById('uploadStatus');
-        const uploadStatusIcon = document.getElementById('uploadStatusIcon');
-        const uploadStatusMessage = document.getElementById('uploadStatusMessage');
-        const uploadConfirmBtn = document.getElementById('uploadConfirmBtn');
+    // ---- Fix for your error: use file.size instead of blob.getSize() ----
+    console.log('Selected file:', file.name, file.type, file.size);
 
-        if (uploadStatus) uploadStatus.style.display = 'flex';
-        if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        if (uploadStatusMessage) uploadStatusMessage.textContent = 'Uploading...';
-        if (uploadConfirmBtn) uploadConfirmBtn.disabled = true;
-
-        try {
-            const url = window.APP_CONFIG && window.APP_CONFIG.UPLOAD_HANDLER_URL;
-            if (!url) throw new Error('Upload handler URL not configured');
-
-            // Prepare form-encoded body expected by Apps Script doPost (e.parameter)
-            const params = new URLSearchParams();
-            params.append('filename', __dl_selectedFile.name);
-            params.append('mimeType', __dl_selectedFile.type);
-            params.append('data', __dl_selectedFile.base64);
-            params.append('weekEnding', weekEnding || '');
-
-            const resp = await fetch(url, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-                },
-                body: params.toString()
-            });
-
-            // Apps Script returns JSON as ContentService JSON - read text then parse
-            const text = await resp.text();
-            let json;
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                // If server returned HTML (error) show it
-                throw new Error('Unexpected server response: ' + text.substring(0, 500));
-            }
-
-            if (!json || json.success === false) {
-                const err = json && json.error ? json.error : 'Upload failed';
-                throw new Error(err);
-            }
-
-            // Success - show success modal (not a full page)
-            if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i>';
-            if (uploadStatusMessage) uploadStatusMessage.textContent = json.message || 'Upload successful';
-
-            // Close upload modal and show success modal with details
-            setTimeout(() => {
-                closeUploadModal();
-                showUploadSuccessModal(json);
-            }, 700);
-
-        } catch (error) {
-            if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-times-circle" style="color:#dc2626;"></i>';
-            if (uploadStatusMessage) uploadStatusMessage.textContent = 'Error: ' + (error.message || error.toString());
-            console.error('Upload error:', error);
-            showToast('Upload failed: ' + (error.message || 'Unknown error'), 'error');
-            if (uploadConfirmBtn) uploadConfirmBtn.disabled = false;
-        }
+    // Validate type/size as needed
+    const maxBytes = 20 * 1024 * 1024; // 20 MB example
+    if (file.size > maxBytes) {
+      showToast('File too large (max 20MB)', 'error');
+      return;
     }
 
+    showLoadingModal('Preparing file for upload...');
+
+    // Read as base64
+    const base64Data = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // reader.result is like "data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,AAAA..."
+        const result = reader.result;
+        // Strip the prefix before the comma
+        const comma = result.indexOf(',');
+        if (comma === -1) return resolve(result);
+        resolve(result.substring(comma + 1));
+      };
+      reader.onerror = (err) => reject(err);
+      reader.readAsDataURL(file);
+    });
+
+    // Build hidden form and submit to upload handler in popup
+    const uploadUrl = window.APP_CONFIG.UPLOAD_HANDLER_URL;
+    if (!uploadUrl || uploadUrl.includes('YOUR_UPLOAD_HANDLER_DEPLOYMENT_ID')) {
+      hideLoadingModal();
+      showToast('Upload handler not configured in config.js', 'error');
+      console.error('UPLOAD_HANDLER_URL not set in config.js');
+      return;
+    }
+
+    // Create popup window (so the user can see upload status or for fallback)
+    const popupName = 'dailyLiquidityUpload';
+    const popup = window.open('', popupName, 'width=700,height=700,resizable=yes,scrollbars=yes');
+
+    // Build form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = uploadUrl;
+    form.target = popupName;
+    form.enctype = 'application/x-www-form-urlencoded';
+
+    function addInput(name, value) {
+      const i = document.createElement('input');
+      i.type = 'hidden';
+      i.name = name;
+      i.value = value;
+      form.appendChild(i);
+    }
+
+    addInput('filename', file.name);
+    addInput('mimeType', file.type || 'application/octet-stream');
+    addInput('data', base64Data);
+    // include weekEnding if user selected one
+    const weekEndingInput = document.getElementById('uploadWeekEnding') || document.getElementById('weekEndingDate');
+    if (weekEndingInput && weekEndingInput.value) addInput('weekEnding', weekEndingInput.value);
+
+    // Append and submit
+    document.body.appendChild(form);
+    form.submit();
+
+    // Cleanup
+    setTimeout(() => {
+      try { document.body.removeChild(form); } catch (e) {}
+      hideLoadingModal();
+      showToast('Upload started in popup window', 'info');
+    }, 800);
+
+  } catch (err) {
+    console.error('Upload error', err);
+    hideLoadingModal();
+    showToast('Upload failed: ' + (err.message || err.toString()), 'error');
+  }
+}
     // Simple success modal
     function showUploadSuccessModal(result) {
         const modal = document.getElementById('uploadSuccessModal');
