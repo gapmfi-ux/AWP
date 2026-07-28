@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Using proven upload pattern from testCode.gs
+// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
@@ -245,210 +245,24 @@
     }
 
     // ============================================
-    // UPLOAD FUNCTION - Direct POST (testCode.gs pattern)
+    // UPLOAD BUTTON - Opens External Upload Handler
     // ============================================
-    function uploadToTrialBalance(weekEnding, fileData) {
-        if (isLoading) return;
-        
-        showLoadingModal('Uploading Excel to Trial Balance...');
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                // Extract base64 data (remove data URL prefix)
-                const base64String = e.target.result.split(',')[1];
-                
-                console.log('Uploading file:', fileData.name);
-                console.log('Base64 length:', base64String.length);
-                console.log('Week Ending:', weekEnding);
-                
-                // Create FormData object like testindex.html
-                const form = new FormData();
-                form.append('action', 'uploadExcelToTrialBalance');
-                form.append('filename', fileData.name);
-                form.append('mimeType', fileData.type);
-                form.append('data', base64String);
-                form.append('weekEnding', weekEnding);
-                
-                // Direct POST request to API URL
-                fetch(window.APP_CONFIG.API_URL, {
-                    method: 'POST',
-                    body: form
-                })
-                .then(response => response.json())
-                .then(result => {
-                    hideLoadingModal();
-                    console.log('Upload response:', result);
-                    
-                    if (result && result.success) {
-                        showToast('✅ Excel uploaded and imported to Trial Balance successfully!', 'success');
-                        closeUploadModal();
-                        if (result.rowsImported) {
-                            showToast('📊 Rows imported: ' + result.rowsImported, 'info');
-                        }
-                    } else {
-                        showToast('❌ Error uploading: ' + (result?.error || 'Unknown error'), 'error');
-                    }
-                })
-                .catch(error => {
-                    hideLoadingModal();
-                    console.error('Upload error:', error);
-                    showToast('❌ Error uploading: ' + (error.message || error), 'error');
-                });
-                    
-            } catch (err) {
-                hideLoadingModal();
-                console.error('File processing error:', err);
-                showToast('❌ Error processing file: ' + err.message, 'error');
-            }
-        };
-        
-        reader.onerror = function() {
-            hideLoadingModal();
-            showToast('❌ Error reading file', 'error');
-        };
-        
-        reader.readAsDataURL(fileData);
-    }
-
-    // ---------- UPLOAD MODAL SETUP ----------
     function setupUploadModal() {
         const uploadBtn = document.getElementById('uploadBtn');
-        const modal = document.getElementById('uploadModal');
-        const overlay = document.getElementById('uploadModalOverlay');
-        const closeBtn = document.getElementById('uploadModalClose');
-        const cancelBtn = document.getElementById('uploadCancelBtn');
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-        const uploadWeekEnding = document.getElementById('uploadWeekEnding');
-        const fileInput = document.getElementById('uploadFileInput');
-        const fileArea = document.getElementById('uploadFileArea');
-        const fileInfo = document.getElementById('uploadFileInfo');
-        const fileName = document.getElementById('uploadFileName');
-        const fileRemove = document.getElementById('uploadFileRemove');
-
-        // Open modal
-        uploadBtn.addEventListener('click', function() {
-            modal.style.display = 'flex';
-            const currentDate = document.getElementById('weekEndingDate').value;
-            if (uploadWeekEnding) {
-                uploadWeekEnding.value = currentDate || '';
-            }
-            selectedFile = null;
-            confirmBtn.disabled = true;
-            fileArea.style.display = 'block';
-            fileInfo.style.display = 'none';
-            fileInput.value = '';
-        });
-
-        function closeUploadModal() {
-            modal.style.display = 'none';
-            confirmBtn.disabled = true;
-            selectedFile = null;
-        }
-
-        // Close modal functions
-        if (closeBtn) closeBtn.addEventListener('click', closeUploadModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeUploadModal);
-        if (overlay) overlay.addEventListener('click', closeUploadModal);
-
-        // Close on Escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && modal.style.display === 'flex') {
-                closeUploadModal();
-            }
-        });
-
-        // File input change
-        if (fileInput) {
-            fileInput.addEventListener('change', function(e) {
-                e.stopPropagation();
-                if (this.files && this.files.length > 0) {
-                    handleFileSelect(this.files[0]);
-                }
-            });
-        }
-
-        // Click on file area triggers file input
-        if (fileArea) {
-            fileArea.addEventListener('click', function(e) {
-                if (e.target.tagName !== 'INPUT') {
-                    if (fileInput) fileInput.click();
-                }
-            });
-
-            // Drag and drop
-            fileArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                this.classList.add('dragover');
-            });
-
-            fileArea.addEventListener('dragleave', function(e) {
-                e.preventDefault();
-                this.classList.remove('dragover');
-            });
-
-            fileArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                this.classList.remove('dragover');
-                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                    handleFileSelect(e.dataTransfer.files[0]);
-                }
-            });
-        }
-
-        // Handle file selection
-        function handleFileSelect(file) {
-            const validTypes = [
-                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                'application/vnd.ms-excel',
-                'text/csv'
-            ];
-            const validExtensions = ['.xlsx', '.xls', '.csv'];
-            
-            const fileExt = '.' + file.name.split('.').pop().toLowerCase();
-            const isValidType = validTypes.includes(file.type) || validExtensions.includes(fileExt);
-            
-            if (!isValidType) {
-                showToast('❌ Please select an Excel or CSV file', 'error');
-                return;
-            }
-            
-            selectedFile = file;
-            fileName.textContent = file.name;
-            fileInfo.style.display = 'flex';
-            fileArea.style.display = 'none';
-            confirmBtn.disabled = false;
-            showToast('✅ File selected: ' + file.name, 'success');
-        }
-
-        // Remove file
-        if (fileRemove) {
-            fileRemove.addEventListener('click', function() {
-                selectedFile = null;
-                fileInput.value = '';
-                fileInfo.style.display = 'none';
-                fileArea.style.display = 'block';
-                confirmBtn.disabled = true;
-            });
-        }
-
-        // Confirm upload
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', function() {
-                const weekEnding = uploadWeekEnding.value || document.getElementById('weekEndingDate').value;
+        
+        if (uploadBtn) {
+            uploadBtn.addEventListener('click', function() {
+                const uploadHandlerUrl = window.APP_CONFIG.UPLOAD_HANDLER_URL;
                 
-                if (!weekEnding) {
-                    showToast('⚠️ Please select a week ending date', 'warning');
+                if (!uploadHandlerUrl || uploadHandlerUrl.includes('YOUR_UPLOAD_HANDLER_DEPLOYMENT_ID')) {
+                    showToast('❌ Upload handler not configured. Please set UPLOAD_HANDLER_URL in config.js', 'error');
                     return;
                 }
-
-                if (!selectedFile) {
-                    showToast('⚠️ Please select a file to upload', 'warning');
-                    return;
-                }
-
-                confirmBtn.disabled = true;
-                uploadToTrialBalance(weekEnding, selectedFile);
+                
+                // Open upload handler in new window/popup
+                window.open(uploadHandlerUrl, 'dailyLiquidityUpload', 'width=600,height=700,resizable=yes,scrollbars=yes');
+                
+                showToast('📤 Opening upload handler...', 'info');
             });
         }
     }
@@ -478,9 +292,6 @@
     };
 
     // Expose functions for testing
-    window.closeUploadModal = function() {
-        const modal = document.getElementById('uploadModal');
-        if (modal) modal.style.display = 'none';
-    };
+    window.renderLiquidityTable = renderTable;
 
 })();
