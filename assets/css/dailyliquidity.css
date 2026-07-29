@@ -699,3 +699,86 @@
         display: none !important;
     }
 }
+/* Highlighted rows */
+.highlighted-row {
+    background-color: #fef3c7 !important;
+    border-left: 4px solid #f59e0b;
+}
+
+.highlighted-row td {
+    font-weight: 700 !important;
+    color: #92400e;
+}
+
+.highlighted-row td.numeric.highlighted {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+/* Percentage cells */
+.percentage {
+    font-weight: 600;
+    color: #1e40af;
+}
+
+/* Positive values */
+.positive {
+    color: #16a34a;
+}
+
+.negative {
+    color: #dc2626;
+}
+
+/* Section headers */
+.section-header {
+    background-color: #e5e7eb;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.section-header td {
+    padding: 8px 12px;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+/* Total rows */
+.total-row {
+    background-color: #dbeafe;
+    border-top: 2px solid #3b82f6;
+}
+
+.total-row td {
+    font-weight: 600;
+}
+
+/* Surplus rows */
+.surplus-row {
+    background-color: #f0fdf4;
+    border-top: 2px solid #22c55e;
+}
+
+.surplus-row td {
+    font-weight: 600;
+}
+
+/* Empty cells */
+.empty-cell {
+    color: #9ca3af;
+}
+
+/* Row labels */
+.row-label {
+    padding-left: 12px !important;
+    font-size: 13px;
+    color: #374151;
+}
+
+/* Numeric cells */
+.numeric {
+    text-align: right;
+    padding-right: 12px !important;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+}
