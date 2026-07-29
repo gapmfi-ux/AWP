@@ -47,7 +47,7 @@
         'Regulatory Credit Risk Reserve'
     ];
 
-    // Mapping from heading label to table row index (based on your document structure)
+    // Mapping from heading label to table row index
     const HEADING_TO_ROW_MAP = {
         // TOTAL DEPOSITS LIABILITY (row 0)
         'Savings Account': 0,
@@ -193,51 +193,118 @@
         });
     }
 
-    // ---------- BUILD TABLE DATA FROM VALUES ----------
-    function buildTableDataFromValues(values) {
+    function formatDateKey(date) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        d.setHours(0, 0, 0, 0);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE ----------
+    function buildTableDataForDate(rowValues, targetDate) {
         const tableData = getEmptyRows();
 
-        if (!values || values.length < 2) {
+        if (!rowValues || rowValues.length < 2) {
             return tableData;
         }
 
-        // Map values to table rows (summing where multiple headings map to same row)
-        for (let i = 1; i < values.length && i < HEADINGS.length; i++) {
+        // The rowValues array is: [date, val1, val2, ...]
+        // where val1 corresponds to HEADINGS[1], val2 to HEADINGS[2], etc.
+        // We need to map each value to the correct row based on its heading
+        
+        for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
-            const val = values[i];
+            const val = rowValues[i];
             
             if (heading && val !== undefined && val !== null && val !== '') {
                 const rowIndex = HEADING_TO_ROW_MAP[heading];
                 if (rowIndex !== undefined && tableData[rowIndex]) {
-                    const colIndex = i - 1;
-                    if (colIndex >= 0 && colIndex < 7) {
-                        const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
-                        tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
-                    }
+                    // The value goes to the first column (index 0) since we're displaying a single date
+                    // But if we have multiple dates, we need to determine which column
+                    // For now, we put it in column 0 (the first day of the week)
+                    // The column index should be determined by which day of the week this date is
+                    const colIndex = 0; // Default to first column
+                    const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
+                    tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
                 }
             }
         }
 
-        // Calculate all derived rows
+        // Calculate all derived rows for the populated columns
+        calculateDerivedRowsForDate(tableData, targetDate);
+
+        return tableData;
+    }
+
+    // ---------- BUILD TABLE DATA WITH MULTIPLE DATES ----------
+    function buildTableDataFromSheetData(sheetData, weekEndingDate) {
+        // sheetData is an array of rows: [{ date: '2024-01-01', values: [date, val1, val2, ...] }, ...]
+        // weekEndingDate is the selected week ending date
+        
+        const tableData = getEmptyRows();
+        
+        if (!sheetData || sheetData.length === 0) {
+            return tableData;
+        }
+
+        // Get the 7 days of the week
+        const weekDates = getWeekDatesFromEnding(weekEndingDate);
+        const weekDateKeys = weekDates.map(d => formatDateKey(d));
+        
+        // Create a map of date -> row values for quick lookup
+        const dataMap = {};
+        sheetData.forEach(row => {
+            const dateKey = formatDateKey(row.date);
+            if (dateKey) {
+                dataMap[dateKey] = row.values;
+            }
+        });
+
+        // For each day of the week, populate the table
+        weekDateKeys.forEach((dateKey, colIndex) => {
+            if (dataMap[dateKey]) {
+                const rowValues = dataMap[dateKey];
+                
+                // Map each value to the correct row
+                for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
+                    const heading = HEADINGS[i];
+                    const val = rowValues[i];
+                    
+                    if (heading && val !== undefined && val !== null && val !== '') {
+                        const rowIndex = HEADING_TO_ROW_MAP[heading];
+                        if (rowIndex !== undefined && tableData[rowIndex]) {
+                            const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
+                            tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
+                        }
+                    }
+                }
+            }
+        });
+
+        // Calculate derived rows for all columns
         calculateDerivedRows(tableData);
 
         return tableData;
     }
 
-    // ---------- CALCULATE DERIVED ROWS ----------
-    function calculateDerivedRows(tableData) {
+    // ---------- CALCULATE DERIVED ROWS FOR A SINGLE DATE ----------
+    function calculateDerivedRowsForDate(tableData, targetDate) {
         const rows = tableData;
         
+        // Only calculate for column 0 (the first column) for a single date
         for (let col = 0; col < 7; col++) {
             // Get base values
-            const deposits = parseFloat(rows[0].values[col]) || 0; // TOTAL DEPOSITS LIABILITY
-            const currentCall = parseFloat(rows[6].values[col]) || 0; // Current & Call Account Balances
-            const placement = parseFloat(rows[7].values[col]) || 0; // Placement with Other Banks
-            const cash = parseFloat(rows[9].values[col]) || 0; // Cash in hand
-            const govSec = parseFloat(rows[10].values[col]) || 0; // Gov. Securities
-            const totalLoans = parseFloat(rows[20].values[col]) || 0; // TOTAL LOANS & ADVANCES
-            const netWorth = parseFloat(rows[21].values[col]) || 0; // NET WORTH
-            const ppe = parseFloat(rows[22].values[col]) || 0; // Plant, Property & Equipment
+            const deposits = parseFloat(rows[0].values[col]) || 0;
+            const currentCall = parseFloat(rows[6].values[col]) || 0;
+            const placement = parseFloat(rows[7].values[col]) || 0;
+            const cash = parseFloat(rows[9].values[col]) || 0;
+            const govSec = parseFloat(rows[10].values[col]) || 0;
+            const totalLoans = parseFloat(rows[20].values[col]) || 0;
+            const netWorth = parseFloat(rows[21].values[col]) || 0;
+            const ppe = parseFloat(rows[22].values[col]) || 0;
 
             // LIQUIDITY REQUIREMENTS
             const primaryRequired = deposits * 0.08;
@@ -246,7 +313,7 @@
             const secondaryRequired = deposits * 0.20;
             rows[3].values[col] = secondaryRequired;
             
-            rows[4].values[col] = primaryRequired + secondaryRequired; // TRR
+            rows[4].values[col] = primaryRequired + secondaryRequired;
 
             // LIQUID ASSETS
             const totalBalance = currentCall + placement;
@@ -255,7 +322,7 @@
             const tla = totalBalance + cash + govSec;
             rows[11].values[col] = tla;
             
-            rows[12].values[col] = tla - rows[4].values[col]; // SURPLUS/(DEFICIT)
+            rows[12].values[col] = tla - rows[4].values[col];
 
             // RESERVE HELD
             const primaryHeld = totalBalance + cash;
@@ -263,7 +330,7 @@
             rows[14].values[col] = primaryHeld - primaryRequired;
             rows[15].values[col] = primaryHeld - primaryRequired;
             
-            rows[16].values[col] = govSec; // Secondary Reserve Held
+            rows[16].values[col] = govSec;
             rows[17].values[col] = govSec - secondaryRequired;
 
             // PERCENTAGES
@@ -271,6 +338,57 @@
             rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
 
             // RATIOS
+            rows[24].values[col] = deposits > 0 ? tla / deposits : 0;
+            rows[25].values[col] = deposits > 0 ? cash / deposits : 0;
+            rows[26].values[col] = deposits > 0 ? totalLoans / deposits : 0;
+            rows[27].values[col] = netWorth > 0 ? totalLoans / netWorth : 0;
+            rows[28].values[col] = netWorth > 0 ? ppe / netWorth : 0;
+        }
+
+        return rows;
+    }
+
+    // ---------- CALCULATE DERIVED ROWS FOR ALL COLUMNS ----------
+    function calculateDerivedRows(tableData) {
+        const rows = tableData;
+        
+        for (let col = 0; col < 7; col++) {
+            const deposits = parseFloat(rows[0].values[col]) || 0;
+            const currentCall = parseFloat(rows[6].values[col]) || 0;
+            const placement = parseFloat(rows[7].values[col]) || 0;
+            const cash = parseFloat(rows[9].values[col]) || 0;
+            const govSec = parseFloat(rows[10].values[col]) || 0;
+            const totalLoans = parseFloat(rows[20].values[col]) || 0;
+            const netWorth = parseFloat(rows[21].values[col]) || 0;
+            const ppe = parseFloat(rows[22].values[col]) || 0;
+
+            const primaryRequired = deposits * 0.08;
+            rows[2].values[col] = primaryRequired;
+            
+            const secondaryRequired = deposits * 0.20;
+            rows[3].values[col] = secondaryRequired;
+            
+            rows[4].values[col] = primaryRequired + secondaryRequired;
+
+            const totalBalance = currentCall + placement;
+            rows[8].values[col] = totalBalance;
+            
+            const tla = totalBalance + cash + govSec;
+            rows[11].values[col] = tla;
+            
+            rows[12].values[col] = tla - rows[4].values[col];
+
+            const primaryHeld = totalBalance + cash;
+            rows[13].values[col] = primaryHeld;
+            rows[14].values[col] = primaryHeld - primaryRequired;
+            rows[15].values[col] = primaryHeld - primaryRequired;
+            
+            rows[16].values[col] = govSec;
+            rows[17].values[col] = govSec - secondaryRequired;
+
+            rows[18].values[col] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
+            rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
+
             rows[24].values[col] = deposits > 0 ? tla / deposits : 0;
             rows[25].values[col] = deposits > 0 ? cash / deposits : 0;
             rows[26].values[col] = deposits > 0 ? totalLoans / deposits : 0;
@@ -383,8 +501,10 @@
     // ---------- EXPOSE API ----------
     window.LiquidityTable = {
         getEmptyRows: getEmptyRows,
-        buildTableDataFromValues: buildTableDataFromValues,
+        buildTableDataForDate: buildTableDataForDate,
+        buildTableDataFromSheetData: buildTableDataFromSheetData,
         calculateDerivedRows: calculateDerivedRows,
+        calculateDerivedRowsForDate: calculateDerivedRowsForDate,
         renderTable: renderTable,
         formatNumber: formatNumber,
         getWeekDatesFromEnding: getWeekDatesFromEnding,
@@ -393,6 +513,7 @@
         formatDateHeader: formatDateHeader,
         formatWeekEnding: formatWeekEnding,
         setDefaultDate: setDefaultDate,
+        formatDateKey: formatDateKey,
         HEADINGS: HEADINGS,
         HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
     };
