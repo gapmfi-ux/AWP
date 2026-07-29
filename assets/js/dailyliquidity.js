@@ -446,6 +446,30 @@
                 showUploadSuccessModal(json);
             }, 700);
 
+            // --- NEW: After successful upload, kick off server-side import into Daily Liquidity ---
+            // Prefer the explicit weekEnding passed to startUploadProcess, otherwise prefer the server-returned value.
+            (function() {
+                const weekForImport = weekEnding || (json && json.weekEnding) || '';
+                if (window.API && typeof window.API.importLiquidityFromTrialBalance === 'function') {
+                    API.importLiquidityFromTrialBalance(weekForImport)
+                      .then(function(importRes) {
+                        if (importRes && importRes.success) {
+                          showToast('Liquidity import completed: ' + (importRes.message || 'OK'), 'success');
+                        } else {
+                          const msg = importRes && importRes.error ? importRes.error : (importRes && importRes.message) || 'Import failed';
+                          showToast('Liquidity import: ' + msg, 'warning');
+                        }
+                        console.log('importLiquidityFromTrialBalance result:', importRes);
+                      })
+                      .catch(function(err) {
+                        console.error('Error calling importLiquidityFromTrialBalance:', err);
+                        showToast('Liquidity import failed: ' + (err && err.message ? err.message : err), 'error');
+                      });
+                } else {
+                    console.warn('API.importLiquidityFromTrialBalance not available; skipping server import call.');
+                }
+            })();
+
         } catch (error) {
             if (uploadStatusIcon) uploadStatusIcon.innerHTML = '<i class="fas fa-times-circle" style="color:#dc2626;"></i>';
             if (uploadStatusMessage) uploadStatusMessage.textContent = 'Error: ' + (error.message || error.toString());
