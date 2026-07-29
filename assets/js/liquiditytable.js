@@ -47,10 +47,42 @@
         'Regulatory Credit Risk Reserve'
     ];
 
-    // Mapping from heading label to table row index
+    // Mapping from heading label to table row index (based on your document structure)
     const HEADING_TO_ROW_MAP = {
-        'Head Office Vault': 9,  // Cash in hand
-        'Personal Loan': 20,     // TOTAL LOANS & ADVANCES (part of sum)
+        // TOTAL DEPOSITS LIABILITY (row 0)
+        'Savings Account': 0,
+        'Savings Trust Account': 0,
+        'Susu Account': 0,
+        'Susu Trust Account': 0,
+        'GAP Kiddie Account': 0,
+        'Staff Salary Account': 0,
+        'GAP Fixed Term Deposit': 0,
+        'GAP Borrowings': 0,
+        
+        // Current & Call Account Balances (row 6)
+        'CalBank': 6,
+        'Unibank - Current Account': 6,
+        'Fidelity Bank': 6,
+        'Fidelity Bank - Call Account': 6,
+        'CBG - Call Account': 6,
+        'Ecobank': 6,
+        'GCB': 6,
+        
+        // Placement with Other Banks (row 7)
+        'CBG - Fixed Deposit': 7,
+        'Dalex Finance': 7,
+        
+        // Cash in hand (row 9)
+        'Head Office Vault': 9,
+        
+        // Gov. Securities (row 10)
+        'GOG Treasury Bills - CBG': 10,
+        'GOG Treasury Bills - Fidelity': 10,
+        'GOG Treasury Bills - Ecobank': 10,
+        'GOG Treasury Bills- Cal Bank': 10,
+        
+        // TOTAL LOANS & ADVANCES (row 20)
+        'Personal Loan': 20,
         'Susu Loan': 20,
         'Micro Business Loan': 20,
         'Business Loan': 20,
@@ -63,28 +95,9 @@
         'Employee Loan': 20,
         'Group Loan': 20,
         'Controller Loans': 20,
-        'CalBank': 6,            // Current & Call Account Balances
-        'Unibank - Current Account': 6,
-        'Fidelity Bank': 6,
-        'Fidelity Bank - Call Account': 6,
-        'CBG - Call Account': 6,
-        'Ecobank': 6,
-        'GCB': 6,
-        'CBG - Fixed Deposit': 7, // Placement with Other Banks
-        'Dalex Finance': 7,
-        'GOG Treasury Bills - CBG': 10, // Gov. Securities
-        'GOG Treasury Bills - Fidelity': 10,
-        'GOG Treasury Bills - Ecobank': 10,
-        'GOG Treasury Bills- Cal Bank': 10,
-        'Savings Account': 0,    // TOTAL DEPOSITS LIABILITY
-        'Savings Trust Account': 0,
-        'Susu Account': 0,
-        'Susu Trust Account': 0,
-        'GAP Kiddie Account': 0,
-        'Staff Salary Account': 0,
-        'GAP Fixed Term Deposit': 0,
-        'GAP Borrowings': 0,
-        'Stated Capital': 21,    // NET WORTH (last month close)
+        
+        // NET WORTH (row 21)
+        'Stated Capital': 21,
         'Unaudited Profit Or Loss': 21,
         'Income Surplus': 21,
         'Statutory Reserve': 21,
@@ -116,7 +129,7 @@
             { label: 'Secondary Reserve %', values: ['', '', '', '', '', '', ''] },
             { label: 'TOTAL LOANS & ADVANCES', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'NET WORTH (last month close)', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'Plant, Property & Equipment', values: ['', '', '', '', '', '', ''] },
+            { label: 'Plant, Property & Equipment (PPE)', values: ['', '', '', '', '', '', ''] },
             { isSection: true, label: 'RATIOS' },
             { label: 'Total Liquid Assets/Deposits', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Cash in hand/Deposit', values: ['', '', '', '', '', '', ''], bold: true },
@@ -188,7 +201,7 @@
             return tableData;
         }
 
-        // Map values to table rows
+        // Map values to table rows (summing where multiple headings map to same row)
         for (let i = 1; i < values.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = values[i];
@@ -218,91 +231,50 @@
         for (let col = 0; col < 7; col++) {
             // Get base values
             const deposits = parseFloat(rows[0].values[col]) || 0; // TOTAL DEPOSITS LIABILITY
-            
-            // Current & Call Account Balances (row 6)
-            const currentCall = parseFloat(rows[6].values[col]) || 0;
-            
-            // Placement with Other Banks (row 7)
-            const placement = parseFloat(rows[7].values[col]) || 0;
-            
-            // Cash in hand (row 9)
-            const cash = parseFloat(rows[9].values[col]) || 0;
-            
-            // Gov. Securities (row 10)
-            const govSec = parseFloat(rows[10].values[col]) || 0;
-            
-            // TOTAL LOANS & ADVANCES (row 20)
-            const totalLoans = parseFloat(rows[20].values[col]) || 0;
-            
-            // NET WORTH (row 21)
-            const netWorth = parseFloat(rows[21].values[col]) || 0;
-            
-            // Plant, Property & Equipment (row 22)
-            const ppe = parseFloat(rows[22].values[col]) || 0;
+            const currentCall = parseFloat(rows[6].values[col]) || 0; // Current & Call Account Balances
+            const placement = parseFloat(rows[7].values[col]) || 0; // Placement with Other Banks
+            const cash = parseFloat(rows[9].values[col]) || 0; // Cash in hand
+            const govSec = parseFloat(rows[10].values[col]) || 0; // Gov. Securities
+            const totalLoans = parseFloat(rows[20].values[col]) || 0; // TOTAL LOANS & ADVANCES
+            const netWorth = parseFloat(rows[21].values[col]) || 0; // NET WORTH
+            const ppe = parseFloat(rows[22].values[col]) || 0; // Plant, Property & Equipment
 
-            // ----- LIQUIDITY REQUIREMENTS -----
-            // Primary Reserve required (8%) - row 2
+            // LIQUIDITY REQUIREMENTS
             const primaryRequired = deposits * 0.08;
             rows[2].values[col] = primaryRequired;
             
-            // Secondary Reserve required (20%) - row 3
             const secondaryRequired = deposits * 0.20;
             rows[3].values[col] = secondaryRequired;
             
-            // TOTAL RESERVE REQUIRED - TRR (row 4)
-            rows[4].values[col] = primaryRequired + secondaryRequired;
+            rows[4].values[col] = primaryRequired + secondaryRequired; // TRR
 
-            // ----- LIQUID ASSETS -----
-            // Total Balance with Banks (row 8)
+            // LIQUID ASSETS
             const totalBalance = currentCall + placement;
             rows[8].values[col] = totalBalance;
             
-            // TOTAL LIQUID ASSETS - TLA (row 11)
             const tla = totalBalance + cash + govSec;
             rows[11].values[col] = tla;
             
-            // SURPLUS/(DEFICIT) TLA - TRR (row 12)
-            const trr = rows[4].values[col];
-            rows[12].values[col] = tla - trr;
+            rows[12].values[col] = tla - rows[4].values[col]; // SURPLUS/(DEFICIT)
 
-            // ----- RESERVE HELD -----
-            // Primary Reserve Held (row 13)
+            // RESERVE HELD
             const primaryHeld = totalBalance + cash;
             rows[13].values[col] = primaryHeld;
-            
-            // Surplus/(Deficit)* - row 14
             rows[14].values[col] = primaryHeld - primaryRequired;
-            
-            // Surplus/Deficit (with borrowings)* - row 15
             rows[15].values[col] = primaryHeld - primaryRequired;
             
-            // Secondary Reserve Held (row 16)
-            rows[16].values[col] = govSec;
-            
-            // Surplus/(Deficit)* - row 17
+            rows[16].values[col] = govSec; // Secondary Reserve Held
             rows[17].values[col] = govSec - secondaryRequired;
 
-            // ----- PERCENTAGES -----
-            // Primary Reserve % (row 18)
+            // PERCENTAGES
             rows[18].values[col] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
-            
-            // Secondary Reserve % (row 19)
             rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
 
-            // ----- RATIOS (rows 24-28) -----
-            // Total Liquid Assets/Deposits (row 24)
+            // RATIOS
             rows[24].values[col] = deposits > 0 ? tla / deposits : 0;
-            
-            // Cash in hand/Deposit (row 25)
             rows[25].values[col] = deposits > 0 ? cash / deposits : 0;
-            
-            // Loans/Deposits (row 26)
             rows[26].values[col] = deposits > 0 ? totalLoans / deposits : 0;
-            
-            // Total Loans/Networth (row 27)
             rows[27].values[col] = netWorth > 0 ? totalLoans / netWorth : 0;
-            
-            // PPE/Networth (row 28)
             rows[28].values[col] = netWorth > 0 ? ppe / netWorth : 0;
         }
 
@@ -410,24 +382,17 @@
 
     // ---------- EXPOSE API ----------
     window.LiquidityTable = {
-        // Data building
         getEmptyRows: getEmptyRows,
         buildTableDataFromValues: buildTableDataFromValues,
         calculateDerivedRows: calculateDerivedRows,
-        
-        // Rendering
         renderTable: renderTable,
         formatNumber: formatNumber,
-        
-        // Date utilities
         getWeekDatesFromEnding: getWeekDatesFromEnding,
         updateColumnHeadersWithDates: updateColumnHeadersWithDates,
         updateWeekEnding: updateWeekEnding,
         formatDateHeader: formatDateHeader,
         formatWeekEnding: formatWeekEnding,
         setDefaultDate: setDefaultDate,
-        
-        // Headings
         HEADINGS: HEADINGS,
         HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
     };
