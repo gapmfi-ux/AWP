@@ -2,7 +2,7 @@
 (function() {
     'use strict';
 
-    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ---------
+    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ----------
     const HEADINGS = [
         'Date',
         'Head Office Vault',
@@ -213,14 +213,38 @@
         return year + '-' + month + '-' + day;
     }
 
-    function getDateFromValue(dateValue) {
+    function parseDateFromValue(dateValue) {
         if (dateValue instanceof Date) return dateValue;
+        
         if (typeof dateValue === 'string') {
-            // Try parsing the date string
-            const d = new Date(dateValue);
+            // Try various date formats
+            let d;
+            
+            // Try DD/MM/YYYY or DD-MM-YYYY
+            let parts = dateValue.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+            if (parts) {
+                // parts: [full, day, month, year]
+                d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            // Try YYYY-MM-DD
+            parts = dateValue.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+            if (parts) {
+                d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            // Try standard Date parsing
+            d = new Date(dateValue);
             if (!isNaN(d.getTime())) return d;
         }
+        
         return null;
+    }
+
+    function isEmptyValue(val) {
+        return val === null || val === undefined || val === '' || val === '—' || val === '—';
     }
 
     // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE ----------
@@ -233,7 +257,7 @@
 
         // Get the date from the row
         const dateValue = rowValues[0];
-        const dateObj = getDateFromValue(dateValue);
+        const dateObj = parseDateFromValue(dateValue);
         
         // Determine which column this date belongs to based on the week
         let colIndex = -1;
@@ -258,11 +282,12 @@
             const heading = HEADINGS[i];
             const val = rowValues[i];
             
-            if (heading && val !== undefined && val !== null && val !== '') {
+            if (heading && !isEmptyValue(val)) {
                 const rowIndex = HEADING_TO_ROW_MAP[heading];
                 if (rowIndex !== undefined && tableData[rowIndex]) {
                     const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
-                    tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
+                    const newVal = parseFloat(val) || 0;
+                    tableData[rowIndex].values[colIndex] = currentVal + newVal;
                 }
             }
         }
@@ -348,7 +373,6 @@
             if (item.totalRow) rowClass = 'total-row';
             else if (item.surplusRow) rowClass = 'surplus-row';
             
-            // Highlight specific rows
             if (item.highlight) {
                 rowClass += ' highlighted-row';
             }
@@ -363,7 +387,9 @@
             if (item.values && item.values.length === 7) {
                 item.values.forEach((val) => {
                     let displayVal = '';
-                    if (val !== undefined && val !== null && String(val).trim() !== '') {
+                    const isEmpty = isEmptyValue(val) || val === 0 || val === '0' || val === '0.00';
+                    
+                    if (!isEmpty && val !== undefined && val !== null && String(val).trim() !== '') {
                         if (item.isPercentage) {
                             displayVal = formatPercentage(val);
                         } else {
@@ -461,7 +487,8 @@
         formatWeekEnding: formatWeekEnding,
         setDefaultDate: setDefaultDate,
         formatDateKey: formatDateKey,
-        getDateFromValue: getDateFromValue,
+        parseDateFromValue: parseDateFromValue,
+        isEmptyValue: isEmptyValue,
         HEADINGS: HEADINGS,
         HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
     };
