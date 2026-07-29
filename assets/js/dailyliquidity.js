@@ -83,8 +83,10 @@
             return;
         }
 
-        // Update date picker
+        // Get the date from the response
         const dateStr = data.date || values[0] || '';
+        
+        // Update date picker
         if (dateStr) {
             const datePicker = document.getElementById('weekEndingDate');
             if (datePicker) {
@@ -105,9 +107,14 @@
             }
         }
 
-        // Build and render table data
+        // Build table data for this specific date
         if (window.LiquidityTable) {
-            const tableData = window.LiquidityTable.buildTableDataFromValues(values);
+            // Use the current week ending date from the picker
+            const datePicker = document.getElementById('weekEndingDate');
+            const weekEnding = datePicker ? datePicker.value : dateStr;
+            
+            // Build the table with the values for the selected date
+            const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
             window.LiquidityTable.renderTable(tableData);
             showToast('Liquidity data loaded successfully', 'success');
         } else {
@@ -334,7 +341,7 @@
                 showUploadSuccessModal(json);
             }, 700);
 
-            // After upload, import liquidity data
+            // After upload, import liquidity data for the week
             const weekForImport = weekEnding || json?.weekEnding || '';
             if (weekForImport) {
                 await loadLiquidityData(weekForImport);
