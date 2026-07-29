@@ -215,7 +215,11 @@
 
     function getDateFromValue(dateValue) {
         if (dateValue instanceof Date) return dateValue;
-        if (typeof dateValue === 'string') return new Date(dateValue);
+        if (typeof dateValue === 'string') {
+            // Try parsing the date string
+            const d = new Date(dateValue);
+            if (!isNaN(d.getTime())) return d;
+        }
         return null;
     }
 
@@ -227,15 +231,12 @@
             return tableData;
         }
 
-        // The rowValues array is: [date, val1, val2, ...]
-        // where val1 corresponds to HEADINGS[1], val2 to HEADINGS[2], etc.
-        
         // Get the date from the row
         const dateValue = rowValues[0];
         const dateObj = getDateFromValue(dateValue);
         
         // Determine which column this date belongs to based on the week
-        let colIndex = 0;
+        let colIndex = -1;
         if (dateObj && targetDate) {
             const weekDates = getWeekDatesFromEnding(targetDate);
             const dateKey = formatDateKey(dateObj);
@@ -244,6 +245,12 @@
                     colIndex = index;
                 }
             });
+        }
+        
+        // If date doesn't match any day in the week, don't populate
+        if (colIndex === -1) {
+            console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
+            return tableData;
         }
         
         // Map values to table rows
@@ -266,55 +273,6 @@
         return tableData;
     }
 
-    // ---------- BUILD TABLE DATA WITH MULTIPLE DATES ----------
-    function buildTableDataFromSheetData(sheetData, weekEndingDate) {
-        const tableData = getEmptyRows();
-        
-        if (!sheetData || sheetData.length === 0) {
-            return tableData;
-        }
-
-        // Get the 7 days of the week
-        const weekDates = getWeekDatesFromEnding(weekEndingDate);
-        const weekDateKeys = weekDates.map(d => formatDateKey(d));
-        
-        // Create a map of date -> row values for quick lookup
-        const dataMap = {};
-        sheetData.forEach(row => {
-            const dateObj = getDateFromValue(row.date);
-            if (dateObj) {
-                const dateKey = formatDateKey(dateObj);
-                dataMap[dateKey] = row.values;
-            }
-        });
-
-        // For each day of the week, populate the table
-        weekDateKeys.forEach((dateKey, colIndex) => {
-            if (dataMap[dateKey]) {
-                const rowValues = dataMap[dateKey];
-                
-                // Map each value to the correct row
-                for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
-                    const heading = HEADINGS[i];
-                    const val = rowValues[i];
-                    
-                    if (heading && val !== undefined && val !== null && val !== '') {
-                        const rowIndex = HEADING_TO_ROW_MAP[heading];
-                        if (rowIndex !== undefined && tableData[rowIndex]) {
-                            const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
-                            tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
-                        }
-                    }
-                }
-            }
-        });
-
-        // Calculate derived rows for all columns
-        calculateDerivedRows(tableData);
-
-        return tableData;
-    }
-
     // ---------- CALCULATE DERIVED ROWS ----------
     function calculateDerivedRows(tableData) {
         const rows = tableData;
@@ -331,15 +289,12 @@
             const ppe = parseFloat(rows[22].values[col]) || 0;
 
             // LIQUIDITY REQUIREMENTS
-            // Primary Reserve required (8%) - calculated on TOTAL DEPOSITS LIABILITY
             const primaryRequired = deposits * 0.08;
             rows[2].values[col] = primaryRequired;
             
-            // Secondary Reserve required (20%) - calculated on TOTAL DEPOSITS LIABILITY
             const secondaryRequired = deposits * 0.20;
             rows[3].values[col] = secondaryRequired;
             
-            // TOTAL RESERVE REQUIRED - TRR
             rows[4].values[col] = primaryRequired + secondaryRequired;
 
             // LIQUID ASSETS
@@ -349,33 +304,19 @@
             const tla = totalBalance + cash + govSec;
             rows[11].values[col] = tla;
             
-            // SURPLUS/(DEFICIT) TLA - TRR
             rows[12].values[col] = tla - rows[4].values[col];
 
             // RESERVE HELD
-            // Primary Reserve Held = Total Balance with Banks + Cash in hand
             const primaryHeld = totalBalance + cash;
             rows[13].values[col] = primaryHeld;
-            
-            // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
-            // Note: GAP Borrowings is already included in deposits, so we don't subtract it separately
             rows[14].values[col] = primaryHeld - primaryRequired;
-            
-            // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
-            // This is the same calculation - the difference is in the label/context
             rows[15].values[col] = primaryHeld - primaryRequired;
             
-            // Secondary Reserve Held = Gov. Securities
             rows[16].values[col] = govSec;
-            
-            // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
             rows[17].values[col] = govSec - secondaryRequired;
 
             // PERCENTAGES
-            // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
             rows[18].values[col] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
-            
-            // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
             rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
 
             // RATIOS
@@ -397,7 +338,7 @@
         let html = '';
         const rows = data || getEmptyRows();
 
-        rows.forEach((item, index) => {
+        rows.forEach((item) => {
             if (item.isSection) {
                 html += `<tr class="section-header"><td colspan="8"><i class="fas fa-${item.icon || 'folder-open'}"></i> ${item.label}</td></tr>`;
                 return;
@@ -509,7 +450,6 @@
     window.LiquidityTable = {
         getEmptyRows: getEmptyRows,
         buildTableDataForDate: buildTableDataForDate,
-        buildTableDataFromSheetData: buildTableDataFromSheetData,
         calculateDerivedRows: calculateDerivedRows,
         renderTable: renderTable,
         formatNumber: formatNumber,
