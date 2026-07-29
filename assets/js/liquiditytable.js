@@ -121,12 +121,12 @@
             { label: 'TOTAL LIQUID ASSETS - TLA', values: ['', '', '', '', '', '', ''], bold: true, totalRow: true },
             { label: 'SURPLUS/(DEFICIT) TLA - TRR =', values: ['', '', '', '', '', '', ''], bold: true, surplusRow: true },
             { label: 'Primary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
-            { label: 'Surplus/Deficit (with borrowings)*', values: ['', '', '', '', '', '', ''], negative: true },
+            { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true, highlight: true, bold: true },
+            { label: 'Surplus/Deficit (with borrowings)*', values: ['', '', '', '', '', '', ''], negative: true, highlight: true, bold: true },
             { label: 'Secondary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
-            { label: 'Primary Reserve %', values: ['', '', '', '', '', '', ''] },
-            { label: 'Secondary Reserve %', values: ['', '', '', '', '', '', ''] },
+            { label: 'Primary Reserve %', values: ['', '', '', '', '', '', ''], bold: true, highlight: true, isPercentage: true },
+            { label: 'Secondary Reserve %', values: ['', '', '', '', '', '', ''], bold: true, highlight: true, isPercentage: true },
             { label: 'TOTAL LOANS & ADVANCES', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'NET WORTH (last month close)', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Plant, Property & Equipment (PPE)', values: ['', '', '', '', '', '', ''] },
@@ -171,8 +171,11 @@
     }
 
     function formatDateHeader(date) {
-        const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-        return days[date.getDay()] + ' ' + date.getDate();
+        // Format as DD-MM-YYYY
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return day + '-' + month + '-' + year;
     }
 
     function formatWeekEnding(date) {
@@ -193,6 +196,13 @@
         });
     }
 
+    function formatPercentage(val) {
+        if (val === null || val === undefined || val === '') return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return String(val);
+        return num.toFixed(2) + '%';
+    }
+
     function formatDateKey(date) {
         const d = new Date(date);
         if (isNaN(d.getTime())) return '';
@@ -201,6 +211,12 @@
         const month = String(d.getMonth() + 1).padStart(2, '0');
         const day = String(d.getDate()).padStart(2, '0');
         return year + '-' + month + '-' + day;
+    }
+
+    function getDateFromValue(dateValue) {
+        if (dateValue instanceof Date) return dateValue;
+        if (typeof dateValue === 'string') return new Date(dateValue);
+        return null;
     }
 
     // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE ----------
@@ -213,8 +229,24 @@
 
         // The rowValues array is: [date, val1, val2, ...]
         // where val1 corresponds to HEADINGS[1], val2 to HEADINGS[2], etc.
-        // We need to map each value to the correct row based on its heading
         
+        // Get the date from the row
+        const dateValue = rowValues[0];
+        const dateObj = getDateFromValue(dateValue);
+        
+        // Determine which column this date belongs to based on the week
+        let colIndex = 0;
+        if (dateObj && targetDate) {
+            const weekDates = getWeekDatesFromEnding(targetDate);
+            const dateKey = formatDateKey(dateObj);
+            weekDates.forEach((d, index) => {
+                if (formatDateKey(d) === dateKey) {
+                    colIndex = index;
+                }
+            });
+        }
+        
+        // Map values to table rows
         for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = rowValues[i];
@@ -222,28 +254,20 @@
             if (heading && val !== undefined && val !== null && val !== '') {
                 const rowIndex = HEADING_TO_ROW_MAP[heading];
                 if (rowIndex !== undefined && tableData[rowIndex]) {
-                    // The value goes to the first column (index 0) since we're displaying a single date
-                    // But if we have multiple dates, we need to determine which column
-                    // For now, we put it in column 0 (the first day of the week)
-                    // The column index should be determined by which day of the week this date is
-                    const colIndex = 0; // Default to first column
                     const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
                     tableData[rowIndex].values[colIndex] = currentVal + (parseFloat(val) || 0);
                 }
             }
         }
 
-        // Calculate all derived rows for the populated columns
-        calculateDerivedRowsForDate(tableData, targetDate);
+        // Calculate all derived rows
+        calculateDerivedRows(tableData);
 
         return tableData;
     }
 
     // ---------- BUILD TABLE DATA WITH MULTIPLE DATES ----------
     function buildTableDataFromSheetData(sheetData, weekEndingDate) {
-        // sheetData is an array of rows: [{ date: '2024-01-01', values: [date, val1, val2, ...] }, ...]
-        // weekEndingDate is the selected week ending date
-        
         const tableData = getEmptyRows();
         
         if (!sheetData || sheetData.length === 0) {
@@ -257,8 +281,9 @@
         // Create a map of date -> row values for quick lookup
         const dataMap = {};
         sheetData.forEach(row => {
-            const dateKey = formatDateKey(row.date);
-            if (dateKey) {
+            const dateObj = getDateFromValue(row.date);
+            if (dateObj) {
+                const dateKey = formatDateKey(dateObj);
                 dataMap[dateKey] = row.values;
             }
         });
@@ -290,11 +315,10 @@
         return tableData;
     }
 
-    // ---------- CALCULATE DERIVED ROWS FOR A SINGLE DATE ----------
-    function calculateDerivedRowsForDate(tableData, targetDate) {
+    // ---------- CALCULATE DERIVED ROWS ----------
+    function calculateDerivedRows(tableData) {
         const rows = tableData;
         
-        // Only calculate for column 0 (the first column) for a single date
         for (let col = 0; col < 7; col++) {
             // Get base values
             const deposits = parseFloat(rows[0].values[col]) || 0;
@@ -307,12 +331,15 @@
             const ppe = parseFloat(rows[22].values[col]) || 0;
 
             // LIQUIDITY REQUIREMENTS
+            // Primary Reserve required (8%) - calculated on TOTAL DEPOSITS LIABILITY
             const primaryRequired = deposits * 0.08;
             rows[2].values[col] = primaryRequired;
             
+            // Secondary Reserve required (20%) - calculated on TOTAL DEPOSITS LIABILITY
             const secondaryRequired = deposits * 0.20;
             rows[3].values[col] = secondaryRequired;
             
+            // TOTAL RESERVE REQUIRED - TRR
             rows[4].values[col] = primaryRequired + secondaryRequired;
 
             // LIQUID ASSETS
@@ -322,73 +349,36 @@
             const tla = totalBalance + cash + govSec;
             rows[11].values[col] = tla;
             
+            // SURPLUS/(DEFICIT) TLA - TRR
             rows[12].values[col] = tla - rows[4].values[col];
 
             // RESERVE HELD
+            // Primary Reserve Held = Total Balance with Banks + Cash in hand
             const primaryHeld = totalBalance + cash;
             rows[13].values[col] = primaryHeld;
+            
+            // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
+            // Note: GAP Borrowings is already included in deposits, so we don't subtract it separately
             rows[14].values[col] = primaryHeld - primaryRequired;
+            
+            // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
+            // This is the same calculation - the difference is in the label/context
             rows[15].values[col] = primaryHeld - primaryRequired;
             
+            // Secondary Reserve Held = Gov. Securities
             rows[16].values[col] = govSec;
+            
+            // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
             rows[17].values[col] = govSec - secondaryRequired;
 
             // PERCENTAGES
+            // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
             rows[18].values[col] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
+            
+            // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
             rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
 
             // RATIOS
-            rows[24].values[col] = deposits > 0 ? tla / deposits : 0;
-            rows[25].values[col] = deposits > 0 ? cash / deposits : 0;
-            rows[26].values[col] = deposits > 0 ? totalLoans / deposits : 0;
-            rows[27].values[col] = netWorth > 0 ? totalLoans / netWorth : 0;
-            rows[28].values[col] = netWorth > 0 ? ppe / netWorth : 0;
-        }
-
-        return rows;
-    }
-
-    // ---------- CALCULATE DERIVED ROWS FOR ALL COLUMNS ----------
-    function calculateDerivedRows(tableData) {
-        const rows = tableData;
-        
-        for (let col = 0; col < 7; col++) {
-            const deposits = parseFloat(rows[0].values[col]) || 0;
-            const currentCall = parseFloat(rows[6].values[col]) || 0;
-            const placement = parseFloat(rows[7].values[col]) || 0;
-            const cash = parseFloat(rows[9].values[col]) || 0;
-            const govSec = parseFloat(rows[10].values[col]) || 0;
-            const totalLoans = parseFloat(rows[20].values[col]) || 0;
-            const netWorth = parseFloat(rows[21].values[col]) || 0;
-            const ppe = parseFloat(rows[22].values[col]) || 0;
-
-            const primaryRequired = deposits * 0.08;
-            rows[2].values[col] = primaryRequired;
-            
-            const secondaryRequired = deposits * 0.20;
-            rows[3].values[col] = secondaryRequired;
-            
-            rows[4].values[col] = primaryRequired + secondaryRequired;
-
-            const totalBalance = currentCall + placement;
-            rows[8].values[col] = totalBalance;
-            
-            const tla = totalBalance + cash + govSec;
-            rows[11].values[col] = tla;
-            
-            rows[12].values[col] = tla - rows[4].values[col];
-
-            const primaryHeld = totalBalance + cash;
-            rows[13].values[col] = primaryHeld;
-            rows[14].values[col] = primaryHeld - primaryRequired;
-            rows[15].values[col] = primaryHeld - primaryRequired;
-            
-            rows[16].values[col] = govSec;
-            rows[17].values[col] = govSec - secondaryRequired;
-
-            rows[18].values[col] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
-            rows[19].values[col] = deposits > 0 ? (govSec / deposits) * 100 : 0;
-
             rows[24].values[col] = deposits > 0 ? tla / deposits : 0;
             rows[25].values[col] = deposits > 0 ? cash / deposits : 0;
             rows[26].values[col] = deposits > 0 ? totalLoans / deposits : 0;
@@ -407,7 +397,7 @@
         let html = '';
         const rows = data || getEmptyRows();
 
-        rows.forEach(item => {
+        rows.forEach((item, index) => {
             if (item.isSection) {
                 html += `<tr class="section-header"><td colspan="8"><i class="fas fa-${item.icon || 'folder-open'}"></i> ${item.label}</td></tr>`;
                 return;
@@ -416,6 +406,11 @@
             let rowClass = '';
             if (item.totalRow) rowClass = 'total-row';
             else if (item.surplusRow) rowClass = 'surplus-row';
+            
+            // Highlight specific rows
+            if (item.highlight) {
+                rowClass += ' highlighted-row';
+            }
 
             let labelHtml = item.label;
             if (item.icon) {
@@ -426,11 +421,23 @@
             let valueCells = '';
             if (item.values && item.values.length === 7) {
                 item.values.forEach((val) => {
-                    const displayVal = (val !== undefined && val !== null && String(val).trim() !== '') ? 
-                        formatNumber(val) : '<span class="empty-cell">—</span>';
+                    let displayVal = '';
+                    if (val !== undefined && val !== null && String(val).trim() !== '') {
+                        if (item.isPercentage) {
+                            displayVal = formatPercentage(val);
+                        } else {
+                            displayVal = formatNumber(val);
+                        }
+                    } else {
+                        displayVal = '<span class="empty-cell">—</span>';
+                    }
+                    
                     let cls = 'numeric';
                     if (item.positive) cls += ' positive';
                     if (item.negative) cls += ' negative';
+                    if (item.isPercentage) cls += ' percentage';
+                    if (item.highlight) cls += ' highlighted';
+                    
                     valueCells += `<td class="${cls}">${displayVal}</td>`;
                 });
             } else {
@@ -504,9 +511,9 @@
         buildTableDataForDate: buildTableDataForDate,
         buildTableDataFromSheetData: buildTableDataFromSheetData,
         calculateDerivedRows: calculateDerivedRows,
-        calculateDerivedRowsForDate: calculateDerivedRowsForDate,
         renderTable: renderTable,
         formatNumber: formatNumber,
+        formatPercentage: formatPercentage,
         getWeekDatesFromEnding: getWeekDatesFromEnding,
         updateColumnHeadersWithDates: updateColumnHeadersWithDates,
         updateWeekEnding: updateWeekEnding,
@@ -514,6 +521,7 @@
         formatWeekEnding: formatWeekEnding,
         setDefaultDate: setDefaultDate,
         formatDateKey: formatDateKey,
+        getDateFromValue: getDateFromValue,
         HEADINGS: HEADINGS,
         HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
     };
