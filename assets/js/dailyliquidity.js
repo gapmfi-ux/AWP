@@ -156,16 +156,17 @@
         }
     }
 
-    // ---------- HANDLE DATE CHANGE ----------
-    function handleDateChange() {
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker) {
-            if (window.LiquidityTable) {
-                window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
-            }
-            loadLiquidityData(datePicker.value);
-        }
+    // Replaces the previous handleDateChange: update headers only, do NOT trigger import
+function handleDateChange() {
+    const datePicker = document.getElementById('weekEndingDate');
+    if (!datePicker) return;
+
+    // Only update column headers when user changes the date.
+    // Do NOT call loadLiquidityData here so the change doesn't trigger an import.
+    if (window.LiquidityTable) {
+        window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
     }
+}
 
     // ============================================
     // UPLOAD MODAL HANDLING
