@@ -1,0 +1,67 @@
+<!-- Weekly Liquidity Module -->
+<div class="weekly-liquidity-container">
+    <!-- Module Header -->
+    <div class="weekly-liquidity-header">
+        <h1><i class="fas fa-water"></i> Liquidity Management</h1>
+        <div class="weekly-liquidity-controls">
+            <div class="week-selector">
+                <label for="weeklyWeekEndingDate"><i class="far fa-calendar-alt"></i> Week Ending:</label>
+                <input type="date" id="weeklyWeekEndingDate" value="">
+            </div>
+            <button class="refresh-btn" onclick="refreshWeeklyLiquidity()" title="Refresh Data">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="weekly-tabs">
+        <button class="weekly-tab active" data-tab="dailyTable" onclick="switchWeeklyTab('dailyTable')">
+            <i class="fas fa-table"></i> <span>Daily Table</span>
+        </button>
+        <button class="weekly-tab" data-tab="weeklyReport" onclick="switchWeeklyTab('weeklyReport')">
+            <i class="fas fa-chart-bar"></i> <span>Weekly Report</span>
+        </button>
+    </div>
+
+    <!-- Tab Content: Daily Table -->
+    <div class="weekly-tab-content active" id="dailyTableContent">
+        <div class="liquidity-table-wrapper">
+            <div id="dailyLiquidityTableContainer"></div>
+        </div>
+    </div>
+
+    <!-- Tab Content: Weekly Report -->
+    <div class="weekly-tab-content" id="weeklyReportContent">
+        <div class="weekly-report-wrapper">
+            <div class="weekly-report-actions">
+                <button class="print-btn" onclick="printWeeklyReport()">
+                    <i class="fas fa-print"></i> Print Report
+                </button>
+                <button class="export-btn" onclick="exportWeeklyReport()">
+                    <i class="fas fa-file-excel"></i> Export
+                </button>
+            </div>
+            <div id="weeklyReportTableContainer">
+                <div class="loading-report">
+                    <div class="loading-spinner-inline"></div>
+                    <p>Loading weekly report...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="weekly-footer">
+        <span><i class="far fa-calendar-check"></i> Week ending: <span id="weeklyFooterDate">Loading...</span></span>
+        <span><i class="fas fa-info-circle"></i> Data sourced from Daily Liquidity</span>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="weekly-loading-modal" id="weeklyLoadingModal" style="display: none;">
+    <div class="weekly-loading-content">
+        <div class="loading-spinner"></div>
+        <p id="weeklyLoadingMessage">Loading data...</p>
+    </div>
+</div>
