@@ -1,9 +1,10 @@
-// Daily Liquidity Module - UI, upload, and data loading
+// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
     let isLoading = false;
     let __dl_selectedFile = null;
+    let isInitialized = false;
 
     // ---------- LOADING MODAL ----------
     function showLoadingModal(message) {
@@ -64,160 +65,106 @@
         }, 3500);
     }
 
- // ---------- POPULATE TABLE FROM LIQUIDITY DATA (defensive) ----------
-function populateTableFromLiquidityData(data) {
-    if (!data) {
-        console.warn('populateTableFromLiquidityData: no data received');
-        showToast('No data available to populate', 'warning');
-        if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
-        return;
-    }
-
-    console.debug('populateTableFromLiquidityData - server response:', data);
-
-    // server may return { success: true, values: [...] } or { values: [...] } etc.
-    const rawValues = data.values || [];
-    // If server returned a nested array (multiple rows), keep as-is; otherwise wrap single row so handling is consistent
-    let rows = [];
-    if (Array.isArray(rawValues) && rawValues.length > 0 && Array.isArray(rawValues[0])) {
-        rows = rawValues; // already array of rows
-    } else if (Array.isArray(rawValues) && rawValues.length > 0) {
-        // single row (1D) -> treat as single row array
-        rows = [rawValues];
-    } else {
-        // fallback: server may have returned the row directly as data (not under values)
-        if (Array.isArray(data)) {
-            if (Array.isArray(data[0])) rows = data;
-            else rows = [data];
-        } else {
-            console.warn('populateTableFromLiquidityData: no usable values found in response');
-            showToast('No data rows found', 'warning');
-            if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
+    // ---------- POPULATE TABLE FROM LIQUIDITY DATA ----------
+    function populateTableFromLiquidityData(data) {
+        if (!data || !data.success) {
+            if (window.LiquidityTable) {
+                window.LiquidityTable.renderTable(null);
+            }
             return;
         }
-    }
 
-    // Determine the week ending we should use (prefer date picker value; else data.date; else today)
-    const datePicker = document.getElementById('weekEndingDate');
-    const weekEnding = datePicker && datePicker.value ? datePicker.value : (data.date || '');
+        const values = data.values || [];
+        if (values.length < 2) {
+            if (window.LiquidityTable) {
+                window.LiquidityTable.renderTable(null);
+            }
+            return;
+        }
 
-    // If multiple rows were returned, try to pick the row whose date falls in the selected week
-    let matchedRow = null;
-    if (rows.length === 1) {
-        matchedRow = rows[0];
-    } else {
-        // Normalize week dates and compare
-        const weekDates = window.LiquidityTable ? window.LiquidityTable.getWeekDatesFromEnding(weekEnding || window.LiquidityTable.setDefaultDate()) : null;
-        for (let r of rows) {
-            const rowDateRaw = r && r.length ? r[0] : null;
-            const rowDate = window.LiquidityTable ? window.LiquidityTable.parseDateFromValue(rowDateRaw) : null;
-            if (!rowDate || !weekDates) continue;
-            // compare day keys
-            const rowKey = window.LiquidityTable.formatDateKey(rowDate);
-            for (let d of weekDates) {
-                if (window.LiquidityTable.formatDateKey(d) === rowKey) {
-                    matchedRow = r;
-                    break;
+        // Get the date from the response
+        const dateStr = data.date || values[0] || '';
+        
+        // Update date picker to match the data date
+        if (dateStr) {
+            const datePicker = document.getElementById('weekEndingDate');
+            if (datePicker) {
+                try {
+                    const d = new Date(dateStr);
+                    if (!isNaN(d.getTime())) {
+                        const year = d.getFullYear();
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const day = String(d.getDate()).padStart(2, '0');
+                        datePicker.value = year + '-' + month + '-' + day;
+                        if (window.LiquidityTable) {
+                            window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Could not parse date:', dateStr);
                 }
             }
-            if (matchedRow) break;
+        }
+
+        // Build table data for this specific date
+        if (window.LiquidityTable) {
+            const datePicker = document.getElementById('weekEndingDate');
+            const weekEnding = datePicker ? datePicker.value : dateStr;
+            
+            const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
+            window.LiquidityTable.renderTable(tableData);
         }
     }
 
-    if (!matchedRow) {
-        // As a last resort, try to use first non-empty row
-        matchedRow = rows.find(r => Array.isArray(r) && r.some(v => v !== null && v !== '' && v !== 0));
-    }
-
-    if (!matchedRow) {
-        console.warn('populateTableFromLiquidityData: no matching row found for weekEnding:', weekEnding, 'rows:', rows);
-        showToast('No matching data for selected week', 'warning');
-        if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
-        return;
-    }
-
-    // Update the date picker/display if server provided a date string at top of matchedRow or data.date
-    const serverDateCandidate = data.date || matchedRow[0];
-    if (serverDateCandidate) {
+    // ---------- LOAD LIQUIDITY DATA FROM SHEET (READ ONLY - NO IMPORT) ----------
+    async function loadLiquidityData(weekEnding) {
+        if (isLoading) return;
+        
+        showLoadingModal('Loading liquidity data...');
+        
         try {
-            const d = new Date(serverDateCandidate);
-            if (!isNaN(d.getTime())) {
-                if (datePicker) {
-                    const year = d.getFullYear();
-                    const month = String(d.getMonth() + 1).padStart(2, '0');
-                    const day = String(d.getDate()).padStart(2, '0');
-                    datePicker.value = year + '-' + month + '-' + day;
-                    if (window.LiquidityTable) window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
+            const api = window.API;
+            if (!api || typeof api.importLiquidityFromTrialBalance !== 'function') {
+                throw new Error('API service not available');
+            }
+            
+            // This ONLY reads from the Daily Liquidity sheet - NO import from Trial Balance
+            const result = await api.importLiquidityFromTrialBalance(weekEnding);
+            
+            if (result && result.success) {
+                populateTableFromLiquidityData(result);
+            } else {
+                const errorMsg = result && result.error ? result.error : 'No data available for this week';
+                showToast(errorMsg, 'warning');
+                if (window.LiquidityTable) {
+                    window.LiquidityTable.renderTable(null);
                 }
             }
-        } catch (e) {
-            console.debug('populateTableFromLiquidityData: could not parse server date', serverDateCandidate, e);
+        } catch (error) {
+            console.error('Error loading liquidity data:', error);
+            showToast('Failed to load data: ' + (error.message || 'Unknown error'), 'error');
+            if (window.LiquidityTable) {
+                window.LiquidityTable.renderTable(null);
+            }
+        } finally {
+            hideLoadingModal();
         }
     }
 
-    // Build and render using the matched row
-    try {
-        const tableData = window.LiquidityTable.buildTableDataForDate(matchedRow, weekEnding);
-        window.LiquidityTable.renderTable(tableData);
-        showToast('Liquidity data loaded', 'success');
-    } catch (err) {
-        console.error('populateTableFromLiquidityData - failed to build/render table:', err);
-        showToast('Failed to render liquidity data', 'error');
-        if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
-    }
-}
-
-// ---------- LOAD LIQUIDITY DATA (with debug) ----------
-async function loadLiquidityData(weekEnding) {
-    if (isLoading) return;
-
-    showLoadingModal('Loading liquidity data...');
-
-    try {
-        const api = window.API;
-        if (!api || typeof api.importLiquidityFromTrialBalance !== 'function') {
-            console.error('loadLiquidityData: API.importLiquidityFromTrialBalance not available');
-            throw new Error('API service not available');
-        }
-
-        console.debug('Calling importLiquidityFromTrialBalance with weekEnding=', weekEnding);
-        const result = await api.importLiquidityFromTrialBalance(weekEnding);
-        console.debug('importLiquidityFromTrialBalance result:', result);
-
-        if (result && (result.success === true || result.values)) {
-            populateTableFromLiquidityData(result);
-        } else {
-            const errorMsg = (result && result.error) ? result.error : 'No data available for this week';
-            console.warn('loadLiquidityData: no data -', errorMsg, result);
-            showToast(errorMsg, 'warning');
-            if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
-        }
-    } catch (error) {
-        console.error('Error loading liquidity data:', error);
-        showToast('Failed to load data: ' + (error.message || 'Unknown error'), 'error');
-        if (window.LiquidityTable) window.LiquidityTable.renderTable(null);
-    } finally {
-        hideLoadingModal();
-    }
-}
-
-    // ---------- HANDLE DATE CHANGE ----------
-    // NOTE: Changed behavior — DO NOT call loadLiquidityData when user changes the date picker.
-    // The date picker now only updates column headers and the UI. Import is triggered only after upload.
+    // ---------- HANDLE DATE CHANGE (LOAD ONLY - NO IMPORT) ----------
     function handleDateChange() {
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             if (window.LiquidityTable) {
                 window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
-                // Re-render an empty table so columns reflect the selected week
-                window.LiquidityTable.renderTable(null);
             }
-            // Do NOT call loadLiquidityData here — import should only be triggered on upload.
+            // ONLY LOAD data from the sheet - NO import
+            loadLiquidityData(datePicker.value);
         }
     }
 
     // ============================================
-    // UPLOAD MODAL HANDLING
+    // UPLOAD - TRIGGERS IMPORT FROM TRIAL BALANCE
     // ============================================
 
     function setupUploadButton() {
@@ -267,8 +214,9 @@ async function loadLiquidityData(weekEnding) {
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         if (confirmBtn) {
             confirmBtn.addEventListener('click', function() {
-                const weekEndingInput = document.getElementById('uploadWeekEnding');
-                const weekEnding = weekEndingInput?.value || '';
+                // Get the week ending date from the main page date picker
+                const mainDatePicker = document.getElementById('weekEndingDate');
+                const weekEnding = mainDatePicker ? mainDatePicker.value : '';
                 startUploadProcess(weekEnding);
             });
         }
@@ -287,9 +235,12 @@ async function loadLiquidityData(weekEnding) {
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         if (confirmBtn) confirmBtn.disabled = true;
 
-        const pageDate = document.getElementById('weekEndingDate');
-        const uploadDate = document.getElementById('uploadWeekEnding');
-        if (pageDate && uploadDate) uploadDate.value = pageDate.value || '';
+        // Set the upload modal date picker to match the main page date picker
+        const mainDatePicker = document.getElementById('weekEndingDate');
+        const uploadDatePicker = document.getElementById('uploadWeekEnding');
+        if (mainDatePicker && uploadDatePicker) {
+            uploadDatePicker.value = mainDatePicker.value || '';
+        }
     }
 
     function closeUploadModal() {
@@ -390,10 +341,36 @@ async function loadLiquidityData(weekEnding) {
                 showUploadSuccessModal(json);
             }, 700);
 
-            // After upload, import liquidity data for the week
-            const weekForImport = weekEnding || json?.weekEnding || '';
+            // ============================================================
+            // TRIGGER IMPORT FROM TRIAL BALANCE - ONLY ON UPLOAD
+            // Uses the week ending date from the main page date picker
+            // ============================================================
+            const mainDatePicker = document.getElementById('weekEndingDate');
+            const weekForImport = mainDatePicker ? mainDatePicker.value : weekEnding;
+            
             if (weekForImport) {
-                await loadLiquidityData(weekForImport);
+                if (window.API && typeof window.API.importLiquidityFromTrialBalance === 'function') {
+                    try {
+                        showLoadingModal('Importing liquidity data...');
+                        const importResult = await window.API.importLiquidityFromTrialBalance(weekForImport);
+                        
+                        if (importResult && importResult.success) {
+                            showToast('Liquidity imported successfully', 'success');
+                            // After import, load the data to display
+                            await loadLiquidityData(weekForImport);
+                        } else {
+                            const msg = importResult && importResult.error ? importResult.error : 'Import failed';
+                            showToast('Liquidity import: ' + msg, 'warning');
+                        }
+                    } catch (importError) {
+                        console.error('Error importing liquidity:', importError);
+                        showToast('Liquidity import failed: ' + (importError.message || 'Unknown error'), 'error');
+                    } finally {
+                        hideLoadingModal();
+                    }
+                } else {
+                    console.warn('API.importLiquidityFromTrialBalance not available');
+                }
             }
 
         } catch (error) {
@@ -430,17 +407,23 @@ async function loadLiquidityData(weekEnding) {
         modal.style.display = 'flex';
         const closeBtn = document.getElementById('uploadSuccessClose');
         if (closeBtn) {
-            closeBtn.onclick = () => { modal.style.display = 'none'; };
+            closeBtn.onclick = () => {
+                modal.style.display = 'none';
+            };
         }
     }
 
     // ============================================
-    // INITIALIZE MODULE
+    // INITIALIZE MODULE - NO AUTO IMPORT ON LOAD
     // ============================================
 
     window.initDailyLiquidityModule = function() {
+        if (isInitialized) {
+            console.log('Daily Liquidity already initialized');
+            return;
+        }
+        
         console.log('Initializing Daily Liquidity Module');
-        console.log('Upload Handler URL:', window.APP_CONFIG?.UPLOAD_HANDLER_URL);
         
         if (!window.LiquidityTable) {
             console.error('LiquidityTable not loaded!');
@@ -448,19 +431,25 @@ async function loadLiquidityData(weekEnding) {
             return;
         }
         
+        // Set default date and update headers
         const defaultDate = window.LiquidityTable.setDefaultDate();
         window.LiquidityTable.updateColumnHeadersWithDates(defaultDate);
-        // Render empty table initially; do not auto-import data
+        
+        // Render empty table (no data loaded on page load)
         window.LiquidityTable.renderTable(null);
         
+        // Setup upload button
         setupUploadButton();
         
+        // Date change handler - ONLY LOADS data, does NOT import
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.removeEventListener('change', handleDateChange);
             datePicker.addEventListener('change', handleDateChange);
-            // Do not call loadLiquidityData here — import is triggered only after upload.
         }
+
+        isInitialized = true;
+        console.log('Daily Liquidity Module initialized. Data loads on date change. Import triggers on upload only.');
     };
 
 })();
