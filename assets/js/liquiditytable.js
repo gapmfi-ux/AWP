@@ -2,7 +2,7 @@
 (function() {
     'use strict';
 
-    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ----------
+    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ---------
     const HEADINGS = [
         'Date',
         'Head Office Vault',
