@@ -49,7 +49,7 @@
 
     // Mapping from heading label to table row index
     const HEADING_TO_ROW_MAP = {
-        // TOTAL DEPOSITS LIABILITY (row 0)
+        // TOTAL DEPOSITS LIABILITY (row 0) - these are summed
         'Savings Account': 0,
         'Savings Trust Account': 0,
         'Susu Account': 0,
@@ -59,7 +59,7 @@
         'GAP Fixed Term Deposit': 0,
         'GAP Borrowings': 0,
         
-        // Current & Call Account Balances (row 6)
+        // Current & Call Account Balances (row 6) - these are summed
         'CalBank': 6,
         'Unibank - Current Account': 6,
         'Fidelity Bank': 6,
@@ -68,20 +68,20 @@
         'Ecobank': 6,
         'GCB': 6,
         
-        // Placement with Other Banks (row 7)
+        // Placement with Other Banks (row 7) - these are summed
         'CBG - Fixed Deposit': 7,
         'Dalex Finance': 7,
         
         // Cash in hand (row 9)
         'Head Office Vault': 9,
         
-        // Gov. Securities (row 10)
+        // Gov. Securities (row 10) - these are summed
         'GOG Treasury Bills - CBG': 10,
         'GOG Treasury Bills - Fidelity': 10,
         'GOG Treasury Bills - Ecobank': 10,
         'GOG Treasury Bills- Cal Bank': 10,
         
-        // TOTAL LOANS & ADVANCES (row 20)
+        // TOTAL LOANS & ADVANCES (row 20) - these are summed
         'Personal Loan': 20,
         'Susu Loan': 20,
         'Micro Business Loan': 20,
@@ -96,7 +96,7 @@
         'Group Loan': 20,
         'Controller Loans': 20,
         
-        // NET WORTH (row 21)
+        // NET WORTH (row 21) - these are summed
         'Stated Capital': 21,
         'Unaudited Profit Or Loss': 21,
         'Income Surplus': 21,
@@ -272,6 +272,7 @@
             return tableData;
         }
         
+        // Map values to table rows (summing where multiple headings map to same row)
         for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = rowValues[i];
@@ -281,12 +282,14 @@
                 if (rowIndex !== undefined && tableData[rowIndex]) {
                     const numVal = parseFloat(val) || 0;
                     if (numVal !== 0) {
-                        tableData[rowIndex].values[colIndex] = numVal;
+                        const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
+                        tableData[rowIndex].values[colIndex] = currentVal + numVal;
                     }
                 }
             }
         }
 
+        // Calculate all derived rows
         calculateDerivedRowsForColumn(tableData, colIndex);
 
         return tableData;
@@ -296,8 +299,8 @@
     function calculateDerivedRowsForColumn(tableData, colIndex) {
         const rows = tableData;
         
-        // Get base values
-        const deposits = parseFloat(rows[0].values[colIndex]) || 0; // TOTAL DEPOSITS LIABILITY
+        // Get base values for the specific column
+        const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
         const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
         const placement = parseFloat(rows[7].values[colIndex]) || 0;
         const cash = parseFloat(rows[9].values[colIndex]) || 0;
@@ -306,65 +309,68 @@
         const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
         const ppe = parseFloat(rows[22].values[colIndex]) || 0;
 
-        // GAP Borrowings is included in deposits, we need to extract it
-        // Since GAP Borrowings maps to row 0, we need to find its individual value
-        // We stored it in row 0 as part of the sum, but we need the individual value
-        // Let's find the individual GAP Borrowings value from the original data
-        // We'll need to store it separately during the mapping phase
-        
-        // For now, we'll calculate it from deposits (it's included in deposits)
-        // The actual GAP Borrowings value is not available separately in the tableData structure
-        // We'll use the deposits value and assume the 8% of GAP Borrowings is already accounted for
-        // in the Primary Reserve required calculation
-
         // ----- LIQUIDITY REQUIREMENTS -----
         // Primary Reserve required (8%) = 8% of TOTAL DEPOSITS LIABILITY
-        const primaryRequired = deposits * 0.08;
+        const primaryRequired = totalDeposits * 0.08;
         rows[2].values[colIndex] = primaryRequired;
         
         // Secondary Reserve required (20%) = 20% of TOTAL DEPOSITS LIABILITY
-        const secondaryRequired = deposits * 0.20;
+        const secondaryRequired = totalDeposits * 0.20;
         rows[3].values[colIndex] = secondaryRequired;
         
-        // TOTAL RESERVE REQUIRED - TRR
+        // TOTAL RESERVE REQUIRED - TRR = Primary Reserve required + Secondary Reserve required
         rows[4].values[colIndex] = primaryRequired + secondaryRequired;
 
         // ----- LIQUID ASSETS -----
+        // Total Balance with Banks = Current & Call Account Balances + Placement with Other Banks
         const totalBalance = currentCall + placement;
         rows[8].values[colIndex] = totalBalance;
         
+        // TOTAL LIQUID ASSETS - TLA = Total Balance with Banks + Cash in hand + Gov. Securities
         const tla = totalBalance + cash + govSec;
         rows[11].values[colIndex] = tla;
         
+        // SURPLUS/(DEFICIT) TLA - TRR = TLA - TRR
         rows[12].values[colIndex] = tla - rows[4].values[colIndex];
 
         // ----- RESERVE HELD -----
+        // Primary Reserve Held = Total Balance with Banks + Cash in hand
         const primaryHeld = totalBalance + cash;
         rows[13].values[colIndex] = primaryHeld;
         
-        // Surplus/(Deficit)* = Primary Reserve Held - (Primary Reserve required (8%) - 8% of GAP Borrowings)
-        // GAP Borrowings is part of deposits, so we need to find its value
-        // Since we can't easily separate it from the sum, we use the standard calculation
-        // but subtract 8% of GAP Borrowings from the required reserve
-        // GAP Borrowings is typically a small portion of deposits
-        // For now, we use the standard formula: Primary Reserve Held - Primary Reserve required (8%)
+        // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[14].values[colIndex] = primaryHeld - primaryRequired;
         
         // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[15].values[colIndex] = primaryHeld - primaryRequired;
         
+        // Secondary Reserve Held = Gov. Securities
         rows[16].values[colIndex] = govSec;
+        
+        // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
         rows[17].values[colIndex] = govSec - secondaryRequired;
 
         // ----- PERCENTAGES -----
-        rows[18].values[colIndex] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
-        rows[19].values[colIndex] = deposits > 0 ? (govSec / deposits) * 100 : 0;
+        // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
+        rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) * 100 : 0;
+        
+        // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
+        rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) * 100 : 0;
 
-        // ----- RATIOS -----
-        rows[24].values[colIndex] = deposits > 0 ? tla / deposits : 0;
-        rows[25].values[colIndex] = deposits > 0 ? cash / deposits : 0;
-        rows[26].values[colIndex] = deposits > 0 ? totalLoans / deposits : 0;
+        // ----- RATIOS (displayed as percentages) -----
+        // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
+        rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
+        
+        // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
+        rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
+        
+        // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
+        rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
+        
+        // Total Loans/Networth = TOTAL LOANS & ADVANCES / NET WORTH
         rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
+        
+        // PPE/Networth = PPE / NET WORTH
         rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
 
         return rows;
