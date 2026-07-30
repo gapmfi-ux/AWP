@@ -1,4 +1,4 @@
-// Daily Liquidity Module - Upload Excel to Trial Balance (full updated script)
+// Daily Liquidity Module - Upload Excel to Trial Balance
 (function() {
     'use strict';
 
@@ -68,7 +68,6 @@
     // ---------- POPULATE TABLE FROM LIQUIDITY DATA ----------
     function populateTableFromLiquidityData(data) {
         if (!data || !data.success) {
-            showToast('No data available to populate', 'warning');
             if (window.LiquidityTable) {
                 window.LiquidityTable.renderTable(null);
             }
@@ -77,7 +76,6 @@
 
         const values = data.values || [];
         if (values.length < 2) {
-            showToast('No data rows found', 'warning');
             if (window.LiquidityTable) {
                 window.LiquidityTable.renderTable(null);
             }
@@ -115,12 +113,10 @@
             
             const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
             window.LiquidityTable.renderTable(tableData);
-        } else {
-            console.error('LiquidityTable not loaded');
         }
     }
 
-    // ---------- LOAD LIQUIDITY DATA FROM SHEET (READ ONLY, NO IMPORT) ----------
+    // ---------- LOAD LIQUIDITY DATA FROM SHEET (READ ONLY - NO IMPORT) ----------
     async function loadLiquidityData(weekEnding) {
         if (isLoading) return;
         
@@ -132,7 +128,7 @@
                 throw new Error('API service not available');
             }
             
-            // This reads from the Daily Liquidity sheet (does NOT import from Trial Balance)
+            // This ONLY reads from the Daily Liquidity sheet - NO import from Trial Balance
             const result = await api.importLiquidityFromTrialBalance(weekEnding);
             
             if (result && result.success) {
@@ -155,20 +151,20 @@
         }
     }
 
-    // ---------- HANDLE DATE CHANGE ----------
+    // ---------- HANDLE DATE CHANGE (LOAD ONLY - NO IMPORT) ----------
     function handleDateChange() {
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             if (window.LiquidityTable) {
                 window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
             }
-            // Load data for the selected week from the sheet
+            // ONLY LOAD data from the sheet - NO import
             loadLiquidityData(datePicker.value);
         }
     }
 
     // ============================================
-    // UPLOAD MODAL HANDLING
+    // UPLOAD - TRIGGERS IMPORT FROM TRIAL BALANCE
     // ============================================
 
     function setupUploadButton() {
@@ -218,8 +214,9 @@
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         if (confirmBtn) {
             confirmBtn.addEventListener('click', function() {
-                const weekEndingInput = document.getElementById('uploadWeekEnding');
-                const weekEnding = weekEndingInput?.value || '';
+                // Get the week ending date from the main page date picker
+                const mainDatePicker = document.getElementById('weekEndingDate');
+                const weekEnding = mainDatePicker ? mainDatePicker.value : '';
                 startUploadProcess(weekEnding);
             });
         }
@@ -238,9 +235,12 @@
         const confirmBtn = document.getElementById('uploadConfirmBtn');
         if (confirmBtn) confirmBtn.disabled = true;
 
-        const pageDate = document.getElementById('weekEndingDate');
-        const uploadDate = document.getElementById('uploadWeekEnding');
-        if (pageDate && uploadDate) uploadDate.value = pageDate.value || '';
+        // Set the upload modal date picker to match the main page date picker
+        const mainDatePicker = document.getElementById('weekEndingDate');
+        const uploadDatePicker = document.getElementById('uploadWeekEnding');
+        if (mainDatePicker && uploadDatePicker) {
+            uploadDatePicker.value = mainDatePicker.value || '';
+        }
     }
 
     function closeUploadModal() {
@@ -342,10 +342,12 @@
             }, 700);
 
             // ============================================================
-            // TRIGGER IMPORT: Only on successful upload
-            // This imports from Trial Balance to Daily Liquidity sheet
+            // TRIGGER IMPORT FROM TRIAL BALANCE - ONLY ON UPLOAD
+            // Uses the week ending date from the main page date picker
             // ============================================================
-            const weekForImport = weekEnding || json?.weekEnding || '';
+            const mainDatePicker = document.getElementById('weekEndingDate');
+            const weekForImport = mainDatePicker ? mainDatePicker.value : weekEnding;
+            
             if (weekForImport) {
                 if (window.API && typeof window.API.importLiquidityFromTrialBalance === 'function') {
                     try {
@@ -353,8 +355,8 @@
                         const importResult = await window.API.importLiquidityFromTrialBalance(weekForImport);
                         
                         if (importResult && importResult.success) {
-                            showToast('Liquidity imported: ' + (importResult.message || 'OK'), 'success');
-                            // Now load the data to display
+                            showToast('Liquidity imported successfully', 'success');
+                            // After import, load the data to display
                             await loadLiquidityData(weekForImport);
                         } else {
                             const msg = importResult && importResult.error ? importResult.error : 'Import failed';
@@ -416,18 +418,12 @@
     // ============================================
 
     window.initDailyLiquidityModule = function() {
-        // Prevent duplicate initialization
         if (isInitialized) {
-            console.log('Daily Liquidity already initialized, refreshing data...');
-            const datePicker = document.getElementById('weekEndingDate');
-            if (datePicker && datePicker.value) {
-                loadLiquidityData(datePicker.value);
-            }
+            console.log('Daily Liquidity already initialized');
             return;
         }
         
         console.log('Initializing Daily Liquidity Module');
-        console.log('Upload Handler URL:', window.APP_CONFIG?.UPLOAD_HANDLER_URL);
         
         if (!window.LiquidityTable) {
             console.error('LiquidityTable not loaded!');
@@ -445,7 +441,7 @@
         // Setup upload button
         setupUploadButton();
         
-        // Date change handler
+        // Date change handler - ONLY LOADS data, does NOT import
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.removeEventListener('change', handleDateChange);
@@ -453,11 +449,7 @@
         }
 
         isInitialized = true;
-        console.log('Daily Liquidity Module initialized. Data will load on upload or date change.');
+        console.log('Daily Liquidity Module initialized. Data loads on date change. Import triggers on upload only.');
     };
-
-    // Expose functions for testing
-    window.renderLiquidityTable = window.LiquidityTable?.renderTable || function() {};
-    window.loadLiquidityData = loadLiquidityData;
 
 })();
