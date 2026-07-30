@@ -49,7 +49,7 @@
 
     // Mapping from heading label to table row index
     const HEADING_TO_ROW_MAP = {
-        // TOTAL DEPOSITS LIABILITY (row 0) - these are summed
+        // TOTAL DEPOSITS LIABILITY (row 0)
         'Savings Account': 0,
         'Savings Trust Account': 0,
         'Susu Account': 0,
@@ -59,7 +59,7 @@
         'GAP Fixed Term Deposit': 0,
         'GAP Borrowings': 0,
         
-        // Current & Call Account Balances (row 6) - these are summed
+        // Current & Call Account Balances (row 6)
         'CalBank': 6,
         'Unibank - Current Account': 6,
         'Fidelity Bank': 6,
@@ -68,20 +68,20 @@
         'Ecobank': 6,
         'GCB': 6,
         
-        // Placement with Other Banks (row 7) - these are summed
+        // Placement with Other Banks (row 7)
         'CBG - Fixed Deposit': 7,
         'Dalex Finance': 7,
         
         // Cash in hand (row 9)
         'Head Office Vault': 9,
         
-        // Gov. Securities (row 10) - these are summed
+        // Gov. Securities (row 10)
         'GOG Treasury Bills - CBG': 10,
         'GOG Treasury Bills - Fidelity': 10,
         'GOG Treasury Bills - Ecobank': 10,
         'GOG Treasury Bills- Cal Bank': 10,
         
-        // TOTAL LOANS & ADVANCES (row 20) - these are summed
+        // TOTAL LOANS & ADVANCES (row 20)
         'Personal Loan': 20,
         'Susu Loan': 20,
         'Micro Business Loan': 20,
@@ -96,7 +96,7 @@
         'Group Loan': 20,
         'Controller Loans': 20,
         
-        // NET WORTH (row 21) - these are summed
+        // NET WORTH (row 21)
         'Stated Capital': 21,
         'Unaudited Profit Or Loss': 21,
         'Income Surplus': 21,
@@ -140,6 +140,8 @@
     }
 
     // ---------- DATE HELPERS ----------
+    
+    // Get 7 days of the week ending on the given date (Wednesday)
     function getWeekDatesFromEnding(weekEndingDate) {
         const endDate = new Date(weekEndingDate);
         endDate.setHours(0, 0, 0, 0);
@@ -170,6 +172,7 @@
         return weekDates;
     }
 
+    // Format date for display as DD-MM-YYYY
     function formatDateHeader(date) {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -177,6 +180,7 @@
         return day + '-' + month + '-' + year;
     }
 
+    // Format date for display as "MMM DD, YYYY"
     function formatWeekEnding(date) {
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         const day = date.getDate();
@@ -185,23 +189,7 @@
         return month + ' ' + day + ', ' + year;
     }
 
-    function formatNumber(val) {
-        if (val === null || val === undefined || val === '') return '';
-        const num = parseFloat(val);
-        if (isNaN(num)) return String(val);
-        return num.toLocaleString('en-US', {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2
-        });
-    }
-
-    function formatPercentage(val) {
-        if (val === null || val === undefined || val === '') return '';
-        const num = parseFloat(val);
-        if (isNaN(num)) return String(val);
-        return (num * 100).toFixed(2) + '%';
-    }
-
+    // Format date as YYYY-MM-DD for comparison (matches sheet and date picker)
     function formatDateKey(date) {
         const d = new Date(date);
         if (isNaN(d.getTime())) return '';
@@ -212,27 +200,77 @@
         return year + '-' + month + '-' + day;
     }
 
+    // Parse date from various formats
     function parseDateFromValue(dateValue) {
-        if (dateValue instanceof Date) return dateValue;
+        // If it's already a Date object
+        if (dateValue instanceof Date) {
+            const d = new Date(dateValue);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
         
         if (typeof dateValue === 'string') {
-            let parts = dateValue.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+            // Clean up the string
+            let cleaned = dateValue.trim();
+            
+            // Try DD/MM/YYYY or DD-MM-YYYY
+            let parts = cleaned.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
             if (parts) {
+                // parts: [full, day, month, year]
                 const d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
-                if (!isNaN(d.getTime())) return d;
+                if (!isNaN(d.getTime())) {
+                    d.setHours(0, 0, 0, 0);
+                    return d;
+                }
             }
             
-            parts = dateValue.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+            // Try YYYY-MM-DD
+            parts = cleaned.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
             if (parts) {
                 const d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
-                if (!isNaN(d.getTime())) return d;
+                if (!isNaN(d.getTime())) {
+                    d.setHours(0, 0, 0, 0);
+                    return d;
+                }
             }
             
+            // Try standard Date parsing
+            const d = new Date(cleaned);
+            if (!isNaN(d.getTime())) {
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
+        }
+        
+        // Try numeric timestamp
+        if (typeof dateValue === 'number') {
             const d = new Date(dateValue);
-            if (!isNaN(d.getTime())) return d;
+            if (!isNaN(d.getTime())) {
+                d.setHours(0, 0, 0, 0);
+                return d;
+            }
         }
         
         return null;
+    }
+
+    // Format number with 2 decimal places
+    function formatNumber(val) {
+        if (val === null || val === undefined || val === '') return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return String(val);
+        return num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    // Format percentage (multiply by 100 and add %)
+    function formatPercentage(val) {
+        if (val === null || val === undefined || val === '') return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return String(val);
+        return (num * 100).toFixed(2) + '%';
     }
 
     function isEmptyValue(val) {
@@ -247,6 +285,7 @@
             return tableData;
         }
 
+        // Get the date from the row (could be string or Date object)
         const dateValue = rowValues[0];
         const dateObj = parseDateFromValue(dateValue);
         
@@ -255,24 +294,37 @@
             return tableData;
         }
         
+        // Debug: Log the parsed date
+        console.log('Parsed date from data:', dateObj, 'formatDateKey:', formatDateKey(dateObj));
+        
+        // Determine which column this date belongs to based on the week
         let colIndex = -1;
         if (targetDate) {
             const weekDates = getWeekDatesFromEnding(targetDate);
             const dateKey = formatDateKey(dateObj);
             
+            // Debug: Log week dates
+            console.log('Week dates:', weekDates.map(d => formatDateKey(d)));
+            console.log('Looking for date key:', dateKey);
+            
             weekDates.forEach((d, index) => {
-                if (formatDateKey(d) === dateKey) {
+                const weekDateKey = formatDateKey(d);
+                console.log('Comparing:', weekDateKey, '===', dateKey, weekDateKey === dateKey);
+                if (weekDateKey === dateKey) {
                     colIndex = index;
                 }
             });
         }
         
+        // If date doesn't match any day in the week, return empty table
         if (colIndex === -1) {
             console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
             return tableData;
         }
         
-        // Map values to table rows (summing where multiple headings map to same row)
+        console.log('Matched to column index:', colIndex);
+        
+        // Map values to table rows - ONLY populate the matching column
         for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = rowValues[i];
@@ -282,14 +334,13 @@
                 if (rowIndex !== undefined && tableData[rowIndex]) {
                     const numVal = parseFloat(val) || 0;
                     if (numVal !== 0) {
-                        const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
-                        tableData[rowIndex].values[colIndex] = currentVal + numVal;
+                        tableData[rowIndex].values[colIndex] = numVal;
                     }
                 }
             }
         }
 
-        // Calculate all derived rows
+        // Calculate all derived rows for the matching column only
         calculateDerivedRowsForColumn(tableData, colIndex);
 
         return tableData;
@@ -309,68 +360,42 @@
         const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
         const ppe = parseFloat(rows[22].values[colIndex]) || 0;
 
-        // ----- LIQUIDITY REQUIREMENTS -----
-        // Primary Reserve required (8%) = 8% of TOTAL DEPOSITS LIABILITY
+        // LIQUIDITY REQUIREMENTS
         const primaryRequired = totalDeposits * 0.08;
         rows[2].values[colIndex] = primaryRequired;
         
-        // Secondary Reserve required (20%) = 20% of TOTAL DEPOSITS LIABILITY
         const secondaryRequired = totalDeposits * 0.20;
         rows[3].values[colIndex] = secondaryRequired;
         
-        // TOTAL RESERVE REQUIRED - TRR = Primary Reserve required + Secondary Reserve required
         rows[4].values[colIndex] = primaryRequired + secondaryRequired;
 
-        // ----- LIQUID ASSETS -----
-        // Total Balance with Banks = Current & Call Account Balances + Placement with Other Banks
+        // LIQUID ASSETS
         const totalBalance = currentCall + placement;
         rows[8].values[colIndex] = totalBalance;
         
-        // TOTAL LIQUID ASSETS - TLA = Total Balance with Banks + Cash in hand + Gov. Securities
         const tla = totalBalance + cash + govSec;
         rows[11].values[colIndex] = tla;
         
-        // SURPLUS/(DEFICIT) TLA - TRR = TLA - TRR
         rows[12].values[colIndex] = tla - rows[4].values[colIndex];
 
-        // ----- RESERVE HELD -----
-        // Primary Reserve Held = Total Balance with Banks + Cash in hand
+        // RESERVE HELD
         const primaryHeld = totalBalance + cash;
         rows[13].values[colIndex] = primaryHeld;
-        
-        // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[14].values[colIndex] = primaryHeld - primaryRequired;
-        
-        // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[15].values[colIndex] = primaryHeld - primaryRequired;
         
-        // Secondary Reserve Held = Gov. Securities
         rows[16].values[colIndex] = govSec;
-        
-        // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
         rows[17].values[colIndex] = govSec - secondaryRequired;
 
-        // ----- PERCENTAGES -----
-        // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
+        // PERCENTAGES
         rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) * 100 : 0;
-        
-        // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
         rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) * 100 : 0;
 
-        // ----- RATIOS (displayed as percentages) -----
-        // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
+        // RATIOS
         rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
-        
-        // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
         rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
-        
-        // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
         rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
-        
-        // Total Loans/Networth = TOTAL LOANS & ADVANCES / NET WORTH
         rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
-        
-        // PPE/Networth = PPE / NET WORTH
         rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
 
         return rows;
@@ -474,7 +499,7 @@
         });
     }
 
-    // ---------- SET DEFAULT DATE ----------
+    // ---------- SET DEFAULT DATE (Wednesday of current week) ----------
     function setDefaultDate() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
