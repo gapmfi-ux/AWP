@@ -6,6 +6,7 @@
     let __dl_selectedFile = null;
     let isInitialized = false;
     let currentWeekData = null;
+    let currentTab = 'dailyTable';
 
     // ---------- LOADING MODAL ----------
     function showLoadingModal(message) {
@@ -66,6 +67,38 @@
         }, 3500);
     }
 
+    // ---------- TAB SWITCHING ----------
+    window.switchLiquidityTab = function(tabName) {
+        currentTab = tabName;
+        
+        // Update tab buttons
+        document.querySelectorAll('.liquidity-tab-btn').forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.tab === tabName) {
+                btn.classList.add('active');
+            }
+        });
+        
+        // Update tab content
+        document.querySelectorAll('.liquidity-tab-content').forEach(content => {
+            content.classList.remove('active');
+        });
+        const targetContent = document.getElementById(tabName);
+        if (targetContent) {
+            targetContent.classList.add('active');
+        }
+        
+        // Load data for the selected tab
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker && datePicker.value) {
+            if (tabName === 'dailyTable') {
+                loadWeekData(datePicker.value);
+            } else if (tabName === 'weeklyReport') {
+                loadWeeklyReport(datePicker.value);
+            }
+        }
+    };
+
     // ---------- POPULATE TABLE FROM LIQUIDITY DATA ----------
     function populateTableFromLiquidityData(data) {
         if (!data || !data.success) {
@@ -99,6 +132,10 @@
                         datePicker.value = year + '-' + month + '-' + day;
                         if (window.LiquidityTable) {
                             window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
+                        }
+                        // Also update weekly report headers
+                        if (window.WeeklyLiquidity) {
+                            window.WeeklyLiquidity.updateColumnHeadersWithDates(datePicker.value);
                         }
                     }
                 } catch (e) {
@@ -178,14 +215,72 @@
         }
     }
 
-    // ---------- HANDLE DATE CHANGE (READ ONLY - NO IMPORT) ----------
+    // ---------- LOAD WEEKLY REPORT ----------
+    async function loadWeeklyReport(weekEnding) {
+        if (isLoading) return;
+        
+        showLoadingModal('Loading weekly report...');
+        
+        try {
+            const api = window.API;
+            if (!api) {
+                throw new Error('API service not available');
+            }
+            
+            // Get data from the Daily Liquidity sheet
+            const result = await api.loadLiquidityData(weekEnding);
+            
+            if (result && result.success && window.WeeklyLiquidity) {
+                const allRows = result.allRows || [];
+                
+                if (allRows.length > 0) {
+                    // Update column headers for weekly report
+                    window.WeeklyLiquidity.updateColumnHeadersWithDates(weekEnding);
+                    
+                    // Build and render the weekly report
+                    const reportData = window.WeeklyLiquidity.buildWeeklyReportData(allRows, weekEnding);
+                    window.WeeklyLiquidity.renderWeeklyReport(reportData);
+                    showToast('Weekly report loaded successfully', 'success');
+                } else {
+                    window.WeeklyLiquidity.renderWeeklyReport(null);
+                    showToast('No data available for weekly report', 'warning');
+                }
+            } else {
+                const errorMsg = result && result.error ? result.error : 'No data available';
+                showToast(errorMsg, 'warning');
+                if (window.WeeklyLiquidity) {
+                    window.WeeklyLiquidity.renderWeeklyReport(null);
+                }
+            }
+        } catch (error) {
+            console.error('Error loading weekly report:', error);
+            showToast('Failed to load weekly report: ' + (error.message || 'Unknown error'), 'error');
+            if (window.WeeklyLiquidity) {
+                window.WeeklyLiquidity.renderWeeklyReport(null);
+            }
+        } finally {
+            hideLoadingModal();
+        }
+    }
+
+    // ---------- HANDLE DATE CHANGE ----------
     function handleDateChange() {
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker && datePicker.value) {
+            // Update both table headers
             if (window.LiquidityTable) {
                 window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
             }
-            loadWeekData(datePicker.value);
+            if (window.WeeklyLiquidity) {
+                window.WeeklyLiquidity.updateColumnHeadersWithDates(datePicker.value);
+            }
+            
+            // Load data for the current tab
+            if (currentTab === 'dailyTable') {
+                loadWeekData(datePicker.value);
+            } else if (currentTab === 'weeklyReport') {
+                loadWeeklyReport(datePicker.value);
+            }
         }
     }
 
@@ -458,8 +553,12 @@
                             }
                         }
                         
-                        // Load the data to display
-                        await loadWeekData(weekEnding);
+                        // Load data for the current tab
+                        if (currentTab === 'dailyTable') {
+                            await loadWeekData(weekEnding);
+                        } else if (currentTab === 'weeklyReport') {
+                            await loadWeeklyReport(weekEnding);
+                        }
                     } else {
                         const msg = importResult && importResult.error ? importResult.error : 'Import failed';
                         showToast('Liquidity import: ' + msg, 'warning');
@@ -515,7 +614,7 @@
     }
 
     // ============================================
-    // INITIALIZE MODULE - NO IMPORT ON PAGE LOAD
+    // INITIALIZE MODULE
     // ============================================
 
     window.initDailyLiquidityModule = function() {
@@ -532,22 +631,35 @@
             return;
         }
         
+        if (!window.WeeklyLiquidity) {
+            console.error('WeeklyLiquidity not loaded!');
+            showToast('Weekly liquidity module not loaded', 'error');
+            return;
+        }
+        
         // Set default date and update headers
         const defaultDate = window.LiquidityTable.setDefaultDate();
         window.LiquidityTable.updateColumnHeadersWithDates(defaultDate);
+        window.WeeklyLiquidity.updateColumnHeadersWithDates(defaultDate);
         
         // PAGE LOAD: Read data from Daily Liquidity sheet (NO import)
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker && datePicker.value) {
+            // Load daily table by default
             loadWeekData(datePicker.value);
+            // Also pre-load weekly report for the current tab
+            if (currentTab === 'weeklyReport') {
+                loadWeeklyReport(datePicker.value);
+            }
         } else {
             window.LiquidityTable.renderTable(null);
+            window.WeeklyLiquidity.renderWeeklyReport(null);
         }
         
         // Setup upload button
         setupUploadButton();
         
-        // Date change handler - ONLY reads data, does NOT import
+        // Date change handler
         if (datePicker) {
             datePicker.removeEventListener('change', handleDateChange);
             datePicker.addEventListener('change', handleDateChange);
@@ -558,10 +670,12 @@
         console.log('  - Page Load: Reads all data from Daily Liquidity sheet (NO import)');
         console.log('  - Date Change: Reads all data from Daily Liquidity sheet (NO import)');
         console.log('  - Upload: Imports from Trial Balance to Daily Liquidity sheet');
+        console.log('  - Tabs: Daily Table and Weekly Report');
     };
 
     // Expose functions for testing
     window.loadLiquidityData = loadWeekData;
+    window.loadWeeklyReport = loadWeeklyReport;
     window.checkDateExists = checkDateExists;
 
 })();
