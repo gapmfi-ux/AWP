@@ -262,15 +262,12 @@ function loadDashboardRatios() {
   console.log('Rendered test data:', mockRatios);
   
   // ============================================
-  // Then try to load real data
+  // Use cached ratios if fresh
   // ============================================
-  
-  // First check if we have cached ratios in localStorage
   try {
     const cachedRatios = localStorage.getItem('dashboardRatios');
     if (cachedRatios) {
       const parsed = JSON.parse(cachedRatios);
-      // Check if cache is less than 5 minutes old
       if (parsed.timestamp && (Date.now() - parsed.timestamp < 300000)) {
         console.log('Using cached ratios from localStorage:', parsed.ratios);
         if (parsed.ratios && parsed.ratios.primaryReserve > 0) {
@@ -326,54 +323,68 @@ function loadDashboardRatios() {
     API.loadLiquidityData(yesterdayStr, { useCache: true })
       .then(function(response) {
         console.log('=== API RESPONSE RECEIVED ===');
-        console.log('Response.success:', response?.success);
+        console.log('Response type:', Array.isArray(response) ? 'array' : typeof response);
         console.log('Response keys:', response ? Object.keys(response) : 'null');
         
-        if (response && response.success) {
-          const allRows = response.allRows || [];
-          console.log('All rows count:', allRows.length);
-          
-          // Find the row for yesterday's date
-          let yesterdayRow = null;
-          for (let row of allRows) {
-            if (row && row.length > 0) {
-              const rowDate = row[0];
-              if (rowDate) {
-                const d1 = new Date(yesterdayStr);
-                const d2 = new Date(rowDate);
-                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                  const key1 = formatDateKey(d1);
-                  const key2 = formatDateKey(d2);
-                  if (key1 === key2) {
-                    yesterdayRow = row;
-                    break;
-                  }
+        // Normalize rows from possible response shapes
+        let allRows = [];
+        if (Array.isArray(response)) {
+          allRows = response;
+        } else if (response && Array.isArray(response.allRows)) {
+          allRows = response.allRows;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          allRows = response.data;
+        } else {
+          console.log('No rows found in response');
+          allRows = [];
+        }
+        
+        console.log('All rows count:', allRows.length);
+        
+        // Find the row for yesterday's date
+        let yesterdayRow = null;
+        for (let row of allRows) {
+          if (row && row.length > 0) {
+            const rowDate = row[0];
+            if (rowDate) {
+              const d1 = new Date(yesterdayStr);
+              const d2 = new Date(rowDate);
+              if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                const key1 = (window.LiquidityTable?.formatDateKey ? window.LiquidityTable.formatDateKey(d1) : formatDateKey(d1));
+                const key2 = (window.LiquidityTable?.formatDateKey ? window.LiquidityTable.formatDateKey(d2) : formatDateKey(d2));
+                if (key1 === key2) {
+                  yesterdayRow = row;
+                  break;
                 }
               }
             }
           }
-          
-          console.log('Found row for yesterday:', yesterdayRow ? 'Yes' : 'No');
-          if (yesterdayRow) {
-            console.log('Row data sample:', yesterdayRow.slice(0, 5));
-          }
-          
-          if (yesterdayRow && window.LiquidityTable) {
-            // Build table data for the row
-            const tableData = window.LiquidityTable.buildTableDataForDate([yesterdayRow], yesterdayStr);
-            console.log('Table data built, rows:', tableData.length);
+        }
+        
+        console.log('Found row for yesterday:', yesterdayRow ? 'Yes' : 'No');
+        if (yesterdayRow) {
+          if (window.LiquidityTable) {
+            // Build table data for the row (pass single row)
+            const tableData = window.LiquidityTable.buildTableDataForDate(yesterdayRow, yesterdayStr);
+            // Determine which column index corresponds to the date
+            const weekDates = window.LiquidityTable.getWeekDatesFromEnding(yesterdayStr);
+            const weekKeys = weekDates.map(d => window.LiquidityTable.formatDateKey(d));
+            const colIndex = weekKeys.indexOf(window.LiquidityTable.formatDateKey(yesterdayStr));
+            const idx = (colIndex >= 0) ? colIndex : 0;
             
-            // Log the relevant rows
-            console.log('Row 18 (Primary Reserve):', tableData[18]);
-            console.log('Row 19 (Secondary Reserve):', tableData[19]);
-            console.log('Row 24 (Liquid Assets/Deposits):', tableData[24]);
-            console.log('Row 26 (Loans/Deposits):', tableData[26]);
+            console.log('Using column index for ratios:', idx);
+            console.log('Table data sample rows (indices): 18,19,24,26', {
+              r18: tableData[18]?.values?.[idx],
+              r19: tableData[19]?.values?.[idx],
+              r24: tableData[24]?.values?.[idx],
+              r26: tableData[26]?.values?.[idx]
+            });
             
-            // Extract ratios from the table data
-            const primaryReserve = tableData[18]?.values?.[0] || 0;
-            const secondaryReserve = tableData[19]?.values?.[0] || 0;
-            const liquidAssets = tableData[24]?.values?.[0] || 0;
-            const loansDeposits = tableData[26]?.values?.[0] || 0;
+            // Extract ratios from the correct column
+            const primaryReserve = parseFloat(tableData[18]?.values?.[idx]) || 0;
+            const secondaryReserve = parseFloat(tableData[19]?.values?.[idx]) || 0;
+            const liquidAssets = parseFloat(tableData[24]?.values?.[idx]) || 0;
+            const loansDeposits = parseFloat(tableData[26]?.values?.[idx]) || 0;
             
             console.log('Extracted ratios:', {
               primaryReserve,
@@ -406,10 +417,10 @@ function loadDashboardRatios() {
               console.log('Extracted ratios are zero, keeping mock data');
             }
           } else {
-            console.log('No data for yesterday, keeping mock data');
+            console.log('LiquidityTable not available, keeping mock data');
           }
         } else {
-          console.log('Response not successful, keeping mock data');
+          console.log('No data for yesterday, keeping mock data');
         }
       })
       .catch(function(error) {
@@ -422,6 +433,91 @@ function loadDashboardRatios() {
   }
 }
 
+function loadTodayRatios(dateDisplay) {
+  const today = new Date();
+  const todayStr = formatDateForInput(today);
+  const todayDisplay = today.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  console.log('Trying today:', todayStr);
+  
+  if (typeof API !== 'undefined' && API && typeof API.loadLiquidityData === 'function') {
+    API.loadLiquidityData(todayStr, { useCache: true })
+      .then(function(response) {
+        // Normalize rows same as above
+        let allRows = [];
+        if (Array.isArray(response)) {
+          allRows = response;
+        } else if (response && Array.isArray(response.allRows)) {
+          allRows = response.allRows;
+        } else if (response && response.data && Array.isArray(response.data)) {
+          allRows = response.data;
+        } else {
+          allRows = [];
+        }
+        
+        if (allRows.length > 0) {
+          let todayRow = null;
+          for (let row of allRows) {
+            if (row && row.length > 0) {
+              const rowDate = row[0];
+              if (rowDate) {
+                const d1 = new Date(todayStr);
+                const d2 = new Date(rowDate);
+                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                  const key1 = (window.LiquidityTable?.formatDateKey ? window.LiquidityTable.formatDateKey(d1) : formatDateKey(d1));
+                  const key2 = (window.LiquidityTable?.formatDateKey ? window.LiquidityTable.formatDateKey(d2) : formatDateKey(d2));
+                  if (key1 === key2) {
+                    todayRow = row;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+          
+          if (todayRow && window.LiquidityTable) {
+            const tableData = window.LiquidityTable.buildTableDataForDate(todayRow, todayStr);
+            const weekDates = window.LiquidityTable.getWeekDatesFromEnding(todayStr);
+            const weekKeys = weekDates.map(d => window.LiquidityTable.formatDateKey(d));
+            const colIndex = weekKeys.indexOf(window.LiquidityTable.formatDateKey(todayStr));
+            const idx = (colIndex >= 0) ? colIndex : 0;
+            
+            dashboardData.ratios = {
+              primaryReserve: parseFloat(tableData[18]?.values?.[idx]) || 0,
+              secondaryReserve: parseFloat(tableData[19]?.values?.[idx]) || 0,
+              liquidAssets: parseFloat(tableData[24]?.values?.[idx]) || 0,
+              loansDeposits: parseFloat(tableData[26]?.values?.[idx]) || 0,
+              date: todayStr
+            };
+            
+            try {
+              localStorage.setItem('dashboardRatios', JSON.stringify({
+                ratios: dashboardData.ratios,
+                timestamp: Date.now()
+              }));
+            } catch (e) {}
+            
+            ratiosLoaded = true;
+            renderDashboardRatios(todayDisplay + ' (today)');
+          } else {
+            useFallbackRatios(dateDisplay);
+          }
+        } else {
+          useFallbackRatios(dateDisplay);
+        }
+      })
+      .catch(function(error) {
+        console.error('Error loading today data:', error);
+        useFallbackRatios(dateDisplay);
+      });
+  } else {
+    useFallbackRatios(dateDisplay);
+  }
+}
 function loadTodayRatios(dateDisplay) {
   const today = new Date();
   const todayStr = formatDateForInput(today);
