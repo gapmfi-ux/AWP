@@ -1,567 +1,556 @@
-// Daily Liquidity Module - Upload Excel to Trial Balance
+// Liquidity Table - Core computation and population logic
 (function() {
     'use strict';
 
-    let isLoading = false;
-    let __dl_selectedFile = null;
-    let isInitialized = false;
-    let currentWeekData = null;
+    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ----------
+    const HEADINGS = [
+        'Date',
+        'Head Office Vault',
+        'Personal Loan',
+        'Susu Loan',
+        'Micro Business Loan',
+        'Business Loan',
+        'Agents Loan',
+        "Agents' Spouses Loan",
+        'Church Loan',
+        'Church Guaranteed Loan',
+        'PCG Affiliate Loan',
+        'Staff Loan',
+        'Employee Loan',
+        'Group Loan',
+        'Controller Loans',
+        'CalBank',
+        'Unibank - Current Account',
+        'Fidelity Bank',
+        'Fidelity Bank - Call Account',
+        'CBG - Call Account',
+        'Ecobank',
+        'GCB',
+        'CBG - Fixed Deposit',
+        'GOG Treasury Bills - CBG',
+        'GOG Treasury Bills - Fidelity',
+        'GOG Treasury Bills - Ecobank',
+        'GOG Treasury Bills- Cal Bank',
+        'Dalex Finance',
+        'Savings Account',
+        'Savings Trust Account',
+        'Susu Account',
+        'Susu Trust Account',
+        'GAP Kiddie Account',
+        'Staff Salary Account',
+        'GAP Fixed Term Deposit',
+        'GAP Borrowings',
+        'Stated Capital',
+        'Unaudited Profit Or Loss',
+        'Income Surplus',
+        'Statutory Reserve',
+        'Regulatory Credit Risk Reserve'
+    ];
 
-    // ---------- LOADING MODAL ----------
-    function showLoadingModal(message) {
-        const modal = document.getElementById('loadingModal');
-        const msg = document.getElementById('loadingMessage');
-        if (modal) {
-            modal.style.display = 'flex';
-            if (msg) msg.textContent = message || 'Loading data...';
-        }
-        isLoading = true;
-    }
-
-    function hideLoadingModal() {
-        const modal = document.getElementById('loadingModal');
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        isLoading = false;
-    }
-
-    // ---------- TOAST MESSAGE ----------
-    function showToast(message, type) {
-        let toast = document.getElementById('liquidityToast');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.id = 'liquidityToast';
-            toast.style.cssText = `
-                position: fixed; bottom: 20px; right: 20px;
-                padding: 10px 20px; border-radius: 8px;
-                z-index: 9999; font-weight: 600; font-size: 13px;
-                max-width: 380px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                transition: all 0.3s ease; transform: translateY(20px); opacity: 0;
-                pointer-events: none;
-            `;
-            document.body.appendChild(toast);
-        }
-
-        const colors = {
-            success: { bg: '#d1fae5', color: '#065f46', border: '#34d399' },
-            error: { bg: '#fee2e2', color: '#991b1b', border: '#f87171' },
-            info: { bg: '#dbeafe', color: '#1e40af', border: '#60a5fa' },
-            warning: { bg: '#fef3c7', color: '#92400e', border: '#fbbf24' }
-        };
-        const style = colors[type] || colors.info;
-
-        toast.style.background = style.bg;
-        toast.style.color = style.color;
-        toast.style.borderLeft = `4px solid ${style.border}`;
-        toast.style.pointerEvents = 'auto';
-        toast.textContent = message;
-        toast.style.transform = 'translateY(0)';
-        toast.style.opacity = '1';
-
-        clearTimeout(toast._timer);
-        toast._timer = setTimeout(() => {
-            toast.style.transform = 'translateY(20px)';
-            toast.style.opacity = '0';
-        }, 3500);
-    }
-
-    // ---------- POPULATE TABLE FROM LIQUIDITY DATA ----------
-    function populateTableFromLiquidityData(data) {
-        if (!data || !data.success) {
-            if (window.LiquidityTable) {
-                window.LiquidityTable.renderTable(null);
-            }
-            return;
-        }
-
-        const values = data.values || [];
-        if (values.length < 2) {
-            if (window.LiquidityTable) {
-                window.LiquidityTable.renderTable(null);
-            }
-            return;
-        }
-
-        // Get the date from the response
-        const dateStr = data.date || values[0] || '';
+    // Mapping from heading label to table row index
+    const HEADING_TO_ROW_MAP = {
+        // TOTAL DEPOSITS LIABILITY (row 0) - these are summed
+        'Savings Account': 0,
+        'Savings Trust Account': 0,
+        'Susu Account': 0,
+        'Susu Trust Account': 0,
+        'GAP Kiddie Account': 0,
+        'Staff Salary Account': 0,
+        'GAP Fixed Term Deposit': 0,
+        'GAP Borrowings': 0,
         
-        // Update date picker to match the data date
-        if (dateStr) {
-            const datePicker = document.getElementById('weekEndingDate');
-            if (datePicker) {
-                try {
-                    const d = new Date(dateStr);
-                    if (!isNaN(d.getTime())) {
-                        const year = d.getFullYear();
-                        const month = String(d.getMonth() + 1).padStart(2, '0');
-                        const day = String(d.getDate()).padStart(2, '0');
-                        datePicker.value = year + '-' + month + '-' + day;
-                        if (window.LiquidityTable) {
-                            window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
-                        }
-                    }
-                } catch (e) {
-                    console.warn('Could not parse date:', dateStr);
-                }
-            }
-        }
-
-        // Build table data for this specific date
-        if (window.LiquidityTable) {
-            const datePicker = document.getElementById('weekEndingDate');
-            const weekEnding = datePicker ? datePicker.value : dateStr;
-            
-            const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
-            window.LiquidityTable.renderTable(tableData);
-        }
-    }
-
-    // ---------- LOAD ALL DATA FOR THE WEEK ----------
-    async function loadWeekData(weekEnding) {
-        if (isLoading) return;
+        // Current & Call Account Balances (row 6) - these are summed
+        'CalBank': 6,
+        'Unibank - Current Account': 6,
+        'Fidelity Bank': 6,
+        'Fidelity Bank - Call Account': 6,
+        'CBG - Call Account': 6,
+        'Ecobank': 6,
+        'GCB': 6,
         
-        showLoadingModal('Loading liquidity data...');
+        // Placement with Other Banks (row 7) - these are summed
+        'CBG - Fixed Deposit': 7,
+        'Dalex Finance': 7,
         
-        try {
-            const api = window.API;
-            if (!api) {
-                throw new Error('API service not available');
-            }
-            
-            // Get all data from the Daily Liquidity sheet for the week
-            const result = await api.loadLiquidityData(weekEnding);
-            
-            if (result && result.success) {
-                currentWeekData = result;
-                
-                // Check if we have data rows
-                const allRows = result.allRows || [];
-                
-                if (allRows.length > 0) {
-                    // Use the new function to build table from multiple rows
-                    if (window.LiquidityTable && window.LiquidityTable.buildTableDataFromRows) {
-                        const tableData = window.LiquidityTable.buildTableDataFromRows(allRows, weekEnding);
-                        window.LiquidityTable.renderTable(tableData);
-                        showToast('Data loaded successfully', 'success');
-                    } else {
-                        // Fallback to single row if the new function doesn't exist
-                        const values = result.values || [];
-                        if (values.length >= 2) {
-                            const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
-                            window.LiquidityTable.renderTable(tableData);
-                            showToast('Data loaded successfully', 'success');
-                        } else {
-                            window.LiquidityTable.renderTable(null);
-                            showToast('No data available for this week', 'warning');
-                        }
-                    }
-                } else {
-                    window.LiquidityTable.renderTable(null);
-                    showToast('No data available for this week', 'warning');
-                }
-            } else {
-                const errorMsg = result && result.error ? result.error : 'No data available for this week';
-                showToast(errorMsg, 'warning');
-                if (window.LiquidityTable) {
-                    window.LiquidityTable.renderTable(null);
-                }
-            }
-        } catch (error) {
-            console.error('Error loading liquidity data:', error);
-            showToast('Failed to load data: ' + (error.message || 'Unknown error'), 'error');
-            if (window.LiquidityTable) {
-                window.LiquidityTable.renderTable(null);
-            }
-        } finally {
-            hideLoadingModal();
-        }
-    }
-
-    // ---------- HANDLE DATE CHANGE (READ ONLY - NO IMPORT) ----------
-    function handleDateChange() {
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker && datePicker.value) {
-            if (window.LiquidityTable) {
-                window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
-            }
-            loadWeekData(datePicker.value);
-        }
-    }
-
-    // ---------- CHECK IF DATE EXISTS IN DAILY LIQUIDITY SHEET ----------
-    async function checkDateExists(dateStr) {
-        try {
-            const api = window.API;
-            if (!api) {
-                return { exists: false, error: 'API not available' };
-            }
-            
-            const result = await api.loadLiquidityData(dateStr);
-            
-            if (result && result.success && result.allRows && result.allRows.length > 0) {
-                // Check if any row has the matching date
-                for (let row of result.allRows) {
-                    if (row && row.length > 0) {
-                        const rowDate = row[0];
-                        const d1 = new Date(dateStr);
-                        const d2 = new Date(rowDate);
-                        if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                            const key1 = window.LiquidityTable?.formatDateKey(d1) || '';
-                            const key2 = window.LiquidityTable?.formatDateKey(d2) || '';
-                            if (key1 === key2) {
-                                return { exists: true, data: result };
-                            }
-                        }
-                    }
-                }
-            }
-            return { exists: false };
-        } catch (error) {
-            console.error('Error checking date existence:', error);
-            return { exists: false, error: error.message };
-        }
-    }
-
-    // ============================================
-    // UPLOAD - TRIGGERS IMPORT FROM TRIAL BALANCE
-    // ============================================
-
-    function setupUploadButton() {
-        const uploadBtn = document.getElementById('uploadBtn');
-        if (!uploadBtn) return;
-
-        uploadBtn.addEventListener('click', openUploadModal);
-
-        const closeBtn = document.getElementById('uploadModalClose');
-        const overlay = document.getElementById('uploadModalOverlay');
-        const cancelBtn = document.getElementById('uploadCancelBtn');
+        // Cash in hand (row 9)
+        'Head Office Vault': 9,
         
-        if (closeBtn) closeBtn.addEventListener('click', closeUploadModal);
-        if (overlay) overlay.addEventListener('click', closeUploadModal);
-        if (cancelBtn) cancelBtn.addEventListener('click', closeUploadModal);
-
-        const fileInput = document.getElementById('uploadFileInput');
-        const fileArea = document.getElementById('uploadFileArea');
-        const fileRemove = document.getElementById('uploadFileRemove');
-
-        if (fileArea) {
-            fileArea.addEventListener('click', () => fileInput?.click());
-            fileArea.addEventListener('dragover', (e) => { e.preventDefault(); fileArea.classList.add('dragover'); });
-            fileArea.addEventListener('dragleave', (e) => { e.preventDefault(); fileArea.classList.remove('dragover'); });
-            fileArea.addEventListener('drop', (e) => {
-                e.preventDefault();
-                fileArea.classList.remove('dragover');
-                const file = e.dataTransfer.files?.[0];
-                if (file) handleFile(file);
-            });
-        }
-
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => {
-                const file = e.target.files?.[0];
-                if (file) handleFile(file);
-            });
-        }
-
-        if (fileRemove) {
-            fileRemove.addEventListener('click', (e) => {
-                e.preventDefault();
-                clearSelectedFile();
-            });
-        }
-
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-        if (confirmBtn) {
-            confirmBtn.addEventListener('click', function() {
-                const uploadDatePicker = document.getElementById('uploadWeekEnding');
-                const weekEnding = uploadDatePicker ? uploadDatePicker.value : '';
-                startUploadProcess(weekEnding);
-            });
-        }
-    }
-
-    function openUploadModal() {
-        const modal = document.getElementById('uploadModal');
-        if (!modal) return;
-        modal.style.display = 'block';
-
-        clearSelectedFile();
+        // Gov. Securities (row 10) - these are summed
+        'GOG Treasury Bills - CBG': 10,
+        'GOG Treasury Bills - Fidelity': 10,
+        'GOG Treasury Bills - Ecobank': 10,
+        'GOG Treasury Bills- Cal Bank': 10,
         
-        const status = document.getElementById('uploadStatus');
-        if (status) status.style.display = 'none';
-
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-        if (confirmBtn) confirmBtn.disabled = true;
-
-        const mainDatePicker = document.getElementById('weekEndingDate');
-        const uploadDatePicker = document.getElementById('uploadWeekEnding');
-        if (mainDatePicker && uploadDatePicker) {
-            uploadDatePicker.value = mainDatePicker.value || '';
-        }
-    }
-
-    function closeUploadModal() {
-        const modal = document.getElementById('uploadModal');
-        if (modal) modal.style.display = 'none';
-    }
-
-    function clearSelectedFile() {
-        __dl_selectedFile = null;
-        const info = document.getElementById('uploadFileInfo');
-        const fileNameSpan = document.getElementById('uploadFileName');
-        const fileInput = document.getElementById('uploadFileInput');
-        const fileArea = document.getElementById('uploadFileArea');
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-
-        if (info) info.style.display = 'none';
-        if (fileNameSpan) fileNameSpan.textContent = 'No file selected';
-        if (fileInput) fileInput.value = '';
-        if (fileArea) fileArea.style.display = 'block';
-        if (confirmBtn) confirmBtn.disabled = true;
-    }
-
-    function handleFile(file) {
-        const fileNameSpan = document.getElementById('uploadFileName');
-        const info = document.getElementById('uploadFileInfo');
-        const fileArea = document.getElementById('uploadFileArea');
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-
-        const reader = new FileReader();
-        reader.onload = function(evt) {
-            let base64 = evt.target.result;
-            const idx = base64.indexOf('base64,');
-            if (idx !== -1) base64 = base64.substring(idx + 7);
-
-            __dl_selectedFile = {
-                name: file.name,
-                type: file.type || 'application/octet-stream',
-                base64: base64
-            };
-
-            if (fileNameSpan) fileNameSpan.textContent = file.name;
-            if (info) info.style.display = 'flex';
-            if (fileArea) fileArea.style.display = 'none';
-            if (confirmBtn) confirmBtn.disabled = false;
-        };
-        reader.readAsDataURL(file);
-    }
-
-    async function startUploadProcess(weekEnding) {
-        if (!__dl_selectedFile) {
-            showToast('No file selected for upload', 'error');
-            return;
-        }
-
-        if (!weekEnding) {
-            showToast('Please select a date for the upload', 'warning');
-            return;
-        }
-
-        const status = document.getElementById('uploadStatus');
-        const statusIcon = document.getElementById('uploadStatusIcon');
-        const statusMessage = document.getElementById('uploadStatusMessage');
-        const confirmBtn = document.getElementById('uploadConfirmBtn');
-
-        if (status) status.style.display = 'flex';
-        if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-        if (statusMessage) statusMessage.textContent = 'Uploading...';
-        if (confirmBtn) confirmBtn.disabled = true;
-
-        try {
-            // Check for duplicate date
-            const checkResult = await checkDateExists(weekEnding);
-            
-            if (checkResult.exists) {
-                const userConfirmed = confirm(
-                    `Data for date ${weekEnding} already exists in the Daily Liquidity sheet.\n\n` +
-                    `Click "OK" to overwrite (update) the existing data.\n` +
-                    `Click "Cancel" to skip this upload.`
-                );
-                
-                if (!userConfirmed) {
-                    if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-info-circle" style="color: #f59e0b;"></i>';
-                    if (statusMessage) statusMessage.textContent = 'Upload cancelled - duplicate date';
-                    setTimeout(() => {
-                        closeUploadModal();
-                    }, 1500);
-                    if (confirmBtn) confirmBtn.disabled = false;
-                    return;
-                }
-                showToast('Overwriting existing data for ' + weekEnding, 'warning');
-            }
-
-            // Upload the Excel file to Trial Balance
-            const url = window.APP_CONFIG?.UPLOAD_HANDLER_URL;
-            if (!url) throw new Error('Upload handler URL not configured');
-
-            const params = new URLSearchParams();
-            params.append('filename', __dl_selectedFile.name);
-            params.append('mimeType', __dl_selectedFile.type);
-            params.append('data', __dl_selectedFile.base64);
-            params.append('weekEnding', weekEnding);
-
-            const resp = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-                body: params.toString()
-            });
-
-            const text = await resp.text();
-            let json;
-            try {
-                json = JSON.parse(text);
-            } catch (e) {
-                throw new Error('Unexpected server response: ' + text.substring(0, 500));
-            }
-
-            if (!json || json.success === false) {
-                throw new Error(json?.error || 'Upload failed');
-            }
-
-            if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-check-circle" style="color: #16a34a;"></i>';
-            if (statusMessage) statusMessage.textContent = json.message || 'Upload successful';
-
-            setTimeout(() => {
-                closeUploadModal();
-                showUploadSuccessModal(json);
-            }, 700);
-
-            // IMPORT from Trial Balance to Daily Liquidity
-            if (window.API && typeof window.API.importLiquidityFromTrialBalance === 'function') {
-                try {
-                    showLoadingModal('Importing liquidity data for ' + weekEnding + '...');
-                    
-                    const importResult = await window.API.importLiquidityFromTrialBalance(weekEnding);
-                    
-                    if (importResult && importResult.success) {
-                        const actionMsg = checkResult.exists ? 'updated' : 'imported';
-                        showToast('Liquidity ' + actionMsg + ' successfully for ' + weekEnding, 'success');
-                        
-                        // Update the main date picker
-                        const mainDatePicker = document.getElementById('weekEndingDate');
-                        if (mainDatePicker) {
-                            try {
-                                const d = new Date(weekEnding);
-                                if (!isNaN(d.getTime())) {
-                                    const dayOfWeek = d.getDay();
-                                    const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
-                                    const wednesday = new Date(d);
-                                    wednesday.setDate(d.getDate() + diffToWednesday);
-                                    const year = wednesday.getFullYear();
-                                    const month = String(wednesday.getMonth() + 1).padStart(2, '0');
-                                    const day = String(wednesday.getDate()).padStart(2, '0');
-                                    mainDatePicker.value = year + '-' + month + '-' + day;
-                                }
-                            } catch (e) {
-                                console.warn('Could not set date picker:', e);
-                            }
-                        }
-                        
-                        // Load the data to display
-                        await loadWeekData(weekEnding);
-                    } else {
-                        const msg = importResult && importResult.error ? importResult.error : 'Import failed';
-                        showToast('Liquidity import: ' + msg, 'warning');
-                    }
-                } catch (importError) {
-                    console.error('Error importing liquidity:', importError);
-                    showToast('Liquidity import failed: ' + (importError.message || 'Unknown error'), 'error');
-                } finally {
-                    hideLoadingModal();
-                }
-            } else {
-                console.warn('API.importLiquidityFromTrialBalance not available');
-            }
-
-        } catch (error) {
-            if (statusIcon) statusIcon.innerHTML = '<i class="fas fa-times-circle" style="color:#dc2626;"></i>';
-            if (statusMessage) statusMessage.textContent = 'Error: ' + (error.message || error.toString());
-            console.error('Upload error:', error);
-            showToast('Upload failed: ' + (error.message || 'Unknown error'), 'error');
-            if (confirmBtn) confirmBtn.disabled = false;
-        }
-    }
-
-    function showUploadSuccessModal(result) {
-        const modal = document.getElementById('uploadSuccessModal');
-        if (!modal) {
-            showToast(result?.message || 'Upload successful', 'success');
-            return;
-        }
-
-        const title = document.getElementById('uploadSuccessTitle');
-        const body = document.getElementById('uploadSuccessBody');
-
-        if (title) title.textContent = 'Upload Successful';
-        if (body) {
-            body.innerHTML = `
-                <p>${result.message || 'File uploaded successfully.'}</p>
-                <ul style="margin-left:16px;">
-                    <li><strong>File:</strong> ${result.filename || __dl_selectedFile?.name || ''}</li>
-                    <li><strong>Rows:</strong> ${result.rowsImported || 'N/A'}</li>
-                    <li><strong>Sheet:</strong> ${result.sheetName || result.sheetId || 'Trial Balance'}</li>
-                </ul>
-            `;
-        }
-
-        modal.style.display = 'flex';
-        const closeBtn = document.getElementById('uploadSuccessClose');
-        if (closeBtn) {
-            closeBtn.onclick = () => {
-                modal.style.display = 'none';
-            };
-        }
-    }
-
-    // ============================================
-    // INITIALIZE MODULE - NO IMPORT ON PAGE LOAD
-    // ============================================
-
-    window.initDailyLiquidityModule = function() {
-        if (isInitialized) {
-            console.log('Daily Liquidity already initialized');
-            return;
-        }
+        // TOTAL LOANS & ADVANCES (row 20) - these are summed
+        'Personal Loan': 20,
+        'Susu Loan': 20,
+        'Micro Business Loan': 20,
+        'Business Loan': 20,
+        'Agents Loan': 20,
+        "Agents' Spouses Loan": 20,
+        'Church Loan': 20,
+        'Church Guaranteed Loan': 20,
+        'PCG Affiliate Loan': 20,
+        'Staff Loan': 20,
+        'Employee Loan': 20,
+        'Group Loan': 20,
+        'Controller Loans': 20,
         
-        console.log('Initializing Daily Liquidity Module');
-        
-        if (!window.LiquidityTable) {
-            console.error('LiquidityTable not loaded!');
-            showToast('Liquidity table module not loaded', 'error');
-            return;
-        }
-        
-        // Set default date and update headers
-        const defaultDate = window.LiquidityTable.setDefaultDate();
-        window.LiquidityTable.updateColumnHeadersWithDates(defaultDate);
-        
-        // PAGE LOAD: Read data from Daily Liquidity sheet (NO import)
-        const datePicker = document.getElementById('weekEndingDate');
-        if (datePicker && datePicker.value) {
-            loadWeekData(datePicker.value);
-        } else {
-            window.LiquidityTable.renderTable(null);
-        }
-        
-        // Setup upload button
-        setupUploadButton();
-        
-        // Date change handler - ONLY reads data, does NOT import
-        if (datePicker) {
-            datePicker.removeEventListener('change', handleDateChange);
-            datePicker.addEventListener('change', handleDateChange);
-        }
-
-        isInitialized = true;
-        console.log('Daily Liquidity Module initialized.');
-        console.log('  - Page Load: Reads all data from Daily Liquidity sheet (NO import)');
-        console.log('  - Date Change: Reads all data from Daily Liquidity sheet (NO import)');
-        console.log('  - Upload: Imports from Trial Balance to Daily Liquidity sheet');
+        // NET WORTH (row 21) - these are summed
+        'Stated Capital': 21,
+        'Unaudited Profit Or Loss': 21,
+        'Income Surplus': 21,
+        'Statutory Reserve': 21,
+        'Regulatory Credit Risk Reserve': 21
     };
 
-    // Expose functions for testing
-    window.loadLiquidityData = loadWeekData;
-    window.checkDateExists = checkDateExists;
+    // ---------- EMPTY TABLE STRUCTURE ----------
+    function getEmptyRows() {
+        return [
+            { label: 'TOTAL DEPOSITS LIABILITY', values: ['', '', '', '', '', '', ''], bold: true, icon: 'arrow-up' },
+            { isSection: true, label: 'LIQUIDITY REQUIREMENTS' },
+            { label: 'Primary Reserve required (8%)', values: ['', '', '', '', '', '', ''] },
+            { label: 'Secondary Reserve required (20%)', values: ['', '', '', '', '', '', ''] },
+            { label: 'TOTAL RESERVE REQUIRED - TRR', values: ['', '', '', '', '', '', ''], bold: true },
+            { isSection: true, label: 'LIQUID ASSETS' },
+            { label: 'Current & Call Account Balances', values: ['', '', '', '', '', '', ''] },
+            { label: 'Placement with Other Banks', values: ['', '', '', '', '', '', ''] },
+            { label: 'Total Balance with Banks', values: ['', '', '', '', '', '', ''], bold: true },
+            { label: 'Cash in hand', values: ['', '', '', '', '', '', ''] },
+            { label: 'Gov. Securities (Treasury bills, Bonds etc)', values: ['', '', '', '', '', '', ''] },
+            { label: 'TOTAL LIQUID ASSETS - TLA', values: ['', '', '', '', '', '', ''], bold: true, totalRow: true },
+            { label: 'SURPLUS/(DEFICIT) TLA - TRR =', values: ['', '', '', '', '', '', ''], bold: true, surplusRow: true },
+            { label: 'Primary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
+            { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true, highlight: true, bold: true },
+            { label: 'Surplus/Deficit (with borrowings)*', values: ['', '', '', '', '', '', ''], negative: true, highlight: true, bold: true },
+            { label: 'Secondary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
+            { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
+            { label: 'Primary Reserve %', values: ['', '', '', '', '', '', ''], bold: true, highlight: true, isPercentage: true },
+            { label: 'Secondary Reserve %', values: ['', '', '', '', '', '', ''], bold: true, highlight: true, isPercentage: true },
+            { label: 'TOTAL LOANS & ADVANCES', values: ['', '', '', '', '', '', ''], bold: true },
+            { label: 'NET WORTH (last month close)', values: ['', '', '', '', '', '', ''], bold: true },
+            { label: 'Plant, Property & Equipment (PPE)', values: ['', '', '', '', '', '', ''] },
+            { isSection: true, label: 'RATIOS' },
+            { label: 'Total Liquid Assets/Deposits', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Cash in hand/Deposit', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Loans/Deposits', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Total Loans/Networth', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'PPE/Networth', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true }
+        ];
+    }
+
+    // ---------- DATE HELPERS ----------
+    function getWeekDatesFromEnding(weekEndingDate) {
+        const endDate = new Date(weekEndingDate);
+        endDate.setHours(0, 0, 0, 0);
+        
+        if (isNaN(endDate.getTime())) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const dayOfWeek = today.getDay();
+            const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+            const wednesday = new Date(today);
+            wednesday.setDate(today.getDate() + diffToWednesday);
+            return getWeekDatesFromEnding(wednesday);
+        }
+        
+        const dayOfWeek = endDate.getDay();
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(endDate);
+        wednesday.setDate(endDate.getDate() + diffToWednesday);
+        wednesday.setHours(0, 0, 0, 0);
+        
+        const weekDates = [];
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(wednesday);
+            date.setDate(wednesday.getDate() - i);
+            date.setHours(0, 0, 0, 0);
+            weekDates.push(date);
+        }
+        return weekDates;
+    }
+
+    function formatDateHeader(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return day + '-' + month + '-' + year;
+    }
+
+    function formatWeekEnding(date) {
+        const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+        const day = date.getDate();
+        const month = months[date.getMonth()];
+        const year = date.getFullYear();
+        return month + ' ' + day + ', ' + year;
+    }
+
+    function formatNumber(val) {
+        if (val === null || val === undefined || val === '') return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return String(val);
+        return num.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+    }
+
+    function formatPercentage(val) {
+        if (val === null || val === undefined || val === '') return '';
+        const num = parseFloat(val);
+        if (isNaN(num)) return String(val);
+        return (num * 100).toFixed(2) + '%';
+    }
+
+    function formatDateKey(date) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        d.setHours(0, 0, 0, 0);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function parseDateFromValue(dateValue) {
+        if (dateValue instanceof Date) return dateValue;
+        
+        if (typeof dateValue === 'string') {
+            let parts = dateValue.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+            if (parts) {
+                const d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            parts = dateValue.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+            if (parts) {
+                const d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            const d = new Date(dateValue);
+            if (!isNaN(d.getTime())) return d;
+        }
+        
+        return null;
+    }
+
+    function isEmptyValue(val) {
+        return val === null || val === undefined || val === '' || val === '—';
+    }
+
+    // ---------- BUILD TABLE DATA FOR A SINGLE DATE ----------
+    function buildTableDataForDate(rowValues, targetDate) {
+        const tableData = getEmptyRows();
+
+        if (!rowValues || rowValues.length < 2) {
+            return tableData;
+        }
+
+        const dateValue = rowValues[0];
+        const dateObj = parseDateFromValue(dateValue);
+        
+        if (!dateObj) {
+            console.warn('No valid date found in data:', dateValue);
+            return tableData;
+        }
+        
+        // Find which column this date belongs to by matching the date
+        let colIndex = -1;
+        if (targetDate) {
+            const weekDates = getWeekDatesFromEnding(targetDate);
+            const dateKey = formatDateKey(dateObj);
+            
+            weekDates.forEach((d, index) => {
+                if (formatDateKey(d) === dateKey) {
+                    colIndex = index;
+                }
+            });
+        }
+        
+        if (colIndex === -1) {
+            console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
+            return tableData;
+        }
+        
+        // Map values to table rows
+        for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
+            const heading = HEADINGS[i];
+            const val = rowValues[i];
+            
+            if (heading && !isEmptyValue(val)) {
+                const rowIndex = HEADING_TO_ROW_MAP[heading];
+                if (rowIndex !== undefined && tableData[rowIndex]) {
+                    const numVal = parseFloat(val) || 0;
+                    if (numVal !== 0) {
+                        tableData[rowIndex].values[colIndex] = numVal;
+                    }
+                }
+            }
+        }
+
+        calculateDerivedRowsForColumn(tableData, colIndex);
+
+        return tableData;
+    }
+
+    // ---------- BUILD TABLE DATA FROM MULTIPLE DATES ----------
+    function buildTableDataFromRows(dataRows, targetDate) {
+        const tableData = getEmptyRows();
+
+        if (!dataRows || dataRows.length === 0) {
+            return tableData;
+        }
+
+        // Get the week dates
+        const weekDates = getWeekDatesFromEnding(targetDate);
+        const weekDateKeys = weekDates.map(d => formatDateKey(d));
+
+        // Process each row of data
+        dataRows.forEach((rowValues) => {
+            if (!rowValues || rowValues.length < 2) return;
+
+            const dateValue = rowValues[0];
+            const dateObj = parseDateFromValue(dateValue);
+            
+            if (!dateObj) return;
+
+            const dateKey = formatDateKey(dateObj);
+            
+            // Find which column this date belongs to
+            let colIndex = weekDateKeys.indexOf(dateKey);
+            
+            // If date doesn't match any day in the week, skip it
+            if (colIndex === -1) return;
+
+            // Map values to table rows for this date
+            for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
+                const heading = HEADINGS[i];
+                const val = rowValues[i];
+                
+                if (heading && !isEmptyValue(val)) {
+                    const rowIndex = HEADING_TO_ROW_MAP[heading];
+                    if (rowIndex !== undefined && tableData[rowIndex]) {
+                        const numVal = parseFloat(val) || 0;
+                        if (numVal !== 0) {
+                            const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
+                            tableData[rowIndex].values[colIndex] = currentVal + numVal;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Calculate derived rows for all columns that have data
+        for (let col = 0; col < 7; col++) {
+            // Check if this column has any data
+            let hasData = false;
+            for (let row = 0; row < tableData.length; row++) {
+                if (tableData[row].values && tableData[row].values[col] && tableData[row].values[col] !== '') {
+                    hasData = true;
+                    break;
+                }
+            }
+            if (hasData) {
+                calculateDerivedRowsForColumn(tableData, col);
+            }
+        }
+
+        return tableData;
+    }
+
+    // ---------- CALCULATE DERIVED ROWS FOR A SPECIFIC COLUMN ----------
+    function calculateDerivedRowsForColumn(tableData, colIndex) {
+        const rows = tableData;
+        
+        const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
+        const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
+        const placement = parseFloat(rows[7].values[colIndex]) || 0;
+        const cash = parseFloat(rows[9].values[colIndex]) || 0;
+        const govSec = parseFloat(rows[10].values[colIndex]) || 0;
+        const totalLoans = parseFloat(rows[20].values[colIndex]) || 0;
+        const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
+        const ppe = parseFloat(rows[22].values[colIndex]) || 0;
+
+        // LIQUIDITY REQUIREMENTS
+        const primaryRequired = totalDeposits * 0.08;
+        rows[2].values[colIndex] = primaryRequired;
+        
+        const secondaryRequired = totalDeposits * 0.20;
+        rows[3].values[colIndex] = secondaryRequired;
+        
+        rows[4].values[colIndex] = primaryRequired + secondaryRequired;
+
+        // LIQUID ASSETS
+        const totalBalance = currentCall + placement;
+        rows[8].values[colIndex] = totalBalance;
+        
+        const tla = totalBalance + cash + govSec;
+        rows[11].values[colIndex] = tla;
+        
+        rows[12].values[colIndex] = tla - rows[4].values[colIndex];
+
+        // RESERVE HELD
+        const primaryHeld = totalBalance + cash;
+        rows[13].values[colIndex] = primaryHeld;
+        rows[14].values[colIndex] = primaryHeld - primaryRequired;
+        rows[15].values[colIndex] = primaryHeld - primaryRequired;
+        
+        rows[16].values[colIndex] = govSec;
+        rows[17].values[colIndex] = govSec - secondaryRequired;
+
+        // PERCENTAGES
+        rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) * 100 : 0;
+        rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) * 100 : 0;
+
+        // RATIOS
+        rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
+        rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
+        rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
+        rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
+        rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
+
+        return rows;
+    }
+
+    // ---------- RENDER TABLE ----------
+    function renderTable(data) {
+        const tbody = document.getElementById('tableBody');
+        if (!tbody) return;
+        
+        let html = '';
+        const rows = data || getEmptyRows();
+
+        rows.forEach((item) => {
+            if (item.isSection) {
+                html += `<tr class="section-header"><td colspan="8"><i class="fas fa-${item.icon || 'folder-open'}"></i> ${item.label}</td></tr>`;
+                return;
+            }
+
+            let rowClass = '';
+            if (item.totalRow) rowClass = 'total-row';
+            else if (item.surplusRow) rowClass = 'surplus-row';
+            
+            if (item.highlight) {
+                rowClass += ' highlighted-row';
+            }
+
+            let labelHtml = item.label;
+            if (item.icon) {
+                labelHtml = `<i class="fas fa-${item.icon}" style="margin-right:4px;color:#2b6e4f;"></i> ${labelHtml}`;
+            }
+            if (item.bold) labelHtml = `<strong>${labelHtml}</strong>`;
+
+            let valueCells = '';
+            if (item.values && item.values.length === 7) {
+                item.values.forEach((val) => {
+                    let displayVal = '';
+                    const isEmpty = isEmptyValue(val) || val === 0 || val === '0' || val === '0.00';
+                    
+                    if (!isEmpty && val !== undefined && val !== null && String(val).trim() !== '') {
+                        if (item.isPercentage) {
+                            displayVal = formatPercentage(val);
+                        } else {
+                            displayVal = formatNumber(val);
+                        }
+                    } else {
+                        displayVal = '<span class="empty-cell">—</span>';
+                    }
+                    
+                    let cls = 'numeric';
+                    if (item.positive) cls += ' positive';
+                    if (item.negative) cls += ' negative';
+                    if (item.isPercentage) cls += ' percentage';
+                    if (item.isRatio) cls += ' ratio';
+                    if (item.highlight) cls += ' highlighted';
+                    
+                    valueCells += `<td class="${cls}">${displayVal}</td>`;
+                });
+            } else {
+                valueCells = '<td colspan="7" class="text-muted">—</td>';
+            }
+
+            html += `<tr class="${rowClass}">
+                <td class="row-label">${labelHtml}</td>
+                ${valueCells}
+            </tr>`;
+        });
+
+        tbody.innerHTML = html;
+    }
+
+    // ---------- UPDATE COLUMN HEADERS ----------
+    function updateColumnHeadersWithDates(weekEndingDate) {
+        const weekDates = getWeekDatesFromEnding(weekEndingDate);
+        const dayNames = weekDates.map(d => formatDateHeader(d));
+        
+        for (let i = 1; i <= 7; i++) {
+            const col = document.getElementById('col' + i);
+            if (col) col.textContent = dayNames[i - 1];
+        }
+        
+        const lastDay = weekDates[weekDates.length - 1];
+        const weekEnding = formatWeekEnding(lastDay);
+        updateWeekEnding(weekEnding);
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = lastDay.getFullYear();
+            const month = String(lastDay.getMonth() + 1).padStart(2, '0');
+            const day = String(lastDay.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return { weekDates, dayNames, weekEnding };
+    }
+
+    function updateWeekEnding(weekEnding) {
+        const displays = document.querySelectorAll('#weekEndingDisplay, #footerWeekEnding');
+        displays.forEach(el => {
+            if (el) el.textContent = weekEnding;
+        });
+    }
+
+    // ---------- SET DEFAULT DATE ----------
+    function setDefaultDate() {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const dayOfWeek = today.getDay();
+        const diffToWednesday = dayOfWeek <= 3 ? 3 - dayOfWeek : 10 - dayOfWeek;
+        const wednesday = new Date(today);
+        wednesday.setDate(today.getDate() + diffToWednesday);
+        
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            const year = wednesday.getFullYear();
+            const month = String(wednesday.getMonth() + 1).padStart(2, '0');
+            const day = String(wednesday.getDate()).padStart(2, '0');
+            datePicker.value = year + '-' + month + '-' + day;
+        }
+        
+        return wednesday;
+    }
+
+    // ---------- EXPOSE API ----------
+    window.LiquidityTable = {
+        getEmptyRows: getEmptyRows,
+        buildTableDataForDate: buildTableDataForDate,
+        buildTableDataFromRows: buildTableDataFromRows,
+        calculateDerivedRowsForColumn: calculateDerivedRowsForColumn,
+        renderTable: renderTable,
+        formatNumber: formatNumber,
+        formatPercentage: formatPercentage,
+        getWeekDatesFromEnding: getWeekDatesFromEnding,
+        updateColumnHeadersWithDates: updateColumnHeadersWithDates,
+        updateWeekEnding: updateWeekEnding,
+        formatDateHeader: formatDateHeader,
+        formatWeekEnding: formatWeekEnding,
+        setDefaultDate: setDefaultDate,
+        formatDateKey: formatDateKey,
+        parseDateFromValue: parseDateFromValue,
+        isEmptyValue: isEmptyValue,
+        HEADINGS: HEADINGS,
+        HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
+    };
 
 })();
