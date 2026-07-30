@@ -394,10 +394,10 @@
 
         // ----- PERCENTAGES -----
         // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
-        rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) * 100 : 0;
+        rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) : 0;
         
         // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
-        rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) * 100 : 0;
+        rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) : 0;
 
         // ----- RATIOS (displayed as percentages) -----
         // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
