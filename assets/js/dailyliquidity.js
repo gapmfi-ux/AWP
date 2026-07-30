@@ -83,10 +83,10 @@
             return;
         }
 
-        // Get the date from the response
+        // Get the date from the response (server returns formatted yyyy-MM-dd in data.date)
         const dateStr = data.date || values[0] || '';
-        
-        // Update date picker
+
+        // Update date picker (but DO NOT trigger import here)
         if (dateStr) {
             const datePicker = document.getElementById('weekEndingDate');
             if (datePicker) {
@@ -97,6 +97,7 @@
                         const month = String(d.getMonth() + 1).padStart(2, '0');
                         const day = String(d.getDate()).padStart(2, '0');
                         datePicker.value = year + '-' + month + '-' + day;
+                        // update headers to match the returned week-ending
                         if (window.LiquidityTable) {
                             window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
                         }
@@ -107,13 +108,10 @@
             }
         }
 
-        // Build table data for this specific date
+        // Build table data for this specific date (use the week-ending in the picker)
         if (window.LiquidityTable) {
-            // Use the current week ending date from the picker
             const datePicker = document.getElementById('weekEndingDate');
             const weekEnding = datePicker ? datePicker.value : dateStr;
-            
-            // Build the table with the values for the selected date
             const tableData = window.LiquidityTable.buildTableDataForDate(values, weekEnding);
             window.LiquidityTable.renderTable(tableData);
             showToast('Liquidity data loaded successfully', 'success');
@@ -125,17 +123,19 @@
     // ---------- LOAD LIQUIDITY DATA ----------
     async function loadLiquidityData(weekEnding) {
         if (isLoading) return;
-        
+
         showLoadingModal('Loading liquidity data...');
-        
+
         try {
+            // ensure weekEnding is a yyyy-mm-dd string
+            const weekEndingStr = normalizeToISODateString(weekEnding);
             const api = window.API;
             if (!api || typeof api.importLiquidityFromTrialBalance !== 'function') {
                 throw new Error('API service not available');
             }
-            
-            const result = await api.importLiquidityFromTrialBalance(weekEnding);
-            
+
+            const result = await api.importLiquidityFromTrialBalance(weekEndingStr);
+
             if (result && result.success) {
                 populateTableFromLiquidityData(result);
             } else {
@@ -156,17 +156,17 @@
         }
     }
 
-    // Replaces the previous handleDateChange: update headers only, do NOT trigger import
-function handleDateChange() {
-    const datePicker = document.getElementById('weekEndingDate');
-    if (!datePicker) return;
-
-    // Only update column headers when user changes the date.
-    // Do NOT call loadLiquidityData here so the change doesn't trigger an import.
-    if (window.LiquidityTable) {
-        window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
+    // ---------- HANDLE DATE CHANGE ----------
+    // NOTE: Per request, changing the date now only updates column headers and DOES NOT trigger import.
+    function handleDateChange() {
+        const datePicker = document.getElementById('weekEndingDate');
+        if (datePicker) {
+            if (window.LiquidityTable) {
+                window.LiquidityTable.updateColumnHeadersWithDates(datePicker.value);
+            }
+            // import is no longer triggered on date change
+        }
     }
-}
 
     // ============================================
     // UPLOAD MODAL HANDLING
@@ -181,7 +181,7 @@ function handleDateChange() {
         const closeBtn = document.getElementById('uploadModalClose');
         const overlay = document.getElementById('uploadModalOverlay');
         const cancelBtn = document.getElementById('uploadCancelBtn');
-        
+
         if (closeBtn) closeBtn.addEventListener('click', closeUploadModal);
         if (overlay) overlay.addEventListener('click', closeUploadModal);
         if (cancelBtn) cancelBtn.addEventListener('click', closeUploadModal);
@@ -232,7 +232,7 @@ function handleDateChange() {
         modal.style.display = 'block';
 
         clearSelectedFile();
-        
+
         const status = document.getElementById('uploadStatus');
         if (status) status.style.display = 'none';
 
@@ -342,7 +342,7 @@ function handleDateChange() {
                 showUploadSuccessModal(json);
             }, 700);
 
-            // After upload, import liquidity data for the week
+            // After upload, import liquidity data for the week (explicit)
             const weekForImport = weekEnding || json?.weekEnding || '';
             if (weekForImport) {
                 await loadLiquidityData(weekForImport);
@@ -386,6 +386,27 @@ function handleDateChange() {
         }
     }
 
+    // ---------- HELPERS ----------
+    function pad(n) { return String(n).padStart(2, '0'); }
+
+    // Accepts Date object or yyyy-mm-dd or other date string, returns yyyy-mm-dd
+    function normalizeToISODateString(d) {
+        if (!d) return '';
+        if (d instanceof Date) {
+            const year = d.getFullYear();
+            const month = pad(d.getMonth() + 1);
+            const day = pad(d.getDate());
+            return `${year}-${month}-${day}`;
+        }
+        // if already in yyyy-mm-dd format
+        if (typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+        const parsed = new Date(d);
+        if (!isNaN(parsed.getTime())) {
+            return normalizeToISODateString(parsed);
+        }
+        return String(d);
+    }
+
     // ============================================
     // INITIALIZE MODULE
     // ============================================
@@ -393,29 +414,31 @@ function handleDateChange() {
     window.initDailyLiquidityModule = function() {
         console.log('Initializing Daily Liquidity Module');
         console.log('Upload Handler URL:', window.APP_CONFIG?.UPLOAD_HANDLER_URL);
-        
+
         if (!window.LiquidityTable) {
             console.error('LiquidityTable not loaded!');
             showToast('Liquidity table module not loaded', 'error');
             return;
         }
-        
-        const defaultDate = window.LiquidityTable.setDefaultDate();
+
+        // set default picker to the nearest Wednesday as before
+        const defaultDate = window.LiquidityTable.setDefaultDate(); // returns Date
+        // ensure headers match defaultDate
         window.LiquidityTable.updateColumnHeadersWithDates(defaultDate);
         window.LiquidityTable.renderTable(null);
-        
+
         setupUploadButton();
-        
+
         const datePicker = document.getElementById('weekEndingDate');
         if (datePicker) {
             datePicker.removeEventListener('change', handleDateChange);
             datePicker.addEventListener('change', handleDateChange);
-            // Load data for the current week
-            if (datePicker.value) {
-                loadLiquidityData(datePicker.value);
-            } else {
-                loadLiquidityData(defaultDate);
-            }
+            // Load data for the current week using the picker value (ISO string)
+            const weekEndingValue = datePicker.value || normalizeToISODateString(defaultDate);
+            loadLiquidityData(weekEndingValue);
+        } else {
+            // fallback
+            loadLiquidityData(normalizeToISODateString(defaultDate));
         }
     };
 
