@@ -1,4 +1,4 @@
-/* Daily Liquidity ModuleStyles - Compact */
+/* Daily Liquidity Module Styles - Compact */
 .liquidity-container {
     background: white;
     border-radius: 12px;
@@ -111,6 +111,70 @@
     box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
 }
 
+/* ============================================
+   TABS
+   ============================================ */
+.liquidity-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 0;
+}
+
+.liquidity-tab-btn {
+    padding: 8px 18px;
+    border: none;
+    background: none;
+    color: #64748b;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 3px solid transparent;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+.liquidity-tab-btn:hover {
+    color: #1e293b;
+    background: #f1f5f9;
+    border-radius: 6px 6px 0 0;
+}
+
+.liquidity-tab-btn.active {
+    color: #4361ee;
+    border-bottom-color: #4361ee;
+    background: #eef2ff;
+    border-radius: 6px 6px 0 0;
+}
+
+.liquidity-tab-btn i {
+    font-size: 0.85rem;
+}
+
+.liquidity-tab-content {
+    display: none;
+    animation: tabFadeIn 0.25s ease;
+}
+
+.liquidity-tab-content.active {
+    display: block;
+}
+
+@keyframes tabFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .table-responsive {
     overflow-x: auto;
     border-radius: 10px;
@@ -119,7 +183,8 @@
     margin-top: 4px;
 }
 
-#liquidityTable {
+#liquidityTable,
+#weeklyReportTable {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.75rem;
@@ -128,7 +193,8 @@
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
-#liquidityTable th {
+#liquidityTable th,
+#weeklyReportTable th {
     background: #f8fafc;
     color: #1e293b;
     font-weight: 700;
@@ -141,7 +207,8 @@
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Oxygen, Ubuntu, sans-serif;
 }
 
-#liquidityTable td {
+#liquidityTable td,
+#weeklyReportTable td {
     padding: 5px 6px;
     border-bottom: 1px solid #eef2f6;
     text-align: center;
@@ -672,12 +739,27 @@
         padding: 4px 12px;
         font-size: 0.7rem;
     }
-    #liquidityTable {
+    
+    .liquidity-tabs {
+        flex-wrap: wrap;
+        gap: 2px;
+    }
+    .liquidity-tab-btn {
+        padding: 6px 12px;
+        font-size: 0.7rem;
+        flex: 1;
+        justify-content: center;
+    }
+    
+    #liquidityTable,
+    #weeklyReportTable {
         font-size: 0.65rem;
         min-width: 600px;
     }
     #liquidityTable th,
-    #liquidityTable td {
+    #liquidityTable td,
+    #weeklyReportTable th,
+    #weeklyReportTable td {
         padding: 4px 4px;
     }
     .row-label {
@@ -722,6 +804,9 @@
         display: none !important;
     }
     .week-selector {
+        display: none !important;
+    }
+    .liquidity-tabs {
         display: none !important;
     }
     .upload-modal {
