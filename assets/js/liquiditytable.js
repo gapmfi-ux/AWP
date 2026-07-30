@@ -213,33 +213,65 @@
         return year + '-' + month + '-' + day;
     }
 
+    // ---------- Robust date parsing (IMPROVED) ----------
+    // Accepts Date objects, common date strings, and Excel serial numbers
     function parseDateFromValue(dateValue) {
-        if (dateValue instanceof Date) return dateValue;
-        
-        if (typeof dateValue === 'string') {
-            // Try various date formats
-            let d;
-            
-            // Try DD/MM/YYYY or DD-MM-YYYY
-            let parts = dateValue.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-            if (parts) {
-                // parts: [full, day, month, year]
-                d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
-                if (!isNaN(d.getTime())) return d;
-            }
-            
-            // Try YYYY-MM-DD
-            parts = dateValue.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-            if (parts) {
-                d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
-                if (!isNaN(d.getTime())) return d;
-            }
-            
-            // Try standard Date parsing
-            d = new Date(dateValue);
-            if (!isNaN(d.getTime())) return d;
+        if (dateValue === null || dateValue === undefined || dateValue === '') return null;
+
+        // Already a Date
+        if (dateValue instanceof Date) {
+            if (isNaN(dateValue.getTime())) return null;
+            const d = new Date(dateValue);
+            d.setHours(0,0,0,0);
+            return d;
         }
-        
+
+        // Excel serial number (common when reading raw Excel cell values)
+        if (typeof dateValue === 'number' && !isNaN(dateValue)) {
+            // Excel serial: days since 1899-12-30 (Excel leap year bug included)
+            // Treat value > 59 according to Excel serial handling
+            const excelEpoch = new Date(Date.UTC(1899, 11, 30));
+            const days = Math.floor(dateValue);
+            // handle fractional day as time component if needed (we discard time)
+            const ms = days * 24 * 60 * 60 * 1000;
+            const d = new Date(excelEpoch.getTime() + ms);
+            d.setHours(0,0,0,0);
+            if (isNaN(d.getTime())) return null;
+            return d;
+        }
+
+        if (typeof dateValue === 'string') {
+            const s = dateValue.trim();
+            if (s === '') return null;
+
+            // Try DD/MM/YYYY or DD-MM-YYYY
+            let parts = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+            if (parts) {
+                const day = parseInt(parts[1], 10);
+                const month = parseInt(parts[2], 10) - 1;
+                const year = parseInt(parts[3], 10);
+                const d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+            }
+
+            // Try YYYY-MM-DD or YYYY/MM/DD
+            parts = s.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+            if (parts) {
+                const year = parseInt(parts[1], 10);
+                const month = parseInt(parts[2], 10) - 1;
+                const day = parseInt(parts[3], 10);
+                const d = new Date(year, month, day);
+                if (!isNaN(d.getTime())) { d.setHours(0,0,0,0); return d; }
+            }
+
+            // Some Excel exports come with time part or other formats — try Date.parse
+            const parsed = new Date(s);
+            if (!isNaN(parsed.getTime())) {
+                parsed.setHours(0,0,0,0);
+                return parsed;
+            }
+        }
+
         return null;
     }
 
@@ -247,7 +279,7 @@
         return val === null || val === undefined || val === '' || val === '—' || val === '—';
     }
 
-    // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE ----------
+    // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE (STRICT: use row's date only) ----------
     function buildTableDataForDate(rowValues, targetDate) {
         const tableData = getEmptyRows();
 
@@ -255,33 +287,45 @@
             return tableData;
         }
 
-        // Get the date from the row
+        // Parse the date from the row (robust)
         const dateValue = rowValues[0];
         const dateObj = parseDateFromValue(dateValue);
-        
-        // Determine which column this date belongs to based on the week
-        let colIndex = -1;
-        if (dateObj && targetDate) {
-            const weekDates = getWeekDatesFromEnding(targetDate);
-            const dateKey = formatDateKey(dateObj);
-            weekDates.forEach((d, index) => {
-                if (formatDateKey(d) === dateKey) {
-                    colIndex = index;
-                }
-            });
-        }
-        
-        // If date doesn't match any day in the week, don't populate
-        if (colIndex === -1) {
-            console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
+
+        // If we couldn't parse a date from the row, skip it
+        if (!dateObj) {
+            console.warn('Could not parse date from row:', dateValue);
             return tableData;
         }
-        
-        // Map values to table rows
+
+        // Build the seven dates for the selected week-ending period
+        const weekDates = getWeekDatesFromEnding(targetDate);
+
+        // Normalize all weekDates to midnight and compute a simple y-m-d key
+        const weekKeys = weekDates.map(d => {
+            const dd = new Date(d); dd.setHours(0,0,0,0);
+            return dd.getFullYear() + '-' + (dd.getMonth()+1).toString().padStart(2,'0') + '-' + dd.getDate().toString().padStart(2,'0');
+        });
+
+        const rowKey = (function(d) {
+            const dd = new Date(d); dd.setHours(0,0,0,0);
+            return dd.getFullYear() + '-' + (dd.getMonth()+1).toString().padStart(2,'0') + '-' + dd.getDate().toString().padStart(2,'0');
+        })(dateObj);
+
+        // Find exact match of the row date within the weekDates (compare y-m-d)
+        let colIndex = weekKeys.indexOf(rowKey);
+
+        // If no exact match, skip (we are populating by exact date in sheet only)
+        if (colIndex === -1) {
+            // Optionally log for debugging
+            console.warn('Row date not in the selected week, skipping:', rowKey, 'weekKeys:', weekKeys);
+            return tableData;
+        }
+
+        // Map values to table rows using the matched column index
         for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = rowValues[i];
-            
+
             if (heading && !isEmptyValue(val)) {
                 const rowIndex = HEADING_TO_ROW_MAP[heading];
                 if (rowIndex !== undefined && tableData[rowIndex]) {
@@ -292,7 +336,7 @@
             }
         }
 
-        // Calculate all derived rows
+        // Recalculate derived rows for the entire table
         calculateDerivedRows(tableData);
 
         return tableData;
