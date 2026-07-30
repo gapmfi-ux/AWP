@@ -2,7 +2,7 @@
 (function() {
     'use strict';
 
-    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ---------
+    // ---------- HEADINGS (matches server-side DailyLiquidity.gs) ----------
     const HEADINGS = [
         'Date',
         'Head Office Vault',
@@ -239,61 +239,6 @@
         return val === null || val === undefined || val === '' || val === '—';
     }
 
-    // ---------- BUILD TABLE DATA FOR A SINGLE DATE ----------
-    function buildTableDataForDate(rowValues, targetDate) {
-        const tableData = getEmptyRows();
-
-        if (!rowValues || rowValues.length < 2) {
-            return tableData;
-        }
-
-        const dateValue = rowValues[0];
-        const dateObj = parseDateFromValue(dateValue);
-        
-        if (!dateObj) {
-            console.warn('No valid date found in data:', dateValue);
-            return tableData;
-        }
-        
-        // Find which column this date belongs to by matching the date
-        let colIndex = -1;
-        if (targetDate) {
-            const weekDates = getWeekDatesFromEnding(targetDate);
-            const dateKey = formatDateKey(dateObj);
-            
-            weekDates.forEach((d, index) => {
-                if (formatDateKey(d) === dateKey) {
-                    colIndex = index;
-                }
-            });
-        }
-        
-        if (colIndex === -1) {
-            console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
-            return tableData;
-        }
-        
-        // Map values to table rows
-        for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
-            const heading = HEADINGS[i];
-            const val = rowValues[i];
-            
-            if (heading && !isEmptyValue(val)) {
-                const rowIndex = HEADING_TO_ROW_MAP[heading];
-                if (rowIndex !== undefined && tableData[rowIndex]) {
-                    const numVal = parseFloat(val) || 0;
-                    if (numVal !== 0) {
-                        tableData[rowIndex].values[colIndex] = numVal;
-                    }
-                }
-            }
-        }
-
-        calculateDerivedRowsForColumn(tableData, colIndex);
-
-        return tableData;
-    }
-
     // ---------- BUILD TABLE DATA FROM MULTIPLE DATES ----------
     function buildTableDataFromRows(dataRows, targetDate) {
         const tableData = getEmptyRows();
@@ -306,22 +251,37 @@
         const weekDates = getWeekDatesFromEnding(targetDate);
         const weekDateKeys = weekDates.map(d => formatDateKey(d));
 
+        console.log('Week dates:', weekDateKeys);
+
         // Process each row of data
-        dataRows.forEach((rowValues) => {
-            if (!rowValues || rowValues.length < 2) return;
+        let processedCount = 0;
+        dataRows.forEach((rowValues, rowIndex) => {
+            if (!rowValues || rowValues.length < 2) {
+                console.log('Row ' + rowIndex + ' skipped: empty');
+                return;
+            }
 
             const dateValue = rowValues[0];
             const dateObj = parseDateFromValue(dateValue);
             
-            if (!dateObj) return;
+            if (!dateObj) {
+                console.log('Row ' + rowIndex + ' skipped: invalid date', dateValue);
+                return;
+            }
 
             const dateKey = formatDateKey(dateObj);
+            console.log('Row ' + rowIndex + ' date:', dateValue, '->', dateKey);
             
             // Find which column this date belongs to
             let colIndex = weekDateKeys.indexOf(dateKey);
             
             // If date doesn't match any day in the week, skip it
-            if (colIndex === -1) return;
+            if (colIndex === -1) {
+                console.log('Row ' + rowIndex + ' skipped: date not in week', dateKey);
+                return;
+            }
+
+            console.log('Row ' + rowIndex + ' mapped to column:', colIndex);
 
             // Map values to table rows for this date
             for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
@@ -329,29 +289,36 @@
                 const val = rowValues[i];
                 
                 if (heading && !isEmptyValue(val)) {
-                    const rowIndex = HEADING_TO_ROW_MAP[heading];
-                    if (rowIndex !== undefined && tableData[rowIndex]) {
+                    const rowIndexMap = HEADING_TO_ROW_MAP[heading];
+                    if (rowIndexMap !== undefined && tableData[rowIndexMap]) {
                         const numVal = parseFloat(val) || 0;
                         if (numVal !== 0) {
-                            const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
-                            tableData[rowIndex].values[colIndex] = currentVal + numVal;
+                            const currentVal = parseFloat(tableData[rowIndexMap].values[colIndex]) || 0;
+                            tableData[rowIndexMap].values[colIndex] = currentVal + numVal;
                         }
                     }
                 }
             }
+            processedCount++;
         });
 
-        // Calculate derived rows for all columns that have data
+        console.log('Processed ' + processedCount + ' rows');
+
+        // Calculate derived rows for ALL columns that have data
         for (let col = 0; col < 7; col++) {
             // Check if this column has any data
             let hasData = false;
             for (let row = 0; row < tableData.length; row++) {
-                if (tableData[row].values && tableData[row].values[col] && tableData[row].values[col] !== '') {
-                    hasData = true;
-                    break;
+                if (tableData[row].values && tableData[row].values[col]) {
+                    const val = tableData[row].values[col];
+                    if (val !== '' && val !== null && val !== undefined && val !== 0) {
+                        hasData = true;
+                        break;
+                    }
                 }
             }
             if (hasData) {
+                console.log('Calculating derived rows for column:', col);
                 calculateDerivedRowsForColumn(tableData, col);
             }
         }
@@ -359,10 +326,18 @@
         return tableData;
     }
 
+    // ---------- BUILD TABLE DATA FOR A SINGLE DATE ----------
+    function buildTableDataForDate(rowValues, targetDate) {
+        // Convert single row to array and use the multi-row function
+        const rows = rowValues ? [rowValues] : [];
+        return buildTableDataFromRows(rows, targetDate);
+    }
+
     // ---------- CALCULATE DERIVED ROWS FOR A SPECIFIC COLUMN ----------
     function calculateDerivedRowsForColumn(tableData, colIndex) {
         const rows = tableData;
         
+        // Get base values for the specific column
         const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
         const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
         const placement = parseFloat(rows[7].values[colIndex]) || 0;
@@ -372,43 +347,77 @@
         const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
         const ppe = parseFloat(rows[22].values[colIndex]) || 0;
 
-        // LIQUIDITY REQUIREMENTS
+        console.log('Column ' + colIndex + ' base values:', {
+            totalDeposits, currentCall, placement, cash, govSec, totalLoans, netWorth, ppe
+        });
+
+        // ----- LIQUIDITY REQUIREMENTS -----
+        // Primary Reserve required (8%) = 8% of TOTAL DEPOSITS LIABILITY
         const primaryRequired = totalDeposits * 0.08;
         rows[2].values[colIndex] = primaryRequired;
         
+        // Secondary Reserve required (20%) = 20% of TOTAL DEPOSITS LIABILITY
         const secondaryRequired = totalDeposits * 0.20;
         rows[3].values[colIndex] = secondaryRequired;
         
+        // TOTAL RESERVE REQUIRED - TRR = Primary Reserve required + Secondary Reserve required
         rows[4].values[colIndex] = primaryRequired + secondaryRequired;
 
-        // LIQUID ASSETS
+        // ----- LIQUID ASSETS -----
+        // Total Balance with Banks = Current & Call Account Balances + Placement with Other Banks
         const totalBalance = currentCall + placement;
         rows[8].values[colIndex] = totalBalance;
         
+        // TOTAL LIQUID ASSETS - TLA = Total Balance with Banks + Cash in hand + Gov. Securities
         const tla = totalBalance + cash + govSec;
         rows[11].values[colIndex] = tla;
         
+        // SURPLUS/(DEFICIT) TLA - TRR = TLA - TRR
         rows[12].values[colIndex] = tla - rows[4].values[colIndex];
 
-        // RESERVE HELD
+        // ----- RESERVE HELD -----
+        // Primary Reserve Held = Total Balance with Banks + Cash in hand
         const primaryHeld = totalBalance + cash;
         rows[13].values[colIndex] = primaryHeld;
+        
+        // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[14].values[colIndex] = primaryHeld - primaryRequired;
+        
+        // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
         rows[15].values[colIndex] = primaryHeld - primaryRequired;
         
+        // Secondary Reserve Held = Gov. Securities
         rows[16].values[colIndex] = govSec;
+        
+        // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
         rows[17].values[colIndex] = govSec - secondaryRequired;
 
-        // PERCENTAGES
+        // ----- PERCENTAGES -----
+        // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
         rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) * 100 : 0;
+        
+        // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
         rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) * 100 : 0;
 
-        // RATIOS
+        // ----- RATIOS (displayed as percentages) -----
+        // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
         rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
+        
+        // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
         rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
+        
+        // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
         rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
+        
+        // Total Loans/Networth = TOTAL LOANS & ADVANCES / NET WORTH
         rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
+        
+        // PPE/Networth = PPE / NET WORTH
         rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
+
+        console.log('Column ' + colIndex + ' derived values:', {
+            primaryRequired, secondaryRequired, totalBalance, tla, primaryHeld
+        });
 
         return rows;
     }
@@ -552,5 +561,7 @@
         HEADINGS: HEADINGS,
         HEADING_TO_ROW_MAP: HEADING_TO_ROW_MAP
     };
+
+    console.log('LiquidityTable loaded successfully!');
 
 })();
