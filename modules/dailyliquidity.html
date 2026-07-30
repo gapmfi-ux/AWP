@@ -13,25 +13,60 @@
         </div>
     </div>
 
-    <!-- Table -->
-    <div class="table-responsive">
-        <table id="liquidityTable">
-            <thead>
-                <tr>
-                    <th style="text-align:left; padding-left:8px; min-width:140px; width:160px;">Description</th>
-                    <th id="col1">Thu</th>
-                    <th id="col2">Fri</th>
-                    <th id="col3">Sat</th>
-                    <th id="col4">Sun</th>
-                    <th id="col5">Mon</th>
-                    <th id="col6">Tue</th>
-                    <th id="col7">Wed</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <!-- data will be injected -->
-            </tbody>
-        </table>
+    <!-- Tabs -->
+    <div class="liquidity-tabs">
+        <button class="liquidity-tab-btn active" data-tab="dailyTable" onclick="switchLiquidityTab('dailyTable')">
+            <i class="fas fa-table"></i> Daily Liquidity Table
+        </button>
+        <button class="liquidity-tab-btn" data-tab="weeklyReport" onclick="switchLiquidityTab('weeklyReport')">
+            <i class="fas fa-chart-pie"></i> Weekly Report
+        </button>
+    </div>
+
+    <!-- Tab Content: Daily Liquidity Table -->
+    <div class="liquidity-tab-content active" id="dailyTable">
+        <div class="table-responsive">
+            <table id="liquidityTable">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding-left:8px; min-width:140px; width:160px;">Description</th>
+                        <th id="col1">Thu</th>
+                        <th id="col2">Fri</th>
+                        <th id="col3">Sat</th>
+                        <th id="col4">Sun</th>
+                        <th id="col5">Mon</th>
+                        <th id="col6">Tue</th>
+                        <th id="col7">Wed</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- data will be injected -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab Content: Weekly Report -->
+    <div class="liquidity-tab-content" id="weeklyReport">
+        <div class="table-responsive">
+            <table id="weeklyReportTable">
+                <thead>
+                    <tr>
+                        <th style="text-align:left; padding-left:8px; min-width:160px; width:180px;">Description</th>
+                        <th id="weeklyCol1">Thu</th>
+                        <th id="weeklyCol2">Fri</th>
+                        <th id="weeklyCol3">Sat</th>
+                        <th id="weeklyCol4">Sun</th>
+                        <th id="weeklyCol5">Mon</th>
+                        <th id="weeklyCol6">Tue</th>
+                        <th id="weeklyCol7">Wed</th>
+                    </tr>
+                </thead>
+                <tbody id="weeklyTableBody">
+                    <!-- data will be injected -->
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <div class="footer-note">
