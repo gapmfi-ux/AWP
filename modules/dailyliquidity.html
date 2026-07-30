@@ -1,0 +1,104 @@
+<div class="liquidity-container">
+    <!-- header with upload button and date selector -->
+    <div class="liquidity-header">
+        <div class="liquidity-header-left">
+            <button class="upload-btn" id="uploadBtn" title="Upload Excel data to Trial Balance">
+                <i class="fas fa-cloud-upload-alt"></i> Upload
+            </button>
+            <h1><i class="fas fa-water"></i> Daily Liquidity</h1>
+        </div>
+        <div class="week-selector">
+            <label for="weekEndingDate"><i class="far fa-calendar-alt"></i> Week Ending:</label>
+            <input type="date" id="weekEndingDate" value="">
+        </div>
+    </div>
+
+    <!-- Table -->
+    <div class="table-responsive">
+        <table id="liquidityTable">
+            <thead>
+                <tr>
+                    <th style="text-align:left; padding-left:8px; min-width:140px; width:160px;">Description</th>
+                    <th id="col1">Thu</th>
+                    <th id="col2">Fri</th>
+                    <th id="col3">Sat</th>
+                    <th id="col4">Sun</th>
+                    <th id="col5">Mon</th>
+                    <th id="col6">Tue</th>
+                    <th id="col7">Wed</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <!-- data will be injected -->
+            </tbody>
+        </table>
+    </div>
+
+    <div class="footer-note">
+        <span><i class="far fa-calendar-check"></i> Week ending: <span id="footerWeekEnding">Loading...</span></span>
+        <span><i class="fas fa-info-circle"></i> Upload Excel to Trial Balance sheet</span>
+        <span><i class="fas fa-print" style="cursor:pointer;" onclick="window.print();"></i> Print</span>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<div class="upload-modal" id="uploadModal" style="display: none;">
+    <div class="upload-modal-overlay" id="uploadModalOverlay"></div>
+    <div class="upload-modal-content">
+        <div class="upload-modal-header">
+            <h3><i class="fas fa-cloud-upload-alt"></i> Upload Excel to Trial Balance</h3>
+            <button class="upload-modal-close" id="uploadModalClose" title="Close">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="upload-modal-body">
+            <!-- Date Selector -->
+            <div class="upload-modal-field">
+                <label for="uploadWeekEnding"><i class="far fa-calendar-alt"></i> Week Ending Date:</label>
+                <input type="date" id="uploadWeekEnding" value="">
+            </div>
+
+            <!-- File Upload Field -->
+            <div class="upload-modal-field">
+                <label for="uploadFileInput"><i class="fas fa-file-excel"></i> Select Excel File:</label>
+                <div class="upload-file-area" id="uploadFileArea">
+                    <i class="fas fa-upload"></i>
+                    <p>Click to select Excel file or drag & drop here</p>
+                    <span class="upload-file-types">Supports .xlsx, .xls, and .csv files</span>
+                    <input type="file" id="uploadFileInput" accept=".xlsx,.xls,.csv">
+                </div>
+                <div class="upload-file-info" id="uploadFileInfo" style="display: none;">
+                    <i class="fas fa-file-excel" style="color: #4361ee;"></i>
+                    <span id="uploadFileName">No file selected</span>
+                    <button class="upload-file-remove" id="uploadFileRemove" title="Remove file">
+                        <i class="fas fa-times-circle"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload Status -->
+            <div class="upload-status" id="uploadStatus" style="display: none;">
+                <div class="upload-status-icon" id="uploadStatusIcon">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <div class="upload-status-message" id="uploadStatusMessage">Processing...</div>
+            </div>
+
+            <!-- Actions -->
+            <div class="upload-modal-actions">
+                <button class="upload-modal-btn cancel" id="uploadCancelBtn">Cancel</button>
+                <button class="upload-modal-btn upload" id="uploadConfirmBtn" disabled>
+                    <i class="fas fa-cloud-upload-alt"></i> Upload to Trial Balance
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="loading-modal" id="loadingModal" style="display: none;">
+    <div class="loading-modal-content">
+        <div class="loading-spinner"></div>
+        <p id="loadingMessage">Loading data...</p>
+    </div>
+</div>
