@@ -49,7 +49,7 @@
 
     // Mapping from heading label to table row index
     const HEADING_TO_ROW_MAP = {
-        // TOTAL DEPOSITS LIABILITY (row 0)
+        // TOTAL DEPOSITS LIABILITY (row 0) - these are summed
         'Savings Account': 0,
         'Savings Trust Account': 0,
         'Susu Account': 0,
@@ -59,7 +59,7 @@
         'GAP Fixed Term Deposit': 0,
         'GAP Borrowings': 0,
         
-        // Current & Call Account Balances (row 6)
+        // Current & Call Account Balances (row 6) - these are summed
         'CalBank': 6,
         'Unibank - Current Account': 6,
         'Fidelity Bank': 6,
@@ -68,20 +68,20 @@
         'Ecobank': 6,
         'GCB': 6,
         
-        // Placement with Other Banks (row 7)
+        // Placement with Other Banks (row 7) - these are summed
         'CBG - Fixed Deposit': 7,
         'Dalex Finance': 7,
         
         // Cash in hand (row 9)
         'Head Office Vault': 9,
         
-        // Gov. Securities (row 10)
+        // Gov. Securities (row 10) - these are summed
         'GOG Treasury Bills - CBG': 10,
         'GOG Treasury Bills - Fidelity': 10,
         'GOG Treasury Bills - Ecobank': 10,
         'GOG Treasury Bills- Cal Bank': 10,
         
-        // TOTAL LOANS & ADVANCES (row 20)
+        // TOTAL LOANS & ADVANCES (row 20) - these are summed
         'Personal Loan': 20,
         'Susu Loan': 20,
         'Micro Business Loan': 20,
@@ -96,7 +96,7 @@
         'Group Loan': 20,
         'Controller Loans': 20,
         
-        // NET WORTH (row 21)
+        // NET WORTH (row 21) - these are summed
         'Stated Capital': 21,
         'Unaudited Profit Or Loss': 21,
         'Income Surplus': 21,
@@ -140,8 +140,6 @@
     }
 
     // ---------- DATE HELPERS ----------
-    
-    // Get 7 days of the week ending on the given date (Wednesday)
     function getWeekDatesFromEnding(weekEndingDate) {
         const endDate = new Date(weekEndingDate);
         endDate.setHours(0, 0, 0, 0);
@@ -172,7 +170,6 @@
         return weekDates;
     }
 
-    // Format date for display as DD-MM-YYYY
     function formatDateHeader(date) {
         const day = String(date.getDate()).padStart(2, '0');
         const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -180,7 +177,6 @@
         return day + '-' + month + '-' + year;
     }
 
-    // Format date for display as "MMM DD, YYYY"
     function formatWeekEnding(date) {
         const months = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
         const day = date.getDate();
@@ -189,72 +185,6 @@
         return month + ' ' + day + ', ' + year;
     }
 
-    // Format date as YYYY-MM-DD for comparison (matches sheet and date picker)
-    function formatDateKey(date) {
-        const d = new Date(date);
-        if (isNaN(d.getTime())) return '';
-        d.setHours(0, 0, 0, 0);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return year + '-' + month + '-' + day;
-    }
-
-    // Parse date from various formats
-    function parseDateFromValue(dateValue) {
-        // If it's already a Date object
-        if (dateValue instanceof Date) {
-            const d = new Date(dateValue);
-            d.setHours(0, 0, 0, 0);
-            return d;
-        }
-        
-        if (typeof dateValue === 'string') {
-            // Clean up the string
-            let cleaned = dateValue.trim();
-            
-            // Try DD/MM/YYYY or DD-MM-YYYY
-            let parts = cleaned.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
-            if (parts) {
-                // parts: [full, day, month, year]
-                const d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
-                if (!isNaN(d.getTime())) {
-                    d.setHours(0, 0, 0, 0);
-                    return d;
-                }
-            }
-            
-            // Try YYYY-MM-DD
-            parts = cleaned.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
-            if (parts) {
-                const d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
-                if (!isNaN(d.getTime())) {
-                    d.setHours(0, 0, 0, 0);
-                    return d;
-                }
-            }
-            
-            // Try standard Date parsing
-            const d = new Date(cleaned);
-            if (!isNaN(d.getTime())) {
-                d.setHours(0, 0, 0, 0);
-                return d;
-            }
-        }
-        
-        // Try numeric timestamp
-        if (typeof dateValue === 'number') {
-            const d = new Date(dateValue);
-            if (!isNaN(d.getTime())) {
-                d.setHours(0, 0, 0, 0);
-                return d;
-            }
-        }
-        
-        return null;
-    }
-
-    // Format number with 2 decimal places
     function formatNumber(val) {
         if (val === null || val === undefined || val === '') return '';
         const num = parseFloat(val);
@@ -265,7 +195,6 @@
         });
     }
 
-    // Format percentage (multiply by 100 and add %)
     function formatPercentage(val) {
         if (val === null || val === undefined || val === '') return '';
         const num = parseFloat(val);
@@ -273,11 +202,44 @@
         return (num * 100).toFixed(2) + '%';
     }
 
+    function formatDateKey(date) {
+        const d = new Date(date);
+        if (isNaN(d.getTime())) return '';
+        d.setHours(0, 0, 0, 0);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return year + '-' + month + '-' + day;
+    }
+
+    function parseDateFromValue(dateValue) {
+        if (dateValue instanceof Date) return dateValue;
+        
+        if (typeof dateValue === 'string') {
+            let parts = dateValue.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/);
+            if (parts) {
+                const d = new Date(parseInt(parts[3]), parseInt(parts[2]) - 1, parseInt(parts[1]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            parts = dateValue.match(/(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})/);
+            if (parts) {
+                const d = new Date(parseInt(parts[1]), parseInt(parts[2]) - 1, parseInt(parts[3]));
+                if (!isNaN(d.getTime())) return d;
+            }
+            
+            const d = new Date(dateValue);
+            if (!isNaN(d.getTime())) return d;
+        }
+        
+        return null;
+    }
+
     function isEmptyValue(val) {
         return val === null || val === undefined || val === '' || val === '—';
     }
 
-    // ---------- BUILD TABLE DATA FOR A SPECIFIC DATE ----------
+    // ---------- BUILD TABLE DATA FOR A SINGLE DATE ----------
     function buildTableDataForDate(rowValues, targetDate) {
         const tableData = getEmptyRows();
 
@@ -285,7 +247,6 @@
             return tableData;
         }
 
-        // Get the date from the row (could be string or Date object)
         const dateValue = rowValues[0];
         const dateObj = parseDateFromValue(dateValue);
         
@@ -294,37 +255,25 @@
             return tableData;
         }
         
-        // Debug: Log the parsed date
-        console.log('Parsed date from data:', dateObj, 'formatDateKey:', formatDateKey(dateObj));
-        
-        // Determine which column this date belongs to based on the week
+        // Find which column this date belongs to by matching the date
         let colIndex = -1;
         if (targetDate) {
             const weekDates = getWeekDatesFromEnding(targetDate);
             const dateKey = formatDateKey(dateObj);
             
-            // Debug: Log week dates
-            console.log('Week dates:', weekDates.map(d => formatDateKey(d)));
-            console.log('Looking for date key:', dateKey);
-            
             weekDates.forEach((d, index) => {
-                const weekDateKey = formatDateKey(d);
-                console.log('Comparing:', weekDateKey, '===', dateKey, weekDateKey === dateKey);
-                if (weekDateKey === dateKey) {
+                if (formatDateKey(d) === dateKey) {
                     colIndex = index;
                 }
             });
         }
         
-        // If date doesn't match any day in the week, return empty table
         if (colIndex === -1) {
             console.warn('Date does not match any day in the selected week:', dateValue, targetDate);
             return tableData;
         }
         
-        console.log('Matched to column index:', colIndex);
-        
-        // Map values to table rows - ONLY populate the matching column
+        // Map values to table rows
         for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
             const heading = HEADINGS[i];
             const val = rowValues[i];
@@ -340,8 +289,72 @@
             }
         }
 
-        // Calculate all derived rows for the matching column only
         calculateDerivedRowsForColumn(tableData, colIndex);
+
+        return tableData;
+    }
+
+    // ---------- BUILD TABLE DATA FROM MULTIPLE DATES ----------
+    function buildTableDataFromRows(dataRows, targetDate) {
+        const tableData = getEmptyRows();
+
+        if (!dataRows || dataRows.length === 0) {
+            return tableData;
+        }
+
+        // Get the week dates
+        const weekDates = getWeekDatesFromEnding(targetDate);
+        const weekDateKeys = weekDates.map(d => formatDateKey(d));
+
+        // Process each row of data
+        dataRows.forEach((rowValues) => {
+            if (!rowValues || rowValues.length < 2) return;
+
+            const dateValue = rowValues[0];
+            const dateObj = parseDateFromValue(dateValue);
+            
+            if (!dateObj) return;
+
+            const dateKey = formatDateKey(dateObj);
+            
+            // Find which column this date belongs to
+            let colIndex = weekDateKeys.indexOf(dateKey);
+            
+            // If date doesn't match any day in the week, skip it
+            if (colIndex === -1) return;
+
+            // Map values to table rows for this date
+            for (let i = 1; i < rowValues.length && i < HEADINGS.length; i++) {
+                const heading = HEADINGS[i];
+                const val = rowValues[i];
+                
+                if (heading && !isEmptyValue(val)) {
+                    const rowIndex = HEADING_TO_ROW_MAP[heading];
+                    if (rowIndex !== undefined && tableData[rowIndex]) {
+                        const numVal = parseFloat(val) || 0;
+                        if (numVal !== 0) {
+                            const currentVal = parseFloat(tableData[rowIndex].values[colIndex]) || 0;
+                            tableData[rowIndex].values[colIndex] = currentVal + numVal;
+                        }
+                    }
+                }
+            }
+        });
+
+        // Calculate derived rows for all columns that have data
+        for (let col = 0; col < 7; col++) {
+            // Check if this column has any data
+            let hasData = false;
+            for (let row = 0; row < tableData.length; row++) {
+                if (tableData[row].values && tableData[row].values[col] && tableData[row].values[col] !== '') {
+                    hasData = true;
+                    break;
+                }
+            }
+            if (hasData) {
+                calculateDerivedRowsForColumn(tableData, col);
+            }
+        }
 
         return tableData;
     }
@@ -350,7 +363,6 @@
     function calculateDerivedRowsForColumn(tableData, colIndex) {
         const rows = tableData;
         
-        // Get base values for the specific column
         const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
         const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
         const placement = parseFloat(rows[7].values[colIndex]) || 0;
@@ -499,7 +511,7 @@
         });
     }
 
-    // ---------- SET DEFAULT DATE (Wednesday of current week) ----------
+    // ---------- SET DEFAULT DATE ----------
     function setDefaultDate() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -523,6 +535,7 @@
     window.LiquidityTable = {
         getEmptyRows: getEmptyRows,
         buildTableDataForDate: buildTableDataForDate,
+        buildTableDataFromRows: buildTableDataFromRows,
         calculateDerivedRowsForColumn: calculateDerivedRowsForColumn,
         renderTable: renderTable,
         formatNumber: formatNumber,
