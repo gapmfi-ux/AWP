@@ -3,7 +3,9 @@ class ApiService {
     // UPDATE THIS with your Google Apps Script Web App URL
     this.BASE_URL = 'https://script.google.com/macros/s/AKfycbyh-69v4qQbQYFJp6ZeHmnr_vOLuzBgRYjf0F2YeWa0W3k2RC_OMeCnT9V-Wq6Yu5G3/exec';
     this.cache = new Map();
-    this.debug = true; // Set to false in production
+    this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
+    this.pendingRequests = new Map(); // Deduplicate concurrent requests
+    this.debug = false; // Set to true for debugging
   }
 
   log(...args) {
@@ -16,11 +18,30 @@ class ApiService {
     console.error('[API]', ...args);
   }
 
-  // Generic request method (JSONP)
+  // Generic request method with caching and deduplication
   async request(action, data = {}, options = {}) {
-    const showLoading = options.showLoading !== false;
+    const cacheKey = `${action}_${JSON.stringify(data)}`;
+    const useCache = options.useCache !== false;
     
-    return new Promise((resolve, reject) => {
+    // Check cache first
+    if (useCache && this.cache.has(cacheKey)) {
+      const cached = this.cache.get(cacheKey);
+      if (Date.now() - cached.timestamp < this.cacheTimeout) {
+        this.log(`Cache hit for ${action}`);
+        return cached.data;
+      } else {
+        this.cache.delete(cacheKey);
+      }
+    }
+
+    // Deduplicate concurrent requests for the same action
+    if (this.pendingRequests.has(cacheKey)) {
+      this.log(`Deduplicating request for ${action}`);
+      return this.pendingRequests.get(cacheKey);
+    }
+
+    // Create the request promise
+    const requestPromise = new Promise((resolve, reject) => {
       try {
         // Generate a unique callback name
         const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -33,7 +54,6 @@ class ApiService {
         
         const fullUrl = url.toString();
         this.log(`Requesting: ${action}`, data);
-        this.log(`URL: ${fullUrl.substring(0, 300)}...`);
         
         // Set timeout
         const timeoutId = setTimeout(() => {
@@ -56,8 +76,11 @@ class ApiService {
           this.log(`Response for ${action}:`, response);
           
           if (response && response.success !== false) {
-            const cacheKey = `${action}_${JSON.stringify(data)}`;
-            this.cache.set(cacheKey, response);
+            // Cache the response
+            this.cache.set(cacheKey, {
+              data: response,
+              timestamp: Date.now()
+            });
             resolve(response);
           } else {
             reject(new Error((response && response.error) || 'API request failed'));
@@ -83,6 +106,50 @@ class ApiService {
         reject(error);
       }
     });
+
+    // Store the pending request
+    this.pendingRequests.set(cacheKey, requestPromise);
+    
+    try {
+      const result = await requestPromise;
+      return result;
+    } finally {
+      this.pendingRequests.delete(cacheKey);
+    }
+  }
+
+  // Batch load multiple requests
+  async batchRequest(requests) {
+    const results = {};
+    const promises = [];
+    
+    for (const [key, { action, data }] of Object.entries(requests)) {
+      promises.push(
+        this.request(action, data, { showLoading: false })
+          .then(result => { results[key] = result; })
+          .catch(err => { results[key] = { error: err.message }; })
+      );
+    }
+    
+    await Promise.all(promises);
+    return results;
+  }
+
+  // Clear cache for specific action or all
+  clearCache(action = null) {
+    if (action) {
+      const keysToDelete = [];
+      for (const key of this.cache.keys()) {
+        if (key.startsWith(action)) {
+          keysToDelete.push(key);
+        }
+      }
+      keysToDelete.forEach(key => this.cache.delete(key));
+      this.log(`Cleared cache for action: ${action}`);
+    } else {
+      this.cache.clear();
+      this.log('Cleared all cache');
+    }
   }
 
   // ============================================
@@ -99,7 +166,6 @@ class ApiService {
   
   async processForm(formData, options = {}) {
     this.log('processForm called with:', formData);
-    // Send formData directly, not wrapped in another object
     return this.request('processForm', formData, options);
   }
   
@@ -117,7 +183,6 @@ class ApiService {
   
   async updateVoucher(formData, options = {}) {
     this.log('updateVoucher called with:', formData);
-    // Send formData directly, not wrapped in another object
     return this.request('updateVoucher', formData, options);
   }
 
@@ -223,12 +288,15 @@ class ApiService {
   async getAllInvestments(options = {}) {
     return this.request('getAllInvestments', {}, options);
   }
-async getInvestmentByCode(investmentCode, options = {}) {
-  return this.request('getInvestmentByCode', { investmentCode }, options);
-}
+  
+  async getInvestmentByCode(investmentCode, options = {}) {
+    return this.request('getInvestmentByCode', { investmentCode }, options);
+  }
+  
   async updateInvestmentRedeemDate(investmentCode, redeemDate, options = {}) {
-  return this.request('updateInvestmentRedeemDate', { investmentCode, redeemDate }, options);
-}
+    return this.request('updateInvestmentRedeemDate', { investmentCode, redeemDate }, options);
+  }
+
   // ============================================
   // SUBSCRIPTION API
   // ============================================
@@ -287,7 +355,6 @@ async getInvestmentByCode(investmentCode, options = {}) {
     }, options);
   }
 
-
   // ============================================
   // DAILY LIQUIDITY API
   // ============================================
@@ -321,6 +388,7 @@ async getInvestmentByCode(investmentCode, options = {}) {
     this.log('deleteLiquidityData called for week ending:', weekEnding);
     return this.request('deleteLiquidityData', { weekEnding }, options);
   }
+
   // ============================================
   // TEST CONNECTION
   // ============================================
@@ -337,20 +405,6 @@ async getInvestmentByCode(investmentCode, options = {}) {
         connected: false,
         message: 'Connection failed: ' + error.message
       };
-    }
-  }
-  
-  clearCache(action = null) {
-    if (action) {
-      const keysToDelete = [];
-      for (const key of this.cache.keys()) {
-        if (key.startsWith(action)) {
-          keysToDelete.push(key);
-        }
-      }
-      keysToDelete.forEach(key => this.cache.delete(key));
-    } else {
-      this.cache.clear();
     }
   }
 }
@@ -401,6 +455,7 @@ window.callGAS = async function(action, data = {}) {
     'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(data.fromDate, data.toDate),
     'getExpiredSubscriptions': () => API.getExpiredSubscriptions(data.asOfDate),
     'renewSubscription': () => API.renewSubscription(data.subscriptionCode, data.newExpiryDate, data.newAnnualCost),
+    'loadLiquidityData': () => API.loadLiquidityData(data.weekEnding),
     'test': () => API.request('test', {})
   };
   
