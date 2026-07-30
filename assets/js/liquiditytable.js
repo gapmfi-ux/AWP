@@ -131,11 +131,11 @@
             { label: 'NET WORTH (last month close)', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Plant, Property & Equipment (PPE)', values: ['', '', '', '', '', '', ''] },
             { isSection: true, label: 'RATIOS' },
-            { label: 'Total Liquid Assets/Deposits', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'Cash in hand/Deposit', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'Loans/Deposits', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'Total Loans/Networth', values: ['', '', '', '', '', '', ''], bold: true },
-            { label: 'PPE/Networth', values: ['', '', '', '', '', '', ''], bold: true }
+            { label: 'Total Liquid Assets/Deposits', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Cash in hand/Deposit', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Loans/Deposits', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'Total Loans/Networth', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true },
+            { label: 'PPE/Networth', values: ['', '', '', '', '', '', ''], bold: true, isRatio: true, isPercentage: true }
         ];
     }
 
@@ -199,7 +199,9 @@
         if (val === null || val === undefined || val === '') return '';
         const num = parseFloat(val);
         if (isNaN(num)) return String(val);
-        return num.toFixed(2) + '%';
+        // For ratios like 1.13 -> show as 113% or 0.04 -> show as 4%
+        // Multiply by 100 to get percentage
+        return (num * 100).toFixed(2) + '%';
     }
 
     function formatDateKey(date) {
@@ -287,7 +289,6 @@
             if (heading && !isEmptyValue(val)) {
                 const rowIndex = HEADING_TO_ROW_MAP[heading];
                 if (rowIndex !== undefined && tableData[rowIndex]) {
-                    // Only set the value for the matching column
                     const numVal = parseFloat(val) || 0;
                     if (numVal !== 0) {
                         tableData[rowIndex].values[colIndex] = numVal;
@@ -317,41 +318,67 @@
         const ppe = parseFloat(rows[22].values[colIndex]) || 0;
 
         // LIQUIDITY REQUIREMENTS
+        // Primary Reserve required (8%) - row 2
         const primaryRequired = deposits * 0.08;
         rows[2].values[colIndex] = primaryRequired;
         
+        // Secondary Reserve required (20%) - row 3
         const secondaryRequired = deposits * 0.20;
         rows[3].values[colIndex] = secondaryRequired;
         
+        // TOTAL RESERVE REQUIRED - TRR (row 4)
         rows[4].values[colIndex] = primaryRequired + secondaryRequired;
 
         // LIQUID ASSETS
+        // Total Balance with Banks (row 8) = Current & Call Account Balances + Placement with Other Banks
         const totalBalance = currentCall + placement;
         rows[8].values[colIndex] = totalBalance;
         
+        // TOTAL LIQUID ASSETS - TLA (row 11)
         const tla = totalBalance + cash + govSec;
         rows[11].values[colIndex] = tla;
         
+        // SURPLUS/(DEFICIT) TLA - TRR (row 12)
         rows[12].values[colIndex] = tla - rows[4].values[colIndex];
 
         // RESERVE HELD
+        // Primary Reserve Held (row 13) = Total Balance with Banks + Cash in hand
         const primaryHeld = totalBalance + cash;
         rows[13].values[colIndex] = primaryHeld;
+        
+        // Surplus/(Deficit)* (row 14)
         rows[14].values[colIndex] = primaryHeld - primaryRequired;
+        
+        // Surplus/Deficit (with borrowings)* (row 15)
         rows[15].values[colIndex] = primaryHeld - primaryRequired;
         
+        // Secondary Reserve Held (row 16) = Gov. Securities
         rows[16].values[colIndex] = govSec;
+        
+        // Surplus/(Deficit)* (row 17)
         rows[17].values[colIndex] = govSec - secondaryRequired;
 
-        // PERCENTAGES
+        // PERCENTAGES (rows 18-19)
+        // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
         rows[18].values[colIndex] = deposits > 0 ? (primaryHeld / deposits) * 100 : 0;
+        
+        // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
         rows[19].values[colIndex] = deposits > 0 ? (govSec / deposits) * 100 : 0;
 
-        // RATIOS
+        // RATIOS (rows 24-28) - these should be displayed as percentages
+        // Total Liquid Assets/Deposits (row 24)
         rows[24].values[colIndex] = deposits > 0 ? tla / deposits : 0;
+        
+        // Cash in hand/Deposit (row 25)
         rows[25].values[colIndex] = deposits > 0 ? cash / deposits : 0;
+        
+        // Loans/Deposits (row 26)
         rows[26].values[colIndex] = deposits > 0 ? totalLoans / deposits : 0;
+        
+        // Total Loans/Networth (row 27)
         rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
+        
+        // PPE/Networth (row 28)
         rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
 
         return rows;
@@ -393,6 +420,7 @@
                     
                     if (!isEmpty && val !== undefined && val !== null && String(val).trim() !== '') {
                         if (item.isPercentage) {
+                            // For ratios, format as percentage
                             displayVal = formatPercentage(val);
                         } else {
                             displayVal = formatNumber(val);
@@ -405,6 +433,7 @@
                     if (item.positive) cls += ' positive';
                     if (item.negative) cls += ' negative';
                     if (item.isPercentage) cls += ' percentage';
+                    if (item.isRatio) cls += ' ratio';
                     if (item.highlight) cls += ' highlighted';
                     
                     valueCells += `<td class="${cls}">${displayVal}</td>`;
