@@ -8,7 +8,14 @@ let dashboardData = {
   outOfStockItems: [],
   expiredSubscriptions: [],
   expiringSubscriptions: [],
-  duePayments: []  // Now includes recurring payments based on frequency
+  duePayments: [],  // Now includes recurring payments based on frequency
+  ratios: {
+    primaryReserve: null,
+    secondaryReserve: null,
+    liquidAssets: null,
+    loansDeposits: null,
+    date: null
+  }
 };
 
 let dashboardRefreshInterval = null;
@@ -20,6 +27,11 @@ let dashboardRefreshInterval = null;
 function initDashboard() {
   console.log('Initializing Dashboard');
   currentModule = 'dashboard';
+  
+  // Load ratios first (priority)
+  loadDashboardRatios();
+  
+  // Then load other alerts
   loadDashboardData();
   
   // Set up auto-refresh every 5 minutes (300000 ms)
@@ -30,6 +42,7 @@ function initDashboard() {
     if (currentModule === 'dashboard') {
       console.log('Auto-refreshing dashboard alerts...');
       loadDashboardData();
+      loadDashboardRatios();
     }
   }, 300000);
 }
@@ -57,6 +70,70 @@ function loadDashboardContent() {
 function generateDashboardHTML() {
   return `
     <div class="dashboard-container">
+      <!-- ============================================ -->
+      <!-- RATIO GRID BOXES - Top of Dashboard          -->
+      <!-- ============================================ -->
+      <div class="ratios-grid">
+        <div class="ratio-card">
+          <div class="ratio-icon">
+            <i class="fas fa-university"></i>
+          </div>
+          <div class="ratio-info">
+            <div class="ratio-label">Primary Reserve Ratio</div>
+            <div class="ratio-value" id="primaryReserveRatio">--</div>
+            <div class="ratio-date" id="primaryReserveDate">Loading...</div>
+          </div>
+          <div class="ratio-status" id="primaryReserveStatus">
+            <i class="fas fa-circle"></i>
+          </div>
+        </div>
+
+        <div class="ratio-card">
+          <div class="ratio-icon">
+            <i class="fas fa-chart-pie"></i>
+          </div>
+          <div class="ratio-info">
+            <div class="ratio-label">Secondary Reserve Ratio</div>
+            <div class="ratio-value" id="secondaryReserveRatio">--</div>
+            <div class="ratio-date" id="secondaryReserveDate">Loading...</div>
+          </div>
+          <div class="ratio-status" id="secondaryReserveStatus">
+            <i class="fas fa-circle"></i>
+          </div>
+        </div>
+
+        <div class="ratio-card">
+          <div class="ratio-icon">
+            <i class="fas fa-hand-holding-usd"></i>
+          </div>
+          <div class="ratio-info">
+            <div class="ratio-label">Liquid Assets / Deposits</div>
+            <div class="ratio-value" id="liquidAssetsRatio">--</div>
+            <div class="ratio-date" id="liquidAssetsDate">Loading...</div>
+          </div>
+          <div class="ratio-status" id="liquidAssetsStatus">
+            <i class="fas fa-circle"></i>
+          </div>
+        </div>
+
+        <div class="ratio-card">
+          <div class="ratio-icon">
+            <i class="fas fa-money-bill-wave"></i>
+          </div>
+          <div class="ratio-info">
+            <div class="ratio-label">Loans / Deposits</div>
+            <div class="ratio-value" id="loansDepositsRatio">--</div>
+            <div class="ratio-date" id="loansDepositsDate">Loading...</div>
+          </div>
+          <div class="ratio-status" id="loansDepositsStatus">
+            <i class="fas fa-circle"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================ -->
+      <!-- ALERTS SECTION                              -->
+      <!-- ============================================ -->
       <div class="alerts-section">
         <h3><i class="fas fa-bell"></i> Alerts & Notifications</h3>
         
@@ -153,6 +230,250 @@ function generateDashboardHTML() {
     </div>
   `;
 }
+
+// ============================================
+// LOAD DASHBOARD RATIOS (Previous Day)
+// ============================================
+
+function loadDashboardRatios() {
+  console.log('Loading dashboard ratios for previous day...');
+  
+  // Get previous day's date
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = formatDateForInput(yesterday);
+  
+  // Format date for display
+  const dateDisplay = yesterday.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric'
+  });
+  
+  // Show loading state
+  document.getElementById('primaryReserveDate').textContent = 'Loading...';
+  document.getElementById('secondaryReserveDate').textContent = 'Loading...';
+  document.getElementById('liquidAssetsDate').textContent = 'Loading...';
+  document.getElementById('loansDepositsDate').textContent = 'Loading...';
+  
+  // Load liquidity data for yesterday
+  if (typeof API !== 'undefined' && API) {
+    API.loadLiquidityData(yesterdayStr, { useCache: true })
+      .then(function(response) {
+        if (response && response.success) {
+          const allRows = response.allRows || [];
+          
+          // Find the row for yesterday's date
+          let yesterdayRow = null;
+          for (let row of allRows) {
+            if (row && row.length > 0) {
+              const rowDate = row[0];
+              const d1 = new Date(yesterdayStr);
+              const d2 = new Date(rowDate);
+              if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                const key1 = formatDateKey(d1);
+                const key2 = formatDateKey(d2);
+                if (key1 === key2) {
+                  yesterdayRow = row;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (yesterdayRow && window.LiquidityTable) {
+            // Build table data for the row
+            const tableData = window.LiquidityTable.buildTableDataForDate([yesterdayRow], yesterdayStr);
+            
+            // Extract ratios from the table data
+            // Row indices: 
+            // 18 = Primary Reserve %
+            // 19 = Secondary Reserve %
+            // 24 = Total Liquid Assets/Deposits
+            // 26 = Loans/Deposits
+            // 0 = Total Deposits
+            
+            const primaryReserveRow = tableData[18];
+            const secondaryReserveRow = tableData[19];
+            const liquidAssetsRow = tableData[24];
+            const loansDepositsRow = tableData[26];
+            
+            // Get the value from the first column (index 0) since we're looking at a single day
+            const primaryReserve = primaryReserveRow?.values?.[0] || 0;
+            const secondaryReserve = secondaryReserveRow?.values?.[0] || 0;
+            const liquidAssets = liquidAssetsRow?.values?.[0] || 0;
+            const loansDeposits = loansDepositsRow?.values?.[0] || 0;
+            
+            // Update the dashboard
+            dashboardData.ratios = {
+              primaryReserve: primaryReserve,
+              secondaryReserve: secondaryReserve,
+              liquidAssets: liquidAssets,
+              loansDeposits: loansDeposits,
+              date: yesterdayStr
+            };
+            
+            renderDashboardRatios(dateDisplay);
+          } else {
+            // No data for yesterday, try today
+            const today = new Date();
+            const todayStr = formatDateForInput(today);
+            
+            API.loadLiquidityData(todayStr, { useCache: true })
+              .then(function(todayResponse) {
+                if (todayResponse && todayResponse.success) {
+                  const todayRows = todayResponse.allRows || [];
+                  let todayRow = null;
+                  for (let row of todayRows) {
+                    if (row && row.length > 0) {
+                      const rowDate = row[0];
+                      const d1 = new Date(todayStr);
+                      const d2 = new Date(rowDate);
+                      if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
+                        const key1 = formatDateKey(d1);
+                        const key2 = formatDateKey(d2);
+                        if (key1 === key2) {
+                          todayRow = row;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  
+                  if (todayRow && window.LiquidityTable) {
+                    const tableData = window.LiquidityTable.buildTableDataForDate([todayRow], todayStr);
+                    
+                    const primaryReserveRow = tableData[18];
+                    const secondaryReserveRow = tableData[19];
+                    const liquidAssetsRow = tableData[24];
+                    const loansDepositsRow = tableData[26];
+                    
+                    dashboardData.ratios = {
+                      primaryReserve: primaryReserveRow?.values?.[0] || 0,
+                      secondaryReserve: secondaryReserveRow?.values?.[0] || 0,
+                      liquidAssets: liquidAssetsRow?.values?.[0] || 0,
+                      loansDeposits: loansDepositsRow?.values?.[0] || 0,
+                      date: todayStr
+                    };
+                    
+                    const todayDisplay = today.toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric'
+                    });
+                    renderDashboardRatios(todayDisplay + ' (today)');
+                  } else {
+                    setRatiosAsUnavailable(dateDisplay);
+                  }
+                } else {
+                  setRatiosAsUnavailable(dateDisplay);
+                }
+              })
+              .catch(function() {
+                setRatiosAsUnavailable(dateDisplay);
+              });
+          }
+        } else {
+          setRatiosAsUnavailable(dateDisplay);
+        }
+      })
+      .catch(function(error) {
+        console.error('Error loading ratios:', error);
+        setRatiosAsUnavailable(dateDisplay);
+      });
+  } else {
+    setRatiosAsUnavailable(dateDisplay);
+  }
+}
+
+// ============================================
+// RENDER DASHBOARD RATIOS
+// ============================================
+
+function renderDashboardRatios(dateDisplay) {
+  const ratios = dashboardData.ratios;
+  
+  // Update Primary Reserve
+  updateRatioCard('primaryReserveRatio', 'primaryReserveDate', 'primaryReserveStatus', 
+    ratios.primaryReserve, dateDisplay, 20, 8);
+
+  // Update Secondary Reserve
+  updateRatioCard('secondaryReserveRatio', 'secondaryReserveDate', 'secondaryReserveStatus', 
+    ratios.secondaryReserve, dateDisplay, 20, 8);
+
+  // Update Liquid Assets / Deposits
+  updateRatioCard('liquidAssetsRatio', 'liquidAssetsDate', 'liquidAssetsStatus', 
+    ratios.liquidAssets, dateDisplay, 30, 15);
+
+  // Update Loans / Deposits
+  updateRatioCard('loansDepositsRatio', 'loansDepositsDate', 'loansDepositsStatus', 
+    ratios.loansDeposits, dateDisplay, 70, 50);
+}
+
+function updateRatioCard(valueId, dateId, statusId, value, dateDisplay, goodThreshold, warningThreshold) {
+  const valueEl = document.getElementById(valueId);
+  const dateEl = document.getElementById(dateId);
+  const statusEl = document.getElementById(statusId);
+  
+  if (!valueEl || !dateEl || !statusEl) return;
+  
+  // Format the value as percentage
+  if (value !== null && value !== undefined && value !== '') {
+    const numValue = parseFloat(value);
+    if (!isNaN(numValue)) {
+      valueEl.textContent = numValue.toFixed(2) + '%';
+      valueEl.classList.remove('loading');
+      
+      // Determine status color
+      if (numValue >= goodThreshold) {
+        statusEl.className = 'ratio-status good';
+        statusEl.innerHTML = '<i class="fas fa-circle"></i> Good';
+      } else if (numValue >= warningThreshold) {
+        statusEl.className = 'ratio-status warning';
+        statusEl.innerHTML = '<i class="fas fa-circle"></i> Warning';
+      } else {
+        statusEl.className = 'ratio-status danger';
+        statusEl.innerHTML = '<i class="fas fa-circle"></i> Low';
+      }
+    } else {
+      valueEl.textContent = '--';
+      statusEl.className = 'ratio-status';
+      statusEl.innerHTML = '<i class="fas fa-circle"></i> N/A';
+    }
+  } else {
+    valueEl.textContent = '--';
+    statusEl.className = 'ratio-status';
+    statusEl.innerHTML = '<i class="fas fa-circle"></i> N/A';
+  }
+  
+  dateEl.textContent = 'As at: ' + dateDisplay;
+}
+
+function setRatiosAsUnavailable(dateDisplay) {
+  document.getElementById('primaryReserveRatio').textContent = '--';
+  document.getElementById('primaryReserveDate').textContent = 'As at: ' + dateDisplay;
+  document.getElementById('primaryReserveStatus').className = 'ratio-status';
+  document.getElementById('primaryReserveStatus').innerHTML = '<i class="fas fa-circle"></i> N/A';
+  
+  document.getElementById('secondaryReserveRatio').textContent = '--';
+  document.getElementById('secondaryReserveDate').textContent = 'As at: ' + dateDisplay;
+  document.getElementById('secondaryReserveStatus').className = 'ratio-status';
+  document.getElementById('secondaryReserveStatus').innerHTML = '<i class="fas fa-circle"></i> N/A';
+  
+  document.getElementById('liquidAssetsRatio').textContent = '--';
+  document.getElementById('liquidAssetsDate').textContent = 'As at: ' + dateDisplay;
+  document.getElementById('liquidAssetsStatus').className = 'ratio-status';
+  document.getElementById('liquidAssetsStatus').innerHTML = '<i class="fas fa-circle"></i> N/A';
+  
+  document.getElementById('loansDepositsRatio').textContent = '--';
+  document.getElementById('loansDepositsDate').textContent = 'As at: ' + dateDisplay;
+  document.getElementById('loansDepositsStatus').className = 'ratio-status';
+  document.getElementById('loansDepositsStatus').innerHTML = '<i class="fas fa-circle"></i> N/A';
+}
+
+// ============================================
+// LOAD OTHER DASHBOARD DATA
+// ============================================
 
 function loadDashboardData() {
   console.log('Loading dashboard data...');
@@ -415,11 +736,6 @@ function processSubscriptionAlerts(subscriptions) {
   console.log('Expired subscriptions:', dashboardData.expiredSubscriptions.length);
   console.log('Expiring subscriptions:', dashboardData.expiringSubscriptions.length);
   console.log('Due payments:', dashboardData.duePayments.length);
-  
-  // Log details for debugging
-  dashboardData.duePayments.forEach(payment => {
-    console.log(`Payment due: ${payment.name} - ${payment.frequency} - ${payment.paymentMode} - Amount: ${payment.totalAmountDue}`);
-  });
 }
 
 // Helper function to calculate next payment date based on frequency
@@ -684,10 +1000,25 @@ function formatDateForInput(date) {
   return `${year}-${month}-${day}`;
 }
 
-// Expose global functions
+function formatDateKey(date) {
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '';
+  d.setHours(0, 0, 0, 0);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
+}
+
+// ============================================
+// EXPOSE GLOBAL FUNCTIONS
+// ============================================
+
 window.initDashboard = initDashboard;
 window.loadDashboardData = loadDashboardData;
 window.loadDashboardContent = loadDashboardContent;
+window.loadDashboardRatios = loadDashboardRatios;
 window.cleanupDashboard = cleanupDashboard;
 window.formatCurrency = formatCurrency;
 window.formatDateForInput = formatDateForInput;
+window.formatDateKey = formatDateKey;
