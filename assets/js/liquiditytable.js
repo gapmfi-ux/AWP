@@ -122,7 +122,7 @@
             { label: 'SURPLUS/(DEFICIT) TLA - TRR =', values: ['', '', '', '', '', '', ''], bold: true, surplusRow: true },
             { label: 'Primary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true, highlight: true, bold: true },
-            { label: 'Surplus/Deficit (with borrowings)*', values: ['', '', '', '', '', '', ''], negative: true, highlight: true, bold: true },
+            { label: 'Surplus/Deficit (with cash & bank)*', values: ['', '', '', '', '', '', ''], negative: true, highlight: true, bold: true },
             { label: 'Secondary Reserve Held', values: ['', '', '', '', '', '', ''], bold: true },
             { label: 'Surplus/(Deficit)*', values: ['', '', '', '', '', '', ''], positive: true },
             { label: 'Primary Reserve %', values: ['', '', '', '', '', '', ''], bold: true, highlight: true, isPercentage: true },
@@ -334,93 +334,95 @@
     }
 
     // ---------- CALCULATE DERIVED ROWS FOR A SPECIFIC COLUMN ----------
-    function calculateDerivedRowsForColumn(tableData, colIndex) {
-        const rows = tableData;
-        
-        // Get base values for the specific column
-        const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
-        const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
-        const placement = parseFloat(rows[7].values[colIndex]) || 0;
-        const cash = parseFloat(rows[9].values[colIndex]) || 0;
-        const govSec = parseFloat(rows[10].values[colIndex]) || 0;
-        const totalLoans = parseFloat(rows[20].values[colIndex]) || 0;
-        const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
-        const ppe = parseFloat(rows[22].values[colIndex]) || 0;
+ function calculateDerivedRowsForColumn(tableData, colIndex) {
+    const rows = tableData;
+    
+    // Get base values for the specific column
+    const totalDeposits = parseFloat(rows[0].values[colIndex]) || 0;
+    const currentCall = parseFloat(rows[6].values[colIndex]) || 0;
+    const placement = parseFloat(rows[7].values[colIndex]) || 0;
+    const cash = parseFloat(rows[9].values[colIndex]) || 0;
+    const govSec = parseFloat(rows[10].values[colIndex]) || 0;
+    const totalLoans = parseFloat(rows[20].values[colIndex]) || 0;
+    const netWorth = parseFloat(rows[21].values[colIndex]) || 0;
+    const ppe = parseFloat(rows[22].values[colIndex]) || 0;
 
-        console.log('Column ' + colIndex + ' base values:', {
-            totalDeposits, currentCall, placement, cash, govSec, totalLoans, netWorth, ppe
-        });
+    console.log('Column ' + colIndex + ' base values:', {
+        totalDeposits, currentCall, placement, cash, govSec, totalLoans, netWorth, ppe
+    });
 
-        // ----- LIQUIDITY REQUIREMENTS -----
-        // Primary Reserve required (8%) = 8% of TOTAL DEPOSITS LIABILITY
-        const primaryRequired = totalDeposits * 0.08;
-        rows[2].values[colIndex] = primaryRequired;
-        
-        // Secondary Reserve required (20%) = 20% of TOTAL DEPOSITS LIABILITY
-        const secondaryRequired = totalDeposits * 0.20;
-        rows[3].values[colIndex] = secondaryRequired;
-        
-        // TOTAL RESERVE REQUIRED - TRR = Primary Reserve required + Secondary Reserve required
-        rows[4].values[colIndex] = primaryRequired + secondaryRequired;
+    // ----- LIQUIDITY REQUIREMENTS -----
+    // Primary Reserve required (8%) = 8% of TOTAL DEPOSITS LIABILITY
+    const primaryRequired = totalDeposits * 0.08;
+    rows[2].values[colIndex] = primaryRequired;
+    
+    // Secondary Reserve required (20%) = 20% of TOTAL DEPOSITS LIABILITY
+    const secondaryRequired = totalDeposits * 0.20;
+    rows[3].values[colIndex] = secondaryRequired;
+    
+    // TOTAL RESERVE REQUIRED - TRR = Primary Reserve required + Secondary Reserve required
+    rows[4].values[colIndex] = primaryRequired + secondaryRequired;
 
-        // ----- LIQUID ASSETS -----
-        // Total Balance with Banks = Current & Call Account Balances + Placement with Other Banks
-        const totalBalance = currentCall + placement;
-        rows[8].values[colIndex] = totalBalance;
-        
-        // TOTAL LIQUID ASSETS - TLA = Total Balance with Banks + Cash in hand + Gov. Securities
-        const tla = totalBalance + cash + govSec;
-        rows[11].values[colIndex] = tla;
-        
-        // SURPLUS/(DEFICIT) TLA - TRR = TLA - TRR
-        rows[12].values[colIndex] = tla - rows[4].values[colIndex];
+    // ----- LIQUID ASSETS -----
+    // Total Balance with Banks = Current & Call Account Balances + Placement with Other Banks
+    const totalBalance = currentCall + placement;
+    rows[8].values[colIndex] = totalBalance;
+    
+    // TOTAL LIQUID ASSETS - TLA = Total Balance with Banks + Cash in hand + Gov. Securities
+    const tla = totalBalance + cash + govSec;
+    rows[11].values[colIndex] = tla;
+    
+    // SURPLUS/(DEFICIT) TLA - TRR = TLA - TRR
+    rows[12].values[colIndex] = tla - rows[4].values[colIndex];
 
-        // ----- RESERVE HELD -----
-        // Primary Reserve Held = Total Balance with Banks + Cash in hand
-        const primaryHeld = totalBalance + cash;
-        rows[13].values[colIndex] = primaryHeld;
-        
-        // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
-        rows[14].values[colIndex] = primaryHeld - primaryRequired;
-        
-        // Surplus/Deficit (with borrowings)* = Primary Reserve Held - Primary Reserve required (8%)
-        rows[15].values[colIndex] = primaryHeld - primaryRequired;
-        
-        // Secondary Reserve Held = Gov. Securities
-        rows[16].values[colIndex] = govSec;
-        
-        // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
-        rows[17].values[colIndex] = govSec - secondaryRequired;
+    // ----- RESERVE HELD -----
+    // Primary Reserve Held = Total Balance with Banks + Cash in hand
+    const primaryHeld = totalBalance + cash;
+    rows[13].values[colIndex] = primaryHeld;
+    
+    // Surplus/(Deficit)* = Primary Reserve Held - Primary Reserve required (8%)
+    rows[14].values[colIndex] = primaryHeld - primaryRequired;
+    
+    // Surplus/Deficit (with cash & bank)* = Cash in hand + Current & Call Account Balances - Primary Reserve required (8%)
+    // (i.e., exclude placements when computing the "with cash & bank" metric)
+    const primaryHeldWithCashAndBank = cash + currentCall;
+    rows[15].values[colIndex] = primaryHeldWithCashAndBank - primaryRequired;
+    
+    // Secondary Reserve Held = Gov. Securities
+    rows[16].values[colIndex] = govSec;
+    
+    // Surplus/(Deficit)* = Secondary Reserve Held - Secondary Reserve required (20%)
+    rows[17].values[colIndex] = govSec - secondaryRequired;
 
-        // ----- PERCENTAGES -----
-        // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
-        rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) : 0;
-        
-        // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
-        rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) : 0;
+    // ----- PERCENTAGES -----
+    // Primary Reserve % = Primary Reserve Held / TOTAL DEPOSITS LIABILITY
+    rows[18].values[colIndex] = totalDeposits > 0 ? (primaryHeld / totalDeposits) : 0;
+    
+    // Secondary Reserve % = Secondary Reserve Held / TOTAL DEPOSITS LIABILITY
+    rows[19].values[colIndex] = totalDeposits > 0 ? (govSec / totalDeposits) : 0;
 
-        // ----- RATIOS (displayed as percentages) -----
-        // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
-        rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
-        
-        // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
-        rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
-        
-        // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
-        rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
-        
-        // Total Loans/Networth = TOTAL LOANS & ADVANCES / NET WORTH
-        rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
-        
-        // PPE/Networth = PPE / NET WORTH
-        rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
+    // ----- RATIOS (displayed as percentages) -----
+    // Total Liquid Assets/Deposits = TLA / TOTAL DEPOSITS LIABILITY
+    rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
+    
+    // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
+    rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
+    
+    // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
+    rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
+    
+    // Total Loans/Networth = TOTAL LOANS & ADVANCES / NET WORTH
+    rows[27].values[colIndex] = netWorth > 0 ? totalLoans / netWorth : 0;
+    
+    // PPE/Networth = PPE / NET WORTH
+    rows[28].values[colIndex] = netWorth > 0 ? ppe / netWorth : 0;
 
-        console.log('Column ' + colIndex + ' derived values:', {
-            primaryRequired, secondaryRequired, totalBalance, tla, primaryHeld
-        });
+    console.log('Column ' + colIndex + ' derived values:', {
+        primaryRequired, secondaryRequired, totalBalance, tla, primaryHeld
+    });
 
-        return rows;
-    }
+    return rows;
+}
 
     // ---------- RENDER TABLE ----------
     function renderTable(data) {
