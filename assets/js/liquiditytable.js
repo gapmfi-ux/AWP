@@ -406,7 +406,7 @@
     rows[24].values[colIndex] = totalDeposits > 0 ? tla / totalDeposits : 0;
     
     // Cash in hand/Deposit = Cash in hand / TOTAL DEPOSITS LIABILITY
-    rows[25].values[colIndex] = totalDeposits > 0 ? cash / totalDeposits : 0;
+    rows[25].values[colIndex] = totalDeposits > 0 ? cash + currentCall / totalDeposits : 0;
     
     // Loans/Deposits = TOTAL LOANS & ADVANCES / TOTAL DEPOSITS LIABILITY
     rows[26].values[colIndex] = totalDeposits > 0 ? totalLoans / totalDeposits : 0;
