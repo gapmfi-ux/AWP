@@ -1,5 +1,5 @@
 /* ============================================
-   INVENTORY REPORT MODULE JAVASCRIPT
+   INVENTORY REPORT MODULE JAVASCRIPT - UPDATED
    ============================================ */
 
 // Global variables for inventory module
@@ -207,10 +207,18 @@ function loadUsageReport() {
     .getUsageReportData(fromDate, toDate);
 }
 
+/**
+ * loadInventoryList - Loads inventory list with optional date filter
+ * Uses the "As At" date from the inventory date picker
+ */
 function loadInventoryList() {
-  console.log('Loading inventory list');
+  const inventoryToDateInput = document.getElementById('inventoryToDate');
+  const asAtDate = inventoryToDateInput ? inventoryToDateInput.value : null;
+  
+  console.log('Loading inventory list as at:', asAtDate || 'Today');
   showInventoryLoadingSpinner('inventoryListTableBody', 7);
   
+  // Call the server with the date parameter
   google.script.run
     .withSuccessHandler(function(response) {
       console.log('Inventory list response:', response);
@@ -230,16 +238,16 @@ function loadInventoryList() {
       }
       
       if (listData.length === 0) {
-        showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 7);
+        showInventoryEmptyState('inventoryListTableBody', 'No inventory items found as at ' + (asAtDate || 'today'), 7);
       } else {
-        renderInventoryListTable(listData);
+        renderInventoryListTable(listData, asAtDate);
       }
     })
     .withFailureHandler(function(error) {
       console.error('Error loading inventory list:', error);
       showInventoryEmptyState('inventoryListTableBody', 'Error loading inventory list: ' + (error.message || error), 7);
     })
-    .getInventoryListData();
+    .getInventoryListData(asAtDate); // Pass the date to the server
 }
 
 // ============================================
@@ -328,17 +336,22 @@ function renderUsageReportTable(data) {
   tbody.innerHTML = rows + totalRow;
 }
 
-function renderInventoryListTable(data) {
+/**
+ * renderInventoryListTable - Renders inventory list with date context
+ */
+function renderInventoryListTable(data, asAtDate) {
   const tbody = document.getElementById('inventoryListTableBody');
   if (!tbody) return;
   
   if (!data || data.length === 0) {
-    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found', 7);
+    showInventoryEmptyState('inventoryListTableBody', 'No inventory items found as at ' + (asAtDate || 'today'), 7);
     return;
   }
 
   let totalInventoryCost = 0;
   let rows = '';
+  let activeItems = 0;
+  let zeroStockItems = 0;
 
   // Group by main code
   const grouped = {};
@@ -369,9 +382,13 @@ function renderInventoryListTable(data) {
       
       totalInventoryCost += totalCost;
       
-      const statusBadge = quantity > 0 ? '<span style="color: #06d6a0; font-size: 14px;">●</span>' : '<span style="color: #ef476f; font-size: 14px;">●</span>';
+      if (quantity > 0) {
+        activeItems++;
+      } else {
+        zeroStockItems++;
+      }
       
-      console.log('Row data:', { inventoryCode, categoryName, description, quantity, unitCost });
+      const statusBadge = quantity > 0 ? '<span style="color: #06d6a0; font-size: 14px;">●</span>' : '<span style="color: #ef476f; font-size: 14px;">●</span>';
       
       rows += `
         <tr>
@@ -391,15 +408,21 @@ function renderInventoryListTable(data) {
     });
   }
 
-  const totalRow = `
+  // Add summary row with date context
+  const summaryRow = `
     <tr class="total-row">
-      <td colspan="5" style="text-align: right; font-weight: 700;">Total Inventory Cost:</td>
+      <td colspan="3" style="text-align: right; font-weight: 700;">
+        Summary: ${activeItems} active, ${zeroStockItems} zero-stock
+        ${asAtDate ? ' (as at ' + asAtDate + ')' : ''}
+      </td>
+      <td class="total-cell" style="text-align: center;">${activeItems}</td>
+      <td class="total-cell" style="text-align: center;">${zeroStockItems}</td>
       <td class="total-cell">${formatCurrency(totalInventoryCost)}</td>
       <td></td>
     </tr>
   `;
 
-  tbody.innerHTML = rows + totalRow;
+  tbody.innerHTML = rows + summaryRow;
 }
 
 // ============================================
@@ -417,10 +440,13 @@ function openInventoryActionDropdown(event, inventoryCode, categoryName, descrip
   
   if (!portal) return;
   
+  // Check if item has stock to use
+  const hasStock = parseInt(quantity) > 0;
+  
   portal.innerHTML = `
     <div class="action-dropdown-content">
-      <button class="dropdown-item" onclick="openUsageModal('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}', '${escapeHtml(description)}', '${escapeHtml(mainCode)}', '${subCode}', '${quantity}', '${unitCost}')">
-        <i class="fas fa-box-open"></i> Record Usage
+      <button class="dropdown-item" onclick="openUsageModal('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}', '${escapeHtml(description)}', '${escapeHtml(mainCode)}', '${subCode}', '${quantity}', '${unitCost}')" ${!hasStock ? 'disabled style="opacity:0.5;cursor:not-allowed;"' : ''}>
+        <i class="fas fa-box-open"></i> Record Usage ${!hasStock ? '(No Stock)' : ''}
       </button>
       <button class="dropdown-item" onclick="removeInventoryItem('${escapeHtml(inventoryCode)}', '${escapeHtml(categoryName)}')">
         <i class="fas fa-trash-alt"></i> Remove
