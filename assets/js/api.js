@@ -215,9 +215,9 @@ class ApiService {
     return this.request('getUsageReportData', { fromDate, toDate }, options);
   }
   
-  async getInventoryListData(options = {}) {
-    return this.request('getInventoryListData', {}, options);
-  }
+  async getInventoryListData(asAtDate, options = {}) {
+  return this.request('getInventoryListData', { asAtDate }, options);
+}
   
   async recordInventoryUsage(formData, options = {}) {
     return this.request('recordInventoryUsage', formData, options);
