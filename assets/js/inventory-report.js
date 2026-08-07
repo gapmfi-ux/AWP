@@ -29,6 +29,12 @@ function initInventoryReportModule() {
   if (usageToDate) usageToDate.value = today;
   if (inventoryToDate) inventoryToDate.value = today;
 
+  // Ensure changing As At date triggers reload (defensive)
+  if (inventoryToDate) {
+    inventoryToDate.removeEventListener('change', loadInventoryList);
+    inventoryToDate.addEventListener('change', loadInventoryList);
+  }
+
   // Load initial data - Inventory List first (since it's the active tab)
   loadInventoryList();
   
@@ -581,7 +587,8 @@ function showRecordingUsageLoading() {
       display: flex;
       align-items: center;
       justify-content: center;
-      z-index: 1002;
+      z-index: 3002;
+      pointer-events: auto;
     `;
     document.body.appendChild(modal);
   }
