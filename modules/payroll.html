@@ -2,50 +2,25 @@
 <div class="payroll-container">
   <!-- Header -->
   <div class="payroll-header">
-    <h2><i class="fas fa-money-check-alt"></i> Payroll Management</h2>
-    <div class="payroll-header-actions">
+    <h2><i class="fas fa-money-check-alt"></i> Payroll</h2>
+  </div>
+
+  <!-- Controls Row -->
+  <div class="payroll-controls-row">
+    <div class="payroll-controls-left">
+      <label for="payPeriod">Pay Period:</label>
+      <input type="month" id="payPeriod" onchange="loadPayrollRows()">
+      <span style="font-size:12px;color:#718096;margin-left:4px;">
+        <i class="fas fa-info-circle"></i> Click row for payslip
+      </span>
+    </div>
+    <div class="payroll-controls-right">
       <button class="btn-primary" onclick="showAddPayModal()">
         <i class="fas fa-plus"></i> Add Employee Pay
       </button>
-      <button class="btn-secondary" onclick="loadPayrollRows()">
-        <i class="fas fa-sync"></i> Refresh
-      </button>
-      <button class="btn-outline" onclick="runPayroll()">
+      <button class="btn-secondary" onclick="runPayroll()">
         <i class="fas fa-play"></i> Run Payroll
       </button>
-    </div>
-  </div>
-
-  <!-- Controls -->
-  <div class="payroll-controls">
-    <label for="payPeriod">Pay Period:</label>
-    <input type="month" id="payPeriod" onchange="loadPayrollRows()">
-    <span style="font-size:12px;color:#718096;margin-left:4px;">
-      <i class="fas fa-info-circle"></i> Click a row to view payslip
-    </span>
-  </div>
-
-  <!-- Summary -->
-  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;padding:10px 14px;background:#f7fafc;border-radius:8px;border:1px solid #edf2f7;">
-    <div>
-      <span style="font-size:11px;color:#718096;text-transform:uppercase;font-weight:600;">Total Net Pay</span>
-      <br>
-      <span style="font-size:18px;font-weight:700;color:#38a169;" id="payrollTotalNet">0.00</span>
-    </div>
-    <div>
-      <span style="font-size:11px;color:#718096;text-transform:uppercase;font-weight:600;">Total PAYE</span>
-      <br>
-      <span style="font-size:18px;font-weight:700;color:#e53e3e;" id="payrollTotalPaye">0.00</span>
-    </div>
-    <div>
-      <span style="font-size:11px;color:#718096;text-transform:uppercase;font-weight:600;">Total Deductions</span>
-      <br>
-      <span style="font-size:18px;font-weight:700;color:#4a5568;" id="payrollTotalDeductions">0.00</span>
-    </div>
-    <div>
-      <span style="font-size:11px;color:#718096;text-transform:uppercase;font-weight:600;">Employee Count</span>
-      <br>
-      <span style="font-size:18px;font-weight:700;color:#4361ee;" id="payrollEmployeeCount">0</span>
     </div>
   </div>
 
@@ -58,20 +33,21 @@
           <th>Name</th>
           <th>Designation</th>
           <th style="text-align:right;">Basic Salary</th>
-          <th style="text-align:right;">EE PF (5.5%)</th>
-          <th style="text-align:right;">PF 10%</th>
+          <th style="text-align:right;">Ee Pf (5.5%)</th>
+          <th style="text-align:right;">Pf 10%</th>
           <th style="text-align:right;">Tax Relief</th>
           <th style="text-align:right;">Taxable Income</th>
-          <th style="text-align:right;">PAYE</th>
+          <th style="text-align:right;">Paye</th>
           <th style="text-align:right;">Total Deduction</th>
           <th style="text-align:right;">Net Pay</th>
-          <th style="text-align:right;">ER 13%</th>
-          <th style="text-align:right;">ER PF (5%)</th>
+          <th style="text-align:right;">Er 13%</th>
+          <th style="text-align:right;">Er Pf (5%)</th>
+          <th style="text-align:center;">Action</th>
         </tr>
       </thead>
       <tbody id="payrollTableBody">
         <tr>
-          <td colspan="13" class="payroll-table-empty">
+          <td colspan="14" class="payroll-table-empty">
             <i class="fas fa-receipt"></i>
             <p>No payroll records found</p>
             <span class="sub-text">Click "Add Employee Pay" to get started</span>
@@ -94,7 +70,7 @@
     <!-- Body -->
     <div class="payroll-modal-body">
       <div class="form-hint">
-        <i class="fas fa-info-circle"></i> Enter employee details and payroll calculations will update automatically.
+        <i class="fas fa-info-circle"></i> Enter staff number and basic salary. Calculations update automatically.
       </div>
       
       <!-- Staff Lookup -->
@@ -109,14 +85,15 @@
         </button>
       </div>
       
+      <!-- Name and Designation (read-only display fields) -->
       <div class="form-row">
         <div class="form-group">
-          <label>Full Name <span class="required">*</span></label>
-          <input type="text" id="payName" placeholder="Employee full name">
+          <label>Name of Employee <span class="required">*</span></label>
+          <input type="text" id="payName" placeholder="Auto-displays from staff number" readonly>
         </div>
         <div class="form-group">
           <label>Designation</label>
-          <input type="text" id="payDesignation" placeholder="e.g. Accountant">
+          <input type="text" id="payDesignation" placeholder="Auto-displays from staff number" readonly>
         </div>
       </div>
       
@@ -136,18 +113,18 @@
       <div style="margin-top:6px;">
         <label class="toggle-label">
           <input type="checkbox" id="payPF" checked onchange="togglePFFields()">
-          Apply PF Contributions
+          Apply Pf Contributions
           <span class="toggle-hint">(Employee + Employer)</span>
         </label>
         <div class="toggle-section show" id="pfFields">
           <div class="form-row">
             <div class="form-group">
-              <label>Employee PF (%)</label>
+              <label>Employee Pf (%)</label>
               <input type="number" id="payEmployeePF" value="5.5" step="0.1" min="0" max="20"
                      oninput="recalcPayrollPreview()">
             </div>
             <div class="form-group">
-              <label>Employer PF (%)</label>
+              <label>Employer Pf (%)</label>
               <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20"
                      oninput="recalcPayrollPreview()">
             </div>
@@ -160,11 +137,11 @@
         <label class="toggle-label">
           <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField()">
           Apply Tax Relief
-          <span class="toggle-hint">(e.g. NHIS, SSNIT)</span>
+          <span class="toggle-hint">(e.g. Nhiss, Ssnit)</span>
         </label>
         <div class="toggle-section" id="taxReliefField">
           <div class="form-group">
-            <label>Relief Amount (GHS)</label>
+            <label>Relief Amount (Ghs)</label>
             <input type="number" id="payReliefAmount" placeholder="0.00" step="0.01" min="0"
                    oninput="recalcPayrollPreview()">
           </div>
@@ -173,18 +150,26 @@
       
       <!-- Loan Toggle -->
       <div style="margin-top:8px;">
-        <div class="form-group">
-          <label>Loan Option</label>
-          <select id="payLoanOption" onchange="toggleLoanFields(); recalcPayrollPreview()">
-            <option value="none">No Loan</option>
-            <option value="loan">Deduct Loan</option>
-          </select>
-        </div>
+        <label class="toggle-label">
+          <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields()">
+          Apply Loan Deduction
+          <span class="toggle-hint">(Monthly deduction)</span>
+        </label>
         <div class="toggle-section" id="loanFields">
           <div class="form-group">
-            <label>Monthly Loan Deduction (GHS)</label>
+            <label>Monthly Loan Deduction (Ghs)</label>
             <input type="number" id="payLoanMonthly" placeholder="0.00" step="0.01" min="0"
                    oninput="recalcPayrollPreview()">
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>From Date</label>
+              <input type="date" id="payLoanFrom">
+            </div>
+            <div class="form-group">
+              <label>To Date</label>
+              <input type="date" id="payLoanTo">
+            </div>
           </div>
         </div>
       </div>
@@ -200,7 +185,7 @@
             <div class="calc-value" id="previewTaxable">0.00</div>
           </div>
           <div class="calc-item">
-            <div class="calc-label">PAYE</div>
+            <div class="calc-label">Paye</div>
             <div class="calc-value negative" id="previewPaye">0.00</div>
           </div>
           <div class="calc-item">
