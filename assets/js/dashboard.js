@@ -238,32 +238,8 @@ function generateDashboardHTML() {
 
 function loadDashboardRatios() {
   console.log('=== LOADING DASHBOARD RATIOS ===');
-  
-  // ============================================
-  // FOR TESTING: Use mock data first
-  // ============================================
-  const mockRatios = {
-    primaryReserve: 27.61,
-    secondaryReserve: 42.15,
-    liquidAssets: 35.20,
-    loansDeposits: 65.80,
-    date: new Date().toISOString().split('T')[0]
-  };
-  
-  const dateDisplay = new Date().toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-  
-  // Set mock data immediately
-  dashboardData.ratios = mockRatios;
-  renderDashboardRatios(dateDisplay + ' (test)');
-  console.log('Rendered test data:', mockRatios);
-  
-  // ============================================
-  // Use cached ratios if fresh
-  // ============================================
+
+  // Check cached ratios first
   try {
     const cachedRatios = localStorage.getItem('dashboardRatios');
     if (cachedRatios) {
@@ -396,10 +372,10 @@ function loadDashboardRatios() {
             // Only update if we have valid data
             if (primaryReserve > 0 || secondaryReserve > 0) {
               dashboardData.ratios = {
-                primaryReserve: primaryReserve || mockRatios.primaryReserve,
-                secondaryReserve: secondaryReserve || mockRatios.secondaryReserve,
-                liquidAssets: liquidAssets || mockRatios.liquidAssets,
-                loansDeposits: loansDeposits || mockRatios.loansDeposits,
+                primaryReserve: primaryReserve,
+                secondaryReserve: secondaryReserve,
+                liquidAssets: liquidAssets,
+                loansDeposits: loansDeposits,
                 date: yesterdayStr
               };
               
@@ -414,22 +390,27 @@ function loadDashboardRatios() {
               ratiosLoaded = true;
               renderDashboardRatios(dateDisplay2);
             } else {
-              console.log('Extracted ratios are zero, keeping mock data');
+              console.log('Extracted ratios are zero, using fallback');
+              useFallbackRatios(dateDisplay2);
             }
           } else {
-            console.log('LiquidityTable not available, keeping mock data');
+            console.log('LiquidityTable not available, using fallback');
+            useFallbackRatios(dateDisplay2);
           }
         } else {
-          console.log('No data for yesterday, keeping mock data');
+          console.log('No data for yesterday, using fallback');
+          useFallbackRatios(dateDisplay2);
         }
       })
       .catch(function(error) {
         console.error('=== API CALL FAILED ===');
         console.error('Error:', error);
-        // Keep mock data
+        // Use fallback if API call fails
+        useFallbackRatios(dateDisplay2);
       });
   } else {
-    console.warn('API.loadLiquidityData not available, using mock data');
+    console.warn('API.loadLiquidityData not available, using fallback data');
+    useFallbackRatios(dateDisplay2);
   }
 }
 
@@ -491,76 +472,6 @@ function loadTodayRatios(dateDisplay) {
               secondaryReserve: parseFloat(tableData[19]?.values?.[idx]) || 0,
               liquidAssets: parseFloat(tableData[24]?.values?.[idx]) || 0,
               loansDeposits: parseFloat(tableData[26]?.values?.[idx]) || 0,
-              date: todayStr
-            };
-            
-            try {
-              localStorage.setItem('dashboardRatios', JSON.stringify({
-                ratios: dashboardData.ratios,
-                timestamp: Date.now()
-              }));
-            } catch (e) {}
-            
-            ratiosLoaded = true;
-            renderDashboardRatios(todayDisplay + ' (today)');
-          } else {
-            useFallbackRatios(dateDisplay);
-          }
-        } else {
-          useFallbackRatios(dateDisplay);
-        }
-      })
-      .catch(function(error) {
-        console.error('Error loading today data:', error);
-        useFallbackRatios(dateDisplay);
-      });
-  } else {
-    useFallbackRatios(dateDisplay);
-  }
-}
-function loadTodayRatios(dateDisplay) {
-  const today = new Date();
-  const todayStr = formatDateForInput(today);
-  const todayDisplay = today.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric'
-  });
-  
-  console.log('Trying today:', todayStr);
-  
-  if (typeof API !== 'undefined' && API && typeof API.loadLiquidityData === 'function') {
-    API.loadLiquidityData(todayStr, { useCache: true })
-      .then(function(response) {
-        if (response && response.success) {
-          const allRows = response.allRows || [];
-          let todayRow = null;
-          for (let row of allRows) {
-            if (row && row.length > 0) {
-              const rowDate = row[0];
-              if (rowDate) {
-                const d1 = new Date(todayStr);
-                const d2 = new Date(rowDate);
-                if (!isNaN(d1.getTime()) && !isNaN(d2.getTime())) {
-                  const key1 = formatDateKey(d1);
-                  const key2 = formatDateKey(d2);
-                  if (key1 === key2) {
-                    todayRow = row;
-                    break;
-                  }
-                }
-              }
-            }
-          }
-          
-          if (todayRow && window.LiquidityTable) {
-            const tableData = window.LiquidityTable.buildTableDataForDate([todayRow], todayStr);
-            
-            dashboardData.ratios = {
-              primaryReserve: tableData[18]?.values?.[0] || 0,
-              secondaryReserve: tableData[19]?.values?.[0] || 0,
-              liquidAssets: tableData[24]?.values?.[0] || 0,
-              loansDeposits: tableData[26]?.values?.[0] || 0,
               date: todayStr
             };
             
@@ -961,7 +872,7 @@ function calculatePaymentsOverdue(startDate, currentDate, frequency) {
   switch(frequency) {
     case 'Monthly': periodsPassed = monthsDiff; break;
     case 'Quarterly': periodsPassed = Math.floor(monthsDiff / 3); break;
-    case 'Half-Yearly':
+    case 'Half-Yearly': 
     case 'Semi-Annual': periodsPassed = Math.floor(monthsDiff / 6); break;
     case 'Yearly':
     case 'Annual':
