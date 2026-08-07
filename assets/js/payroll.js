@@ -1,4 +1,6 @@
-/* Payroll client logic (localStorage stubs + compute logic) */
+/* Payroll client logic (localStorage stubs + compute logic)
+   Updated: loan checkbox (payHasLoan), pf default checked, exports
+*/
 
 function initPayroll() {
   renderPayrollTable();
@@ -8,19 +10,21 @@ function initPayroll() {
     pp.value = d.toISOString().slice(0,7);
   }
   loadPayrollRows();
+
+  // Bind Add Employee Pay button if present (safety)
+  const addBtn = document.querySelector('.payroll-controls .primary-btn');
+  if (addBtn) {
+    addBtn.removeEventListener('click', _addPayBtnHandler);
+    addBtn.addEventListener('click', _addPayBtnHandler);
+  }
+  function _addPayBtnHandler(e){ showAddPayModal(); }
 }
 
 function getPayrollRows() {
-  try {
-    return JSON.parse(localStorage.getItem('awp_payroll_rows') || '[]');
-  } catch (e) {
-    return [];
-  }
+  try { return JSON.parse(localStorage.getItem('awp_payroll_rows') || '[]'); }
+  catch (e) { return []; }
 }
-
-function savePayrollRows(arr) {
-  localStorage.setItem('awp_payroll_rows', JSON.stringify(arr));
-}
+function savePayrollRows(arr) { localStorage.setItem('awp_payroll_rows', JSON.stringify(arr)); }
 
 function loadPayrollRows() {
   const rows = getPayrollRows();
@@ -65,6 +69,7 @@ function renderPayrollTable(rows) {
 function showAddPayModal() {
   const m = document.getElementById('addPayModal');
   if (!m) return;
+  // reset fields
   ['payStaffNumber','payName','payDepartment','payDesignation','payBasicSalary','payEmployeePF','payEmployerPF','payReliefAmount','payLoanMonthly','payLoanFrom','payLoanTo'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) {
@@ -76,15 +81,26 @@ function showAddPayModal() {
   const erPF = document.getElementById('payEmployerPF');
   if (ePF) ePF.value = '5.5';
   if (erPF) erPF.value = '5';
-  document.getElementById('pfFields').style.display = 'none';
+  // defaults: PF checked, tax relief unchecked, loan unchecked
+  const pfChk = document.getElementById('payPF');
+  if (pfChk) pfChk.checked = true;
+  const trChk = document.getElementById('payTaxRelief');
+  if (trChk) trChk.checked = false;
+  const loanChk = document.getElementById('payHasLoan');
+  if (loanChk) loanChk.checked = false;
+
+  document.getElementById('pfFields').style.display = pfChk && pfChk.checked ? 'block' : 'none';
   document.getElementById('taxReliefField').style.display = 'none';
   document.getElementById('loanFields').style.display = 'none';
+
+  m.classList.add('show');
   m.style.display = 'flex';
 }
 
 function closeAddPayModal() {
   const m = document.getElementById('addPayModal');
   if (!m) return;
+  m.classList.remove('show');
   m.style.display = 'none';
 }
 
@@ -118,25 +134,25 @@ function toggleTaxReliefField() {
 }
 
 function toggleLoanFields() {
-  const v = (document.getElementById('payLoanOption') || {}).value;
+  const c = document.getElementById('payHasLoan');
   const f = document.getElementById('loanFields');
   if (!f) return;
-  f.style.display = v === 'loan' ? 'block' : 'none';
+  f.style.display = (c && c.checked) ? 'block' : 'none';
 }
 
 function saveEmployeePay() {
-  const staff = document.getElementById('payStaffNumber').value.trim();
-  const name = document.getElementById('payName').value.trim();
-  if (!staff || !name) { alert('Staff and name required'); return; }
-  const designation = document.getElementById('payDesignation').value.trim();
-  const basicSalary = parseFloat(document.getElementById('payBasicSalary').value) || 0;
-  const pfChecked = document.getElementById('payPF').checked;
-  const employeePFpct = parseFloat(document.getElementById('payEmployeePF').value) || 0;
-  const employerPFpct = parseFloat(document.getElementById('payEmployerPF').value) || 0;
-  const taxReliefChecked = document.getElementById('payTaxRelief').checked;
+  const staff = (document.getElementById('payStaffNumber') || {}).value || '';
+  const name = (document.getElementById('payName') || {}).value || '';
+  if (!staff.trim() || !name.trim()) { alert('Staff and name required'); return; }
+  const designation = (document.getElementById('payDesignation') || {}).value || '';
+  const basicSalary = parseFloat((document.getElementById('payBasicSalary') || {}).value) || 0;
+  const pfChecked = document.getElementById('payPF') ? document.getElementById('payPF').checked : true;
+  const employeePFpct = parseFloat((document.getElementById('payEmployeePF') || {}).value) || 0;
+  const employerPFpct = parseFloat((document.getElementById('payEmployerPF') || {}).value) || 0;
+  const taxReliefChecked = document.getElementById('payTaxRelief') ? document.getElementById('payTaxRelief').checked : false;
   const reliefAmount = taxReliefChecked ? (parseFloat(document.getElementById('payReliefAmount').value) || 0) : 0;
-  const loanOption = (document.getElementById('payLoanOption')||{}).value || 'none';
-  const loanMonthly = loanOption==='loan' ? (parseFloat(document.getElementById('payLoanMonthly').value)||0) : 0;
+  const hasLoan = document.getElementById('payHasLoan') ? document.getElementById('payHasLoan').checked : false;
+  const loanMonthly = hasLoan ? (parseFloat(document.getElementById('payLoanMonthly').value)||0) : 0;
   const period = (document.getElementById('payPeriod')||{}).value || null;
 
   const calc = computePayrollRow({
@@ -150,9 +166,12 @@ function saveEmployeePay() {
 
   const rows = getPayrollRows();
   const newRow = {
-    staff, name, designation,
+    staff: staff.trim(),
+    name: name.trim(),
+    designation,
     basicSalary,
-    employeePFpct, employerPFpct,
+    employeePFpct,
+    employerPFpct,
     employeePFAmount: calc.employeePFAmount,
     pf10Amount: calc.pf10Amount,
     taxRelief: reliefAmount,
@@ -191,6 +210,7 @@ function roundToTwo(n) { return Math.round((n + Number.EPSILON) * 100) / 100; }
 function formatMoney(n) { return (typeof n === 'number') ? n.toFixed(2) : '0.00'; }
 function escapeHtml(s) { if (!s) return ''; return String(s).replace(/[&<>\"'`]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;','`':'&#96;'}[c])); }
 
+// Exports for inline handlers and main loader
 window.initPayroll = initPayroll;
 window.showAddPayModal = showAddPayModal;
 window.closeAddPayModal = closeAddPayModal;
@@ -200,3 +220,4 @@ window.togglePFFields = togglePFFields;
 window.toggleTaxReliefField = toggleTaxReliefField;
 window.toggleLoanFields = toggleLoanFields;
 window.showPayslipFor = function(staff){ localStorage.setItem('awp_selected_payslip_staff', staff); if (typeof loadModule === 'function') loadModule('payslip'); };
+window.runPayroll = runPayroll;
