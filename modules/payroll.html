@@ -5,17 +5,17 @@
     <h2><i class="fas fa-money-check-alt"></i> Payroll</h2>
   </div>
 
-  <!-- Controls Row -->
+<!-- Controls Row -->
 <div class="payroll-controls-row">
   <div class="payroll-controls-left">
     <button class="btn-primary" onclick="showAddPayModal()">
       <i class="fas fa-plus"></i> Add Employee Pay
     </button>
+  </div>
+  <div class="payroll-controls-right">
     <button class="btn-secondary" onclick="runPayroll()">
       <i class="fas fa-play"></i> Run Payroll
     </button>
-  </div>
-  <div class="payroll-controls-right">
     <label for="payPeriod">Pay Period:</label>
     <input type="month" id="payPeriod" onchange="loadPayrollRows()">
     <span style="font-size:12px;color:#718096;margin-left:4px;">
