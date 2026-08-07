@@ -102,60 +102,60 @@
         </div>
       </div>
       
-      <!-- PF Toggle - inline with smaller inputs -->
-      <div style="margin-top:6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <label class="toggle-label" style="flex: 0 0 auto; font-size: 12px; white-space: nowrap;">
+      <!-- PF Toggle - inline with aligned inputs -->
+      <div class="toggle-inline-row">
+        <label class="toggle-label" style="min-width: 160px;">
           <input type="checkbox" id="payPF" checked onchange="togglePFFields()">
           Apply Pf Contributions
         </label>
-        <div class="toggle-section show" id="pfFields" style="display: flex; gap: 8px; flex: 1; background: none; border: none; padding: 0; margin: 0; align-items: flex-end;">
-          <div class="form-group" style="flex: 1; margin-bottom: 0; min-width: 80px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">Employee Pf (%)</label>
+        <div class="toggle-section show" id="pfFields">
+          <div class="form-group">
+            <label>Employee Pf (%)</label>
             <input type="number" id="payEmployeePF" value="5.5" step="0.1" min="0" max="20"
-                   oninput="recalcPayrollPreview()" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+                   oninput="recalcPayrollPreview()">
           </div>
-          <div class="form-group" style="flex: 1; margin-bottom: 0; min-width: 80px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">Employer Pf (%)</label>
+          <div class="form-group">
+            <label>Employer Pf (%)</label>
             <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20"
-                   oninput="recalcPayrollPreview()" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+                   oninput="recalcPayrollPreview()">
           </div>
         </div>
       </div>
       
-      <!-- Tax Relief Toggle - inline with smaller input -->
-      <div style="margin-top:8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <label class="toggle-label" style="flex: 0 0 auto; font-size: 12px; white-space: nowrap;">
+      <!-- Tax Relief Toggle - inline with aligned input -->
+      <div class="toggle-inline-row">
+        <label class="toggle-label" style="min-width: 160px;">
           <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField()">
           Apply Tax Relief
         </label>
-        <div class="toggle-section" id="taxReliefField" style="display: none; flex: 1; background: none; border: none; padding: 0; margin: 0; align-items: flex-end;">
-          <div class="form-group" style="flex: 1; margin-bottom: 0; max-width: 200px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">Relief Amount (Ghs)</label>
+        <div class="toggle-section" id="taxReliefField">
+          <div class="form-group" style="max-width: 220px;">
+            <label>Relief Amount (Ghs)</label>
             <input type="number" id="payReliefAmount" placeholder="0.00" step="0.01" min="0"
-                   oninput="recalcPayrollPreview()" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+                   oninput="recalcPayrollPreview()">
           </div>
         </div>
       </div>
       
-      <!-- Loan Toggle - inline with smaller inputs -->
-      <div style="margin-top:8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-        <label class="toggle-label" style="flex: 0 0 auto; font-size: 12px; white-space: nowrap;">
+      <!-- Loan Toggle - inline with aligned inputs -->
+      <div class="toggle-inline-row">
+        <label class="toggle-label" style="min-width: 160px;">
           <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields()">
           Apply Loan Deduction
         </label>
-        <div class="toggle-section" id="loanFields" style="display: none; flex: 1; background: none; border: none; padding: 0; margin: 0; align-items: flex-end; gap: 8px;">
-          <div class="form-group" style="flex: 1; margin-bottom: 0; min-width: 80px; max-width: 160px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">Monthly Deduction (Ghs)</label>
+        <div class="toggle-section" id="loanFields">
+          <div class="form-group">
+            <label>Monthly Deduction (Ghs)</label>
             <input type="number" id="payLoanMonthly" placeholder="0.00" step="0.01" min="0"
-                   oninput="recalcPayrollPreview()" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+                   oninput="recalcPayrollPreview()">
           </div>
-          <div class="form-group" style="flex: 1; margin-bottom: 0; min-width: 80px; max-width: 140px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">From Date</label>
-            <input type="date" id="payLoanFrom" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+          <div class="form-group">
+            <label>From Date</label>
+            <input type="date" id="payLoanFrom">
           </div>
-          <div class="form-group" style="flex: 1; margin-bottom: 0; min-width: 80px; max-width: 140px;">
-            <label style="font-size: 10px; margin-bottom: 2px;">To Date</label>
-            <input type="date" id="payLoanTo" style="width: 100%; padding: 5px 6px; font-size: 12px;">
+          <div class="form-group">
+            <label>To Date</label>
+            <input type="date" id="payLoanTo">
           </div>
         </div>
       </div>
