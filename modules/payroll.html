@@ -4,12 +4,128 @@
   </div>
 
   <div class="payroll-controls">
+    <button class="primary-btn" onclick="showAddPayModal()"><i class="fas fa-plus"></i> Add Employee Pay</button>
     <label for="payPeriod">Payroll Period:</label>
-    <input type="month" id="payPeriod" onchange="loadPayrollPreview()">
+    <input type="month" id="payPeriod" onchange="loadPayrollRows()">
     <button class="primary-btn" onclick="runPayroll()"><i class="fas fa-play"></i> Run Payroll</button>
   </div>
 
-  <div id="payrollPreviewContainer">
-    <p>Select a payroll period and click Run Payroll.</p>
+  <div id="payrollContainer">
+    <table class="data-table" id="payrollTable">
+      <thead>
+        <tr>
+          <th>STAFF NUMBER</th>
+          <th>NAME OF EMPLOYEE</th>
+          <th>Designation</th>
+          <th>Basic Salary</th>
+          <th>Employee (5.5%)</th>
+          <th>PF (10%)</th>
+          <th>Tax Reliefs</th>
+          <th>Taxable Income</th>
+          <th>PAYE</th>
+          <th>TOTAL DEDUCTION</th>
+          <th>NET PAY</th>
+          <th>Employer (13%)</th>
+          <th>Employer (5%) PF</th>
+        </tr>
+      </thead>
+      <tbody id="payrollTableBody">
+        <!-- rows injected by JS -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Add Employee Pay Modal -->
+  <div id="addPayModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h2>Add Employee Pay</h2>
+      <form id="addPayForm" onsubmit="event.preventDefault(); saveEmployeePay();">
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="payStaffNumber">Staff Number</label>
+            <input id="payStaffNumber" type="text" required onblur="autoFillEmployeeDetails(this.value)">
+          </div>
+          <div class="form-group">
+            <label for="payName">Name</label>
+            <input id="payName" type="text" readonly>
+          </div>
+        </div>
+
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="payDepartment">Department</label>
+            <input id="payDepartment" type="text" readonly>
+          </div>
+          <div class="form-group">
+            <label for="payDesignation">Designation</label>
+            <input id="payDesignation" type="text" readonly>
+          </div>
+        </div>
+
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="payBasicSalary">Basic Salary Amount</label>
+            <input id="payBasicSalary" type="number" step="0.01" required>
+          </div>
+          <div class="form-group">
+            <label>Options</label>
+            <div>
+              <label><input id="payPF" type="checkbox" onchange="togglePFFields()"> PF</label>
+              <label style="margin-left:12px;"><input id="payTaxRelief" type="checkbox" onchange="toggleTaxReliefField()"> Tax Relief</label>
+            </div>
+          </div>
+        </div>
+
+        <div id="pfFields" style="display:none; margin-top:8px;">
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="payEmployeePF">Employee PF %</label>
+              <input id="payEmployeePF" type="number" step="0.01" value="5.5">
+            </div>
+            <div class="form-group">
+              <label for="payEmployerPF">Employer PF %</label>
+              <input id="payEmployerPF" type="number" step="0.01" value="5">
+            </div>
+          </div>
+        </div>
+
+        <div id="taxReliefField" style="display:none; margin-top:8px;">
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="payReliefAmount">Relief Amount</label>
+              <input id="payReliefAmount" type="number" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+              <label for="payLoanOption">Loan</label>
+              <select id="payLoanOption" onchange="toggleLoanFields()">
+                <option value="none">No Loan</option>
+                <option value="loan">Has Loan</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div id="loanFields" style="display:none; margin-top:8px;">
+          <div class="form-row-two">
+            <div class="form-group">
+              <label for="payLoanMonthly">Monthly Repayment</label>
+              <input id="payLoanMonthly" type="number" step="0.01" value="0">
+            </div>
+            <div class="form-group">
+              <label for="payLoanFromTo">From / To</label>
+              <div style="display:flex; gap:8px;">
+                <input id="payLoanFrom" type="date">
+                <input id="payLoanTo" type="date">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="primary-btn">Save</button>
+          <button type="button" onclick="closeAddPayModal()">Cancel</button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
