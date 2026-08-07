@@ -1,9 +1,12 @@
 /* ============================================
    PAYROLL MODULE STYLES - COMPACT VERSION
    Modeled after inventory.css (compact, responsive)
+   Improvements:
+   - Table headings set to Title Case (capitalize each word)
+   - Better spacing, card UX, and consistent variables
+   - Loading spinners and print rules
    ============================================ */
 
-/* Theme variables */
 :root{
   --primary:#4361ee;
   --primary-dark:#3a56d4;
@@ -20,27 +23,28 @@
 .payroll-container {
   background: var(--bg);
   border-radius: var(--card-radius);
-  padding: 16px;
-  max-width: 1100px;
-  margin: 0 auto;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  padding: 18px;
+  max-width: 1140px;
+  margin: 12px auto;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
   font-size: var(--font-size-sm);
+  color: #2d3748;
 }
 
 /* Header */
 .module-header {
   display:flex;
   align-items:center;
-  gap:10px;
-  margin-bottom:12px;
+  gap:12px;
+  margin-bottom:14px;
   border-bottom:2px solid var(--primary);
-  padding-bottom:8px;
+  padding-bottom:10px;
 }
 .module-header h1 {
   font-size:16px;
   margin:0;
   color:#2d3748;
-  font-weight:600;
+  font-weight:700;
 }
 
 /* Controls Row */
@@ -49,21 +53,22 @@
   gap:10px;
   align-items:center;
   flex-wrap:wrap;
-  margin-bottom:12px;
+  margin-bottom:14px;
 }
 
 .payroll-controls .primary-btn {
   background: var(--primary);
   color: white;
   border: none;
-  padding:6px 12px;
-  border-radius:6px;
-  font-weight:600;
+  padding:8px 14px;
+  border-radius:8px;
+  font-weight:700;
   cursor:pointer;
   display:inline-flex;
   align-items:center;
   gap:8px;
   font-size:13px;
+  box-shadow: 0 2px 8px rgba(67,97,238,0.08);
 }
 
 .payroll-controls .primary-btn:hover {
@@ -75,23 +80,25 @@
 .payroll-controls label {
   font-size: 12px;
   color: var(--muted);
-  font-weight:600;
+  font-weight:700;
   margin-left:4px;
 }
 #payPeriod {
-  padding:6px 8px;
+  padding:8px 10px;
   border:1px solid var(--border);
-  border-radius:6px;
+  border-radius:8px;
   background:transparent;
   cursor:pointer;
   font-size:13px;
+  min-width:150px;
 }
 
 /* Table wrapper and table */
 #payrollContainer {
   overflow-x:auto;
   border:1px solid var(--border);
-  border-radius:8px;
+  border-radius:10px;
+  background: #fff;
 }
 
 .data-table {
@@ -99,6 +106,7 @@
   border-collapse:collapse;
   font-size:13px;
   background:var(--bg);
+  min-width: 900px; /* keep layout stable on wide tables */
 }
 
 .data-table thead {
@@ -106,7 +114,7 @@
 }
 
 .data-table th, .data-table td {
-  padding:8px 6px;
+  padding:10px 8px;
   border-bottom:1px solid var(--border);
   border-right:1px solid var(--border);
   text-align:center;
@@ -119,11 +127,21 @@
   border-right:none;
 }
 
+/* Capitalize each word in table headings */
+.data-table th,
+.report-table th {
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+  font-weight: 700;
+  font-size: 12px;
+  color: #2d3748;
+}
+
 /* Empty / loading states */
 .data-table .loading-cell,
 .data-table .empty-cell {
   text-align:center;
-  padding:24px;
+  padding:28px;
   color:#a0aec0;
   font-style:italic;
 }
@@ -150,33 +168,33 @@
 .modal .modal-content {
   background:var(--bg);
   border-radius:10px;
-  width: 720px;
-  max-width: 95%;
-  padding: 16px;
-  box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+  width: 760px;
+  max-width: 98%;
+  padding: 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
   font-size:13px;
 }
 
 /* Form layout helpers */
 .form-row-two {
   display:flex;
-  gap:10px;
-  margin-bottom:10px;
+  gap:12px;
+  margin-bottom:12px;
 }
 .form-row-two .form-group {
   flex:1;
 }
 .form-row-single {
-  margin-bottom:10px;
+  margin-bottom:12px;
 }
 .form-group label {
   display:block;
-  font-size:11px;
+  font-size:12px;
   font-weight:700;
   color:#4a5568;
-  margin-bottom:6px;
+  margin-bottom:8px;
   text-transform:uppercase;
-  letter-spacing:0.3px;
+  letter-spacing:0.4px;
 }
 .form-group input[type="text"],
 .form-group input[type="email"],
@@ -184,11 +202,12 @@
 .form-group input[type="date"],
 .form-group select {
   width:100%;
-  padding:6px 8px;
+  padding:8px 10px;
   border:1px solid var(--border);
-  border-radius:6px;
+  border-radius:8px;
   font-size:13px;
   box-sizing:border-box;
+  background: #fff;
 }
 
 /* Compact helpers for toggles and small controls */
@@ -199,26 +218,27 @@
 
 /* PF / tax / loan sections */
 #pfFields, #taxReliefField, #loanFields {
-  padding:8px;
-  background:#fafafa;
-  border:1px dashed #e6eefb;
-  border-radius:6px;
-  margin-top:6px;
+  padding:10px;
+  background:#fbfdff;
+  border:1px dashed rgba(67,97,238,0.12);
+  border-radius:8px;
+  margin-top:8px;
 }
 
 /* Modal actions */
 .form-actions {
   display:flex;
-  gap:8px;
+  gap:10px;
   justify-content:flex-end;
-  margin-top:12px;
+  margin-top:14px;
 }
 .form-actions .primary-btn {
-  padding:8px 16px;
+  padding:10px 18px;
+  border-radius:8px;
 }
 .form-actions button[type="button"] {
   padding:8px 14px;
-  border-radius:6px;
+  border-radius:8px;
   border:1px solid var(--border);
   background:#fff;
   cursor:pointer;
@@ -242,8 +262,8 @@
   padding:20px;
   border-radius:8px;
   text-align:center;
-  min-width:130px;
-  box-shadow:0 6px 18px rgba(0,0,0,0.12);
+  min-width:140px;
+  box-shadow:0 8px 20px rgba(0,0,0,0.12);
 }
 .payroll-loading-modal .loading-spinner {
   width:36px;
@@ -259,7 +279,7 @@
   100% { transform:rotate(360deg); }
 }
 
-/* Small spinner for inline use */
+/* Inline spinner */
 .spinner-small {
   width:18px;
   height:18px;
@@ -288,23 +308,20 @@
 }
 
 /* Responsive adjustments */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .form-row-two {
     flex-direction:column;
   }
-  .data-table th,
+  .data-table thead th,
   .data-table td {
-    padding:6px 4px;
-    font-size:11px;
+    padding:8px 6px;
+    font-size:12px;
   }
   .module-header h1 {
-    font-size:14px;
-  }
-  .payroll-controls {
-    gap:8px;
+    font-size:15px;
   }
   #payPeriod {
-    min-width:150px;
+    min-width:140px;
   }
   .modal .modal-content {
     padding:12px;
@@ -313,9 +330,9 @@
 
 /* Very small screens */
 @media (max-width: 480px) {
-  .data-table th, .data-table td { font-size:10px; padding:5px 3px; }
-  .module-header h1 { font-size:13px; }
-  .primary-btn { padding:6px 10px; font-size:12px; }
+  .data-table th, .data-table td { font-size:11px; padding:6px 4px; }
+  .module-header h1 { font-size:14px; }
+  .primary-btn { padding:8px 12px; font-size:12px; }
   .form-actions { flex-direction:column; align-items:stretch; }
   .form-actions .primary-btn { width:100%; }
 }
