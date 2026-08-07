@@ -170,7 +170,7 @@ function showAddPayModal(editData) {
   toggleTaxReliefField();
   toggleLoanFields();
   
-  updateCalcPreview(0, 0, 0, 0, 0);
+  updateCalcPreview(0, 0, 0, 0, 0, 0);
   recalcPayrollPreview();
   
   modal.classList.add('show');
@@ -257,21 +257,30 @@ function recalcPayrollPreview() {
     pfChecked
   });
   
-  updateCalcPreview(calc.netPay, calc.paye, calc.totalDeduction, calc.taxableIncome, calc.employeePension);
+  updateCalcPreview(
+    calc.netPay, 
+    calc.paye, 
+    calc.totalDeduction, 
+    calc.taxableIncome, 
+    calc.employeePension,
+    calc.employeePf
+  );
 }
 
-function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome, employeePension) {
+function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome, employeePension, employeePf) {
   const netEl = document.getElementById('previewNetPay');
   const payeEl = document.getElementById('previewPaye');
   const dedEl = document.getElementById('previewDeductions');
   const taxEl = document.getElementById('previewTaxable');
   const pensionEl = document.getElementById('previewEmployeePension');
+  const pfEl = document.getElementById('previewEmployeePf');
   
   if (netEl) netEl.textContent = formatMoney(netPay);
   if (payeEl) payeEl.textContent = formatMoney(paye);
   if (dedEl) dedEl.textContent = formatMoney(totalDeduction);
   if (taxEl) taxEl.textContent = formatMoney(taxableIncome);
   if (pensionEl) pensionEl.textContent = formatMoney(employeePension);
+  if (pfEl) pfEl.textContent = formatMoney(employeePf);
 }
 
 function computePayrollRow({ basicSalary = 0, employeePFpct = 5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
@@ -284,17 +293,17 @@ function computePayrollRow({ basicSalary = 0, employeePFpct = 5, employerPFpct =
   // 3. Taxable Income = Basic - Employee Pension - Employee Pf - Tax Relief (Loan NOT deducted)
   const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePension - employeePf - reliefAmount));
   
-  // 4. PAYE (calculated from Rates sheet - simplified to 10% for demo)
+  // 4. PAYE (10% of Taxable Income)
   const paye = roundToTwo(taxableIncome * 0.10);
   
-  // 5. NET PAY (For Payroll Table)
+  // 5. NET PAY (For Payroll Table) = Taxable Income - PAYE
   const netPay = roundToTwo(taxableIncome - paye);
   
   // 6. Pf 10% (for information only)
   const pf10Amount = roundToTwo(basicSalary * 0.10);
   
   // 7. Total Deduction (for information only)
-  const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye);
+  const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye + loanMonthly);
   
   // 8. Employer Pension (13% - For information only)
   const employerPension = roundToTwo(basicSalary * 0.13);
