@@ -356,10 +356,13 @@ function loadModule(moduleName) {
     'addAsset': { file: 'modules/add-asset.html', init: 'initAssetModule' },
     'viewAssetRegister': { file: 'modules/asset-register.html', init: 'initAssetRegisterModule' },
     'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
-    'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
+    'investmentReport': { file: 'modules/add-investment.html', init: 'initInvestmentReportModule' },
     'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
     'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
     'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
+    'employeeList': { file: 'modules/employee-list.html', init: 'initEmployeeListModule' },
+    'payroll': { file: 'modules/payroll.html', init: 'initPayrollModule' },
+    'payslip': { file: 'modules/payslip.html', init: 'initPayslipModule' },
     'dashboard': null
   };
   
@@ -475,130 +478,22 @@ function initDailyLiquidityModule() {
   }
 }
 
++// New payroll/employee/payslip init wrappers
++function initEmployeeListModule() {
++  console.log('Employee List module loaded');
++  if (typeof window.initEmployeeList === 'function') window.initEmployeeList();
++}
++
++function initPayrollModule() {
++  console.log('Payroll module loaded');
++  if (typeof window.initPayroll === 'function') window.initPayroll();
++}
++
++function initPayslipModule() {
++  console.log('Payslip module loaded');
++  if (typeof window.initPayslip === 'function') window.initPayslip();
++}
++
 // ============================================
 // USER FUNCTIONS
 // ============================================
-
-function showProfile() {
-  alert('Profile feature coming soon');
-}
-
-function showSettings() {
-  alert('Settings feature coming soon');
-}
-
-function logout() {
-  if (confirm('Are you sure you want to logout?')) {
-    currentUser = null;
-    alert('Logged out successfully');
-    window.location.reload();
-  }
-}
-
-// ============================================
-// UTILITY FUNCTIONS
-// ============================================
-
-function formatDate(dateString) {
-  if (!dateString) return '';
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  } catch (e) {
-    return dateString;
-  }
-}
-
-function getToday() {
-  return formatDateForInput(new Date());
-}
-
-function getStartOfYear() {
-  const today = new Date();
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
-  return formatDateForInput(startOfYear);
-}
-
-// ============================================
-// EXPORT FOR MODULES
-// ============================================
-
-// Make functions available globally
-window.loadModule = loadModule;
-window.toggleSidebar = toggleSidebar;
-window.toggleUserMenu = toggleUserMenu;
-window.toggleSubmenu = toggleSubmenu;
-window.showProfile = showProfile;
-window.showSettings = showSettings;
-window.logout = logout;
-window.initPVModule = initPVModule;
-window.initInventoryModule = initInventoryModule;
-window.initInventoryReportModule = initInventoryReportModule;
-window.initAssetModule = initAssetModule;
-window.initAssetRegisterModule = initAssetRegisterModule;
-window.initInvestmentModule = initInvestmentModule;
-window.initInvestmentReportModule = initInvestmentReportModule;
-window.initSubscriptionAddModule = initSubscriptionAddModule;
-window.initSubscriptionScheduleModule = initSubscriptionScheduleModule;
-window.initDailyLiquidityModule = initDailyLiquidityModule;
-window.formatDate = formatDate;
-window.getToday = getToday;
-window.getStartOfYear = getStartOfYear;
-window.showLoadingModal = showLoadingModal;
-window.hideLoadingModal = hideLoadingModal;
-
-// ============================================
-// ADD CSS FOR LOADING MODAL
-// ============================================
-
-const homepageLoadingStyle = document.createElement('style');
-homepageLoadingStyle.textContent = `
-  .content-loading-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-  }
-
-  .loading-modal-content {
-    background: white;
-    padding: 40px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    text-align: center;
-    min-width: 150px;
-  }
-
-  .loading-spinner {
-    width: 50px;
-    height: 50px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid #4361ee;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin: 0 auto 15px auto;
-  }
-
-  .loading-modal-content p {
-    color: #2d3748;
-    font-size: 14px;
-    font-weight: 500;
-    margin: 0;
-  }
-
-  @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-  }
-`;
-document.head.appendChild(homepageLoadingStyle);
