@@ -9,34 +9,69 @@
   </div>
 
   <div id="employeeListContainer">
-    <p>Loading employee list...</p>
+    <table class="data-table" id="employeeTable">
+      <thead>
+        <tr>
+          <th>STAFF NUMBER</th>
+          <th>NAME OF EMPLOYEE</th>
+          <th>Department</th>
+          <th>Designation</th>
+          <th>Email</th>
+          <th>SSNIT NO.</th>
+          <th>Ghana card ID NO.</th>
+        </tr>
+      </thead>
+      <tbody id="employeeTableBody">
+        <!-- Rows injected by JS -->
+      </tbody>
+    </table>
   </div>
 
-  <!-- Basic Add/Edit Modal (placeholder) -->
+  <!-- Add/Edit Employee Modal -->
   <div id="employeeModal" class="modal" style="display:none;">
     <div class="modal-content">
       <h2 id="employeeModalTitle">Add Employee</h2>
       <form id="employeeForm" onsubmit="event.preventDefault(); saveEmployee();">
         <div class="form-row-two">
           <div class="form-group">
-            <label for="empName">Name</label>
-            <input id="empName" type="text" required>
+            <label for="empStaffNumber">STAFF NUMBER</label>
+            <input id="empStaffNumber" type="text" required>
           </div>
           <div class="form-group">
-            <label for="empId">Employee ID</label>
-            <input id="empId" type="text" required>
+            <label for="empName">NAME OF EMPLOYEE</label>
+            <input id="empName" type="text" required>
           </div>
         </div>
+
         <div class="form-row-two">
           <div class="form-group">
             <label for="empDepartment">Department</label>
             <input id="empDepartment" type="text">
           </div>
           <div class="form-group">
-            <label for="empPosition">Position</label>
-            <input id="empPosition" type="text">
+            <label for="empDesignation">Designation</label>
+            <input id="empDesignation" type="text">
           </div>
         </div>
+
+        <div class="form-row-two">
+          <div class="form-group">
+            <label for="empEmail">Email</label>
+            <input id="empEmail" type="email">
+          </div>
+          <div class="form-group">
+            <label for="empSSNIT">SSNIT NO.</label>
+            <input id="empSSNIT" type="text">
+          </div>
+        </div>
+
+        <div class="form-row-single">
+          <div class="form-group">
+            <label for="empGhanaCard">Ghana card ID NO.</label>
+            <input id="empGhanaCard" type="text">
+          </div>
+        </div>
+
         <div class="form-actions">
           <button type="submit" class="primary-btn">Save</button>
           <button type="button" onclick="closeEmployeeModal()">Cancel</button>
