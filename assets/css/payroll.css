@@ -507,7 +507,7 @@
   gap: 12px;
 }
 
-/* ---- Toggle Sections ---- */
+/* ---- Toggle Sections (Legacy - kept for compatibility) ---- */
 .payroll-modal .toggle-section {
   background: #f7fafc;
   border-radius: 8px;
@@ -549,36 +549,126 @@
   color: #718096;
 }
 
-/* ---- Inline Toggle Layout ---- */
+/* ---- Inline Toggle Layout (NEW) ---- */
 .payroll-modal .toggle-inline-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 12px;
   flex-wrap: wrap;
-  margin-top: 6px;
+  margin-top: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f4f8;
+}
+
+.payroll-modal .toggle-inline-row:last-of-type {
+  border-bottom: none;
 }
 
 .payroll-modal .toggle-inline-row .toggle-label {
-  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #2d3748;
+  cursor: pointer;
+  min-width: 160px;
+  padding: 4px 0;
+  flex-shrink: 0;
 }
 
-.payroll-modal .toggle-inline-row .toggle-section-inline {
-  display: flex;
-  gap: 12px;
+.payroll-modal .toggle-inline-row .toggle-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: #4361ee;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section {
+  display: none;
   flex: 1;
+  gap: 12px;
   background: none;
   border: none;
   padding: 0;
   margin: 0;
+  align-items: flex-end;
 }
 
-.payroll-modal .toggle-inline-row .toggle-section-inline .form-group {
+.payroll-modal .toggle-inline-row .toggle-section.show {
+  display: flex;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 80px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group label {
+  font-size: 10px;
+  font-weight: 500;
+  color: #4a5568;
+  margin-bottom: 2px;
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group input {
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #2d3748;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  height: 34px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group input:focus {
+  border-color: #4361ee;
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group input[type="date"] {
+  padding: 5px 8px;
+  min-width: 130px;
+}
+
+/* Specific max-widths for certain fields */
+.payroll-modal .toggle-inline-row .toggle-section .form-group.tax-relief-field {
+  max-width: 220px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group.loan-amount-field {
+  max-width: 160px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section .form-group.loan-date-field {
+  max-width: 150px;
+}
+
+/* ---- Staff lookup ---- */
+.staff-lookup-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.staff-lookup-row .form-group {
   flex: 1;
   margin-bottom: 0;
 }
 
-.payroll-modal .toggle-inline-row .toggle-section-inline .form-group input {
-  width: 100%;
+.staff-lookup-row .btn-outline {
+  padding: 7px 12px;
+  font-size: 12px;
+  white-space: nowrap;
+  margin-top: 16px;
 }
 
 /* ---- Calculated Fields Display ---- */
@@ -618,25 +708,6 @@
 
 .payroll-modal .calc-item .calc-value.negative {
   color: #e53e3e;
-}
-
-/* ---- Staff lookup ---- */
-.staff-lookup-row {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.staff-lookup-row .form-group {
-  flex: 1;
-  margin-bottom: 0;
-}
-
-.staff-lookup-row .btn-outline {
-  padding: 7px 12px;
-  font-size: 12px;
-  white-space: nowrap;
-  margin-top: 16px;
 }
 
 /* ============================================
@@ -928,10 +999,25 @@
   .payroll-modal .toggle-inline-row {
     flex-direction: column;
     align-items: stretch;
+    gap: 6px;
   }
 
-  .payroll-modal .toggle-inline-row .toggle-section-inline {
+  .payroll-modal .toggle-inline-row .toggle-label {
+    min-width: unset;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section.show {
     flex-direction: column;
+    gap: 8px;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section .form-group {
+    min-width: unset;
+    max-width: unset !important;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section .form-group input {
+    height: 36px;
   }
 }
 
