@@ -4,27 +4,27 @@
   </div>
 
   <div class="payroll-controls">
-    <button class="primary-btn" onclick="showAddPayModal()"><i class="fas fa-plus"></i> Add Employee Pay</button>
-    <label for="payPeriod">Payroll Period:</label>
+    <button class="primary-btn" onclick="showAddPayModal()"><i class="fas fa-plus"></i> Add employee pay</button>
+    <label for="payPeriod">Payroll period:</label>
     <input type="month" id="payPeriod" onchange="loadPayrollRows()">
-    <button class="primary-btn" onclick="runPayroll()"><i class="fas fa-play"></i> Run Payroll</button>
+    <button class="primary-btn" onclick="runPayroll()"><i class="fas fa-play"></i> Run payroll</button>
   </div>
 
   <div id="payrollContainer">
     <table class="data-table" id="payrollTable">
       <thead>
         <tr>
-          <th>STAFF NUMBER</th>
-          <th>NAME OF EMPLOYEE</th>
+          <th>Staff number</th>
+          <th>Name of employee</th>
           <th>Designation</th>
-          <th>Basic Salary</th>
+          <th>Basic salary</th>
           <th>Employee (5.5%)</th>
           <th>PF (10%)</th>
-          <th>Tax Reliefs</th>
-          <th>Taxable Income</th>
+          <th>Tax reliefs</th>
+          <th>Taxable income</th>
           <th>PAYE</th>
-          <th>TOTAL DEDUCTION</th>
-          <th>NET PAY</th>
+          <th>Total deduction</th>
+          <th>Net pay</th>
           <th>Employer (13%)</th>
           <th>Employer (5%) PF</th>
         </tr>
@@ -38,11 +38,11 @@
   <!-- Add Employee Pay Modal -->
   <div id="addPayModal" class="modal" style="display:none;">
     <div class="modal-content">
-      <h2>Add Employee Pay</h2>
+      <h2>Add employee pay</h2>
       <form id="addPayForm" onsubmit="event.preventDefault(); saveEmployeePay();">
         <div class="form-row-two">
           <div class="form-group">
-            <label for="payStaffNumber">Staff Number</label>
+            <label for="payStaffNumber">Staff number</label>
             <input id="payStaffNumber" type="text" required onblur="autoFillEmployeeDetails(this.value)">
           </div>
           <div class="form-group">
@@ -64,19 +64,19 @@
 
         <div class="form-row-two">
           <div class="form-group">
-            <label for="payBasicSalary">Basic Salary Amount</label>
+            <label for="payBasicSalary">Basic salary amount</label>
             <input id="payBasicSalary" type="number" step="0.01" required>
           </div>
           <div class="form-group">
             <label>Options</label>
             <div>
-              <label><input id="payPF" type="checkbox" onchange="togglePFFields()"> PF</label>
-              <label style="margin-left:12px;"><input id="payTaxRelief" type="checkbox" onchange="toggleTaxReliefField()"> Tax Relief</label>
+              <label><input id="payPF" type="checkbox" onchange="togglePFFields()" checked> PF</label>
+              <label style="margin-left:12px;"><input id="payTaxRelief" type="checkbox" onchange="toggleTaxReliefField()"> Tax relief</label>
             </div>
           </div>
         </div>
 
-        <div id="pfFields" style="display:none; margin-top:8px;">
+        <div id="pfFields" style="display:block; margin-top:8px;">
           <div class="form-row-two">
             <div class="form-group">
               <label for="payEmployeePF">Employee PF %</label>
@@ -92,15 +92,14 @@
         <div id="taxReliefField" style="display:none; margin-top:8px;">
           <div class="form-row-two">
             <div class="form-group">
-              <label for="payReliefAmount">Relief Amount</label>
+              <label for="payReliefAmount">Relief amount</label>
               <input id="payReliefAmount" type="number" step="0.01" value="0">
             </div>
             <div class="form-group">
-              <label for="payLoanOption">Loan</label>
-              <select id="payLoanOption" onchange="toggleLoanFields()">
-                <option value="none">No Loan</option>
-                <option value="loan">Has Loan</option>
-              </select>
+              <label for="payHasLoan">Loan</label>
+              <div>
+                <label><input id="payHasLoan" type="checkbox" onchange="toggleLoanFields()"> Has loan</label>
+              </div>
             </div>
           </div>
         </div>
@@ -108,7 +107,7 @@
         <div id="loanFields" style="display:none; margin-top:8px;">
           <div class="form-row-two">
             <div class="form-group">
-              <label for="payLoanMonthly">Monthly Repayment</label>
+              <label for="payLoanMonthly">Monthly repayment</label>
               <input id="payLoanMonthly" type="number" step="0.01" value="0">
             </div>
             <div class="form-group">
