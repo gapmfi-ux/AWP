@@ -1,4 +1,4 @@
-/* Payroll client logic - Enhanced with better UI */
+/* Payroll client logic - Enhanced with renamed columns */
 
 function initPayroll() {
   renderPayrollTable();
@@ -9,7 +9,6 @@ function initPayroll() {
   }
   loadPayrollRows();
   
-  // Setup keyboard shortcuts
   document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
       closeAddPayModal();
@@ -77,16 +76,13 @@ function renderPayrollTable(rows) {
     </tr>
   `).join('');
   
-  // Click to view payslip
   document.querySelectorAll('#payrollTableBody tr[data-staff]').forEach(tr => {
     tr.addEventListener('click', function(e) {
-      // Don't trigger if clicking the edit button
       if (e.target.closest('.btn-edit-icon')) return;
       const staff = this.getAttribute('data-staff');
       if (staff) showPayslipFor(staff);
     });
     
-    // Add hover hint
     const hint = document.createElement('span');
     hint.className = 'click-hint';
     hint.textContent = '↗';
@@ -106,7 +102,6 @@ function editPayrollRecord(staff) {
     return;
   }
   
-  // Open modal with existing data
   showAddPayModal(record);
 }
 
@@ -118,7 +113,6 @@ function showAddPayModal(editData) {
   const title = document.getElementById('payModalTitle');
   if (title) title.textContent = isEdit ? 'Edit Employee Pay' : 'Add Employee Pay';
   
-  // Reset form
   const fields = [
     'payStaffNumber', 'payName', 'payDesignation',
     'payBasicSalary', 'payEmployeePF', 'payEmployerPF', 'payReliefAmount',
@@ -132,7 +126,6 @@ function showAddPayModal(editData) {
   });
   
   if (isEdit) {
-    // Populate with existing data
     document.getElementById('payStaffNumber').value = editData.staff || '';
     document.getElementById('payName').value = editData.name || '';
     document.getElementById('payDesignation').value = editData.designation || '';
@@ -145,7 +138,6 @@ function showAddPayModal(editData) {
     document.getElementById('payLoanFrom').value = editData.loanFrom || '';
     document.getElementById('payLoanTo').value = editData.loanTo || '';
     
-    // Checkboxes
     const pfCheck = document.getElementById('payPF');
     if (pfCheck) pfCheck.checked = (editData.employeePFpct > 0 || editData.employerPFpct > 0);
     
@@ -155,10 +147,8 @@ function showAddPayModal(editData) {
     const loanCheck = document.getElementById('payLoanCheck');
     if (loanCheck) loanCheck.checked = (editData.loanMonthly > 0);
     
-    // Store edit mode
     modal.dataset.editStaff = editData.staff;
   } else {
-    // Set defaults for new record
     const ePF = document.getElementById('payEmployeePF');
     const erPF = document.getElementById('payEmployerPF');
     if (ePF) ePF.value = '5.5';
@@ -176,15 +166,11 @@ function showAddPayModal(editData) {
     delete modal.dataset.editStaff;
   }
   
-  // Toggle sections
   togglePFFields();
   toggleTaxReliefField();
   toggleLoanFields();
   
-  // Clear calculated preview
-  updateCalcPreview(0, 0, 0, 0);
-  
-  // Recalculate
+  updateCalcPreview(0, 0, 0, 0, 0);
   recalcPayrollPreview();
   
   modal.classList.add('show');
@@ -196,7 +182,6 @@ function closeAddPayModal() {
   if (modal) modal.classList.remove('show');
 }
 
-// Close modal on backdrop click
 document.addEventListener('click', function(e) {
   const modal = document.getElementById('addPayModal');
   if (modal && modal.classList.contains('show')) {
@@ -213,7 +198,6 @@ function autoFillEmployeeDetails(staffNumber) {
   const employees = JSON.parse(localStorage.getItem('awp_employees') || '[]');
   const emp = employees.find(e => e.staff === staff);
   
-  // Name and Designation are display fields (readonly)
   const nameEl = document.getElementById('payName');
   const desEl = document.getElementById('payDesignation');
   
@@ -225,7 +209,6 @@ function autoFillEmployeeDetails(staffNumber) {
     if (desEl) desEl.value = '';
   }
   
-  // Recalculate
   recalcPayrollPreview();
 }
 
@@ -233,7 +216,7 @@ function togglePFFields() {
   const checked = document.getElementById('payPF')?.checked || false;
   const fields = document.getElementById('pfFields');
   if (fields) {
-    fields.classList.toggle('hidden', !checked);
+    fields.style.display = checked ? 'flex' : 'none';
   }
   recalcPayrollPreview();
 }
@@ -242,7 +225,7 @@ function toggleTaxReliefField() {
   const checked = document.getElementById('payTaxRelief')?.checked || false;
   const field = document.getElementById('taxReliefField');
   if (field) {
-    field.classList.toggle('hidden', !checked);
+    field.style.display = checked ? 'flex' : 'none';
   }
   recalcPayrollPreview();
 }
@@ -251,7 +234,7 @@ function toggleLoanFields() {
   const checked = document.getElementById('payLoanCheck')?.checked || false;
   const field = document.getElementById('loanFields');
   if (field) {
-    field.classList.toggle('hidden', !checked);
+    field.style.display = checked ? 'flex' : 'none';
   }
   recalcPayrollPreview();
 }
@@ -274,19 +257,56 @@ function recalcPayrollPreview() {
     pfChecked
   });
   
-  updateCalcPreview(calc.netPay, calc.paye, calc.totalDeduction, calc.taxableIncome);
+  updateCalcPreview(calc.netPay, calc.paye, calc.totalDeduction, calc.taxableIncome, calc.employeePFAmount);
 }
 
-function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome) {
+function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome, employeePF) {
   const netEl = document.getElementById('previewNetPay');
   const payeEl = document.getElementById('previewPaye');
   const dedEl = document.getElementById('previewDeductions');
   const taxEl = document.getElementById('previewTaxable');
+  const pfEl = document.getElementById('previewEmployeePF');
   
   if (netEl) netEl.textContent = formatMoney(netPay);
   if (payeEl) payeEl.textContent = formatMoney(paye);
   if (dedEl) dedEl.textContent = formatMoney(totalDeduction);
   if (taxEl) taxEl.textContent = formatMoney(taxableIncome);
+  if (pfEl) pfEl.textContent = formatMoney(employeePF);
+}
+
+function computePayrollRow({ basicSalary = 0, employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+  // 1. Employee Pension (Employee PF)
+  const employeePFAmount = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
+  
+  // 2. Pf 10% (for information only)
+  const pf10Amount = roundToTwo(basicSalary * 0.10);
+  
+  // 3. Taxable Income = Basic - Employee Pension - Tax Relief - Loan
+  const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePFAmount - reliefAmount - loanMonthly));
+  
+  // 4. PAYE = Taxable Income × 10% (simplified - backend will use dynamic rates)
+  const paye = roundToTwo(taxableIncome * 0.10);
+  
+  // 5. Total Deduction (for information only)
+  const totalDeduction = roundToTwo(employeePFAmount + pf10Amount + paye + loanMonthly);
+  
+  // 6. Net Pay = Taxable Income - PAYE
+  const netPay = roundToTwo(taxableIncome - paye);
+  
+  // 7. Employer contributions (for information only)
+  const employer13Amount = roundToTwo(basicSalary * 0.13);
+  const employerPFAmount = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
+  
+  return {
+    employeePFAmount,
+    pf10Amount,
+    taxableIncome,
+    paye,
+    totalDeduction,
+    netPay,
+    employer13Amount,
+    employerPFAmount
+  };
 }
 
 function saveEmployeePay() {
@@ -332,7 +352,6 @@ function saveEmployeePay() {
   const modal = document.getElementById('addPayModal');
   const editStaff = modal?.dataset?.editStaff || null;
   
-  // Check if editing
   let existingIndex = -1;
   if (editStaff && period) {
     existingIndex = rows.findIndex(r => r.staff === editStaff && r.period === period);
@@ -365,7 +384,6 @@ function saveEmployeePay() {
     rows[existingIndex] = newRow;
     showToast('Payroll record updated successfully!', 'success');
   } else {
-    // Check for duplicate
     const dupIndex = rows.findIndex(r => r.staff === staff && r.period === period);
     if (dupIndex >= 0) {
       if (!confirm(`"${name}" already has a payroll record for this period. Update it?`)) {
@@ -384,21 +402,8 @@ function saveEmployeePay() {
   delete modal.dataset.editStaff;
 }
 
-function computePayrollRow({ basicSalary = 0, employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
-  const employeePFAmount = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-  const pf10Amount = roundToTwo(basicSalary * 0.10);
-  const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePFAmount - reliefAmount - loanMonthly));
-  const paye = roundToTwo(taxableIncome * 0.10);
-  const totalDeduction = roundToTwo(employeePFAmount + pf10Amount + paye + loanMonthly);
-  const netPay = roundToTwo(basicSalary - totalDeduction);
-  const employer13Amount = roundToTwo(basicSalary * 0.13);
-  const employerPFAmount = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
-  
-  return { employeePFAmount, pf10Amount, taxableIncome, paye, totalDeduction, netPay, employer13Amount, employerPFAmount };
-}
-
 function runPayroll() {
-  showToast('Payroll run executed (client-side demo). Replace with backend call to persist runs.', 'info');
+  showToast('Payroll run executed (client-side demo).', 'info');
 }
 
 function deletePayrollRecord(staff) {
