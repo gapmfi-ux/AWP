@@ -60,7 +60,7 @@
 
 <!-- Add/Edit Payroll Modal -->
 <div class="payroll-modal" id="addPayModal">
-  <div class="payroll-modal-content">
+  <div class="payroll-modal-content" style="max-width: 820px;">
     <!-- Header -->
     <div class="payroll-modal-header">
       <h3><i class="fas fa-user-plus"></i> <span id="payModalTitle">Add Employee Pay</span></h3>
@@ -73,20 +73,13 @@
         <i class="fas fa-info-circle"></i> Enter staff number and basic salary. Calculations update automatically.
       </div>
       
-      <!-- Staff Lookup -->
-      <div class="staff-lookup-row">
+      <!-- Staff Lookup - 3 columns -->
+      <div class="form-row-3">
         <div class="form-group">
           <label>Staff Number <span class="required">*</span></label>
           <input type="text" id="payStaffNumber" placeholder="e.g. STAFF001" 
                  oninput="autoFillEmployeeDetails(this.value); recalcPayrollPreview();">
         </div>
-        <button class="btn-outline" type="button" onclick="autoFillEmployeeDetails(document.getElementById('payStaffNumber').value)">
-          <i class="fas fa-search"></i> Lookup
-        </button>
-      </div>
-      
-      <!-- Name and Designation (read-only display fields) -->
-      <div class="form-row">
         <div class="form-group">
           <label>Name of Employee <span class="required">*</span></label>
           <input type="text" id="payName" placeholder="Auto-displays from staff number" readonly>
@@ -97,6 +90,7 @@
         </div>
       </div>
       
+      <!-- Basic Salary and Pay Period - 2 columns -->
       <div class="form-row">
         <div class="form-group">
           <label>Basic Salary (GHS) <span class="required">*</span></label>
@@ -109,67 +103,63 @@
         </div>
       </div>
       
-      <!-- PF Toggle -->
-      <div style="margin-top:6px;">
-        <label class="toggle-label">
+      <!-- PF Toggle - 3 columns -->
+      <div style="margin-top:6px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <label class="toggle-label" style="flex: 0 0 auto;">
           <input type="checkbox" id="payPF" checked onchange="togglePFFields()">
           Apply Pf Contributions
           <span class="toggle-hint">(Employee + Employer)</span>
         </label>
-        <div class="toggle-section show" id="pfFields">
-          <div class="form-row">
-            <div class="form-group">
-              <label>Employee Pf (%)</label>
-              <input type="number" id="payEmployeePF" value="5.5" step="0.1" min="0" max="20"
-                     oninput="recalcPayrollPreview()">
-            </div>
-            <div class="form-group">
-              <label>Employer Pf (%)</label>
-              <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20"
-                     oninput="recalcPayrollPreview()">
-            </div>
+        <div class="toggle-section show" id="pfFields" style="display: flex; gap: 12px; flex: 1; background: none; border: none; padding: 0; margin: 0;">
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>Employee Pf (%)</label>
+            <input type="number" id="payEmployeePF" value="5.5" step="0.1" min="0" max="20"
+                   oninput="recalcPayrollPreview()" style="width: 100%;">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>Employer Pf (%)</label>
+            <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20"
+                   oninput="recalcPayrollPreview()" style="width: 100%;">
           </div>
         </div>
       </div>
       
-      <!-- Tax Relief Toggle -->
-      <div style="margin-top:8px;">
-        <label class="toggle-label">
+      <!-- Tax Relief Toggle - 2 columns -->
+      <div style="margin-top:10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <label class="toggle-label" style="flex: 0 0 auto;">
           <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField()">
           Apply Tax Relief
           <span class="toggle-hint">(e.g. Nhiss, Ssnit)</span>
         </label>
-        <div class="toggle-section" id="taxReliefField">
-          <div class="form-group">
+        <div class="toggle-section" id="taxReliefField" style="display: none; flex: 1; background: none; border: none; padding: 0; margin: 0;">
+          <div class="form-group" style="margin-bottom: 0;">
             <label>Relief Amount (Ghs)</label>
             <input type="number" id="payReliefAmount" placeholder="0.00" step="0.01" min="0"
-                   oninput="recalcPayrollPreview()">
+                   oninput="recalcPayrollPreview()" style="width: 100%;">
           </div>
         </div>
       </div>
       
-      <!-- Loan Toggle -->
-      <div style="margin-top:8px;">
-        <label class="toggle-label">
+      <!-- Loan Toggle - 3 columns -->
+      <div style="margin-top:10px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <label class="toggle-label" style="flex: 0 0 auto;">
           <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields()">
           Apply Loan Deduction
           <span class="toggle-hint">(Monthly deduction)</span>
         </label>
-        <div class="toggle-section" id="loanFields">
-          <div class="form-group">
+        <div class="toggle-section" id="loanFields" style="display: none; flex: 1; background: none; border: none; padding: 0; margin: 0;">
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
             <label>Monthly Loan Deduction (Ghs)</label>
             <input type="number" id="payLoanMonthly" placeholder="0.00" step="0.01" min="0"
-                   oninput="recalcPayrollPreview()">
+                   oninput="recalcPayrollPreview()" style="width: 100%;">
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>From Date</label>
-              <input type="date" id="payLoanFrom">
-            </div>
-            <div class="form-group">
-              <label>To Date</label>
-              <input type="date" id="payLoanTo">
-            </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>From Date</label>
+            <input type="date" id="payLoanFrom" style="width: 100%;">
+          </div>
+          <div class="form-group" style="flex: 1; margin-bottom: 0;">
+            <label>To Date</label>
+            <input type="date" id="payLoanTo" style="width: 100%;">
           </div>
         </div>
       </div>
