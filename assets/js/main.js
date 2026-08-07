@@ -85,7 +85,7 @@ window.google = {
             'addNewInventory': () => API.addNewInventory(args[0]),
             'getPurchaseReportData': () => API.getPurchaseReportData(args[0], args[1]),
             'getUsageReportData': () => API.getUsageReportData(args[0], args[1]),
-            'getInventoryListData': () => API.getInventoryListData(),
+            'getInventoryListData': () => API.getInventoryListData(args[0]),
             'recordInventoryUsage': () => API.recordInventoryUsage(args[0]),
             'removeInventory': () => API.removeInventory(args[0]),
             
