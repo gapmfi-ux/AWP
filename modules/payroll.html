@@ -1,0 +1,15 @@
+<div class="payroll-container">
+  <div class="module-header">
+    <h1><i class="fas fa-calculator"></i> Payroll</h1>
+  </div>
+
+  <div class="payroll-controls">
+    <label for="payPeriod">Payroll Period:</label>
+    <input type="month" id="payPeriod" onchange="loadPayrollPreview()">
+    <button class="primary-btn" onclick="runPayroll()"><i class="fas fa-play"></i> Run Payroll</button>
+  </div>
+
+  <div id="payrollPreviewContainer">
+    <p>Select a payroll period and click Run Payroll.</p>
+  </div>
+</div>
