@@ -1,5 +1,5 @@
 /* ============================================
-   INVENTORY REPORT MODULE JAVASCRIPT
+   INVENTORY REPORT MODULE JAVASCRIPT 
    ============================================ */
 
 // Global variables for inventory module
