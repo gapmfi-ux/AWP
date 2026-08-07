@@ -1,5 +1,5 @@
 /* ============================================
-   INVENTORY REPORT MODULE JAVASCRIPT 
+   INVENTORY REPORT MODULE JAVASCRIPT
    ============================================ */
 
 // Global variables for inventory module
@@ -29,10 +29,12 @@ function initInventoryReportModule() {
   if (usageToDate) usageToDate.value = today;
   if (inventoryToDate) inventoryToDate.value = today;
 
-  // Ensure changing As At date triggers reload (defensive)
+  // Ensure changing As At date triggers reload (listen to both change and input)
   if (inventoryToDate) {
     inventoryToDate.removeEventListener('change', loadInventoryList);
+    inventoryToDate.removeEventListener('input', loadInventoryList);
     inventoryToDate.addEventListener('change', loadInventoryList);
+    inventoryToDate.addEventListener('input', loadInventoryList);
   }
 
   // Load initial data - Inventory List first (since it's the active tab)
@@ -250,7 +252,7 @@ function loadInventoryList() {
       console.error('Error loading inventory list:', error);
       showInventoryEmptyState('inventoryListTableBody', 'Error loading inventory list: ' + (error.message || error), 7);
     })
-    .getInventoryListData(asOf); // <-- pass as-of date to server
+    .getInventoryListData(asOf); // pass the selected as-of date (yyyy-MM-dd expected)
 }
 
 // ============================================
