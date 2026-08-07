@@ -501,28 +501,18 @@ function showVoucherPreview(voucherData) {
     }
   }
 
-  var creditAccountPreviewRow = document.getElementById('creditAccountPreviewRow');
-  if (creditAccountPreviewRow) {
+  // Show Credit Account inline under Account Code for Direct Credit & Staff Medical
+  var creditAccountInlinePreviewRow = document.getElementById('creditAccountInlinePreviewRow');
+  var previewCreditAccountNo = document.getElementById('preview-creditAccountNo');
+
+  if (creditAccountInlinePreviewRow) {
     if (voucherData.voucherType === 'Direct Credit Payment Voucher' || voucherData.voucherType === 'Staff Medical Payment Voucher') {
-      creditAccountPreviewRow.style.display = 'flex';
-      var previewCreditAccount = document.getElementById('preview-creditAccountNo');
-      if (previewCreditAccount) previewCreditAccount.textContent = voucherData.creditAccountNo;
-      // inline under account code
-      var previewCreditInline = document.getElementById('preview-creditAccountInline');
-      var previewCreditInlineValue = document.getElementById('preview-creditAccountInlineValue');
-      if (previewCreditInline && previewCreditInlineValue) {
-        if (voucherData.creditAccountNo) {
-          previewCreditInlineValue.textContent = voucherData.creditAccountNo;
-          previewCreditInline.style.display = 'block';
-        } else {
-          previewCreditInlineValue.textContent = '';
-          previewCreditInline.style.display = 'none';
-        }
-      }
+      // show the inline credit account row under Account Code
+      creditAccountInlinePreviewRow.style.display = 'flex';
+      if (previewCreditAccountNo) previewCreditAccountNo.textContent = voucherData.creditAccountNo || '';
     } else {
-      creditAccountPreviewRow.style.display = 'none';
-      var previewCreditInline = document.getElementById('preview-creditAccountInline');
-      if (previewCreditInline) previewCreditInline.style.display = 'none';
+      creditAccountInlinePreviewRow.style.display = 'none';
+      if (previewCreditAccountNo) previewCreditAccountNo.textContent = '';
     }
   }
 
@@ -552,7 +542,7 @@ function showVoucherPreview(voucherData) {
   var previewReviewedBy = document.getElementById('preview-reviewedBy');
   var previewReceivedBy = document.getElementById('preview-receivedBy');
   var previewAuthorizedBy = document.getElementById('preview-authorizedBy');
-  
+
   if (previewPvNumber) previewPvNumber.textContent = voucherData.pvNumber;
   if (previewPayableTo) previewPayableTo.textContent = voucherData.payableTo;
   if (previewDate) previewDate.textContent = voucherData.date;
@@ -561,16 +551,16 @@ function showVoucherPreview(voucherData) {
   if (previewAccountCode) previewAccountCode.textContent = voucherData.accountCode;
   if (previewInvoiceDate) previewInvoiceDate.textContent = voucherData.invoiceDate;
   if (previewInvoiceNo) previewInvoiceNo.textContent = voucherData.invoiceNo;
-  
+
   if (previewAmount) {
     const amountNum = parseFloat(voucherData.amount);
-    previewAmount.textContent = amountNum.toLocaleString('en-US', {
+    previewAmount.textContent = isNaN(amountNum) ? '' : amountNum.toLocaleString('en-US', {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
       useGrouping: true
     });
   }
-  
+
   if (previewAmountInWords) previewAmountInWords.textContent = voucherData.amountInWords;
   if (previewTransactionDetails) previewTransactionDetails.textContent = voucherData.transactionDetails;
   if (previewRequestedBy) previewRequestedBy.textContent = voucherData.requestedBy;
@@ -583,13 +573,13 @@ function showVoucherPreview(voucherData) {
   var reviewedBySigRow = document.getElementById('reviewedBySigRow');
   var receivedBySigRow = document.getElementById('receivedBySigRow');
   var authorisedBySigRow = document.getElementById('authorisedBySigRow');
-  
+
   const type = voucherData.voucherType;
-  
+
   // Show/hide based on voucher type
   if (requestedBySigRow) requestedBySigRow.style.display = 'flex'; // Always show for all types
   if (authorisedBySigRow) authorisedBySigRow.style.display = 'flex'; // Always show for all types
-  
+
   if (type === 'Cash Payment Voucher' || type === 'Cheque Payment Voucher') {
     // Show: Requested By, Reviewed By, Authorised By, Received By
     if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
@@ -607,7 +597,7 @@ function showVoucherPreview(voucherData) {
     if (reviewedBySigRow) reviewedBySigRow.style.display = 'flex';
     if (receivedBySigRow) receivedBySigRow.style.display = 'flex';
   }
-  
+
   var voucherModal = document.getElementById('voucher-preview-modal');
   if (voucherModal) voucherModal.style.display = 'block';
 }
