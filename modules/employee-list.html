@@ -1,82 +1,102 @@
 <div class="employee-list-container">
-  <div class="module-header">
-    <h1><i class="fas fa-users"></i> Employee List</h1>
+  <!-- Header -->
+  <div class="employee-list-header">
+    <h2><i class="fas fa-users"></i> Employee List</h2>
+    <div class="employee-controls">
+      <input type="text" id="employeeSearch" placeholder="Search employees..." oninput="filterEmployeeList()">
+      <button class="btn-primary" onclick="showAddEmployeeModal()">
+        <i class="fas fa-plus"></i> Add Employee
+      </button>
+    </div>
   </div>
 
-  <div class="employee-controls">
-    <button id="addEmployeeBtn" class="primary-btn"><i class="fas fa-plus"></i> Add Employee</button>
-    <input type="search" id="employeeSearch" placeholder="Search employees..." oninput="filterEmployeeList()">
-  </div>
-
-  <div id="employeeListContainer">
-    <table class="data-table" id="employeeTable">
+  <!-- Table -->
+  <div class="employee-table-wrapper">
+    <table class="employee-table">
       <thead>
         <tr>
-          <th>STAFF NUMBER</th>
-          <th>NAME OF EMPLOYEE</th>
+          <th>Staff #</th>
+          <th>Name</th>
           <th>Department</th>
           <th>Designation</th>
           <th>Email</th>
-          <th>SSNIT NO.</th>
-          <th>Ghana card ID NO.</th>
+          <th>Ssnit</th>
+          <th style="text-align:center;">Action</th>
         </tr>
       </thead>
       <tbody id="employeeTableBody">
-        <!-- Rows injected by JS -->
+        <tr>
+          <td colspan="7" class="employee-table-empty">
+            <i class="fas fa-users"></i>
+            <p>No employees found</p>
+            <span class="sub-text">Click "Add Employee" to get started</span>
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
+</div>
 
-  <!-- Add/Edit Employee Modal -->
-  <div id="employeeModal" class="modal" style="display:none;">
-    <div class="modal-content">
-      <h2 id="employeeModalTitle">Add Employee</h2>
-      <form id="employeeForm" onsubmit="event.preventDefault(); saveEmployee();">
-        <div class="form-row-two">
-          <div class="form-group">
-            <label for="empStaffNumber">STAFF NUMBER</label>
-            <input id="empStaffNumber" type="text" required>
-          </div>
-          <div class="form-group">
-            <label for="empName">NAME OF EMPLOYEE</label>
-            <input id="empName" type="text" required>
-          </div>
+<!-- Add/Edit Employee Modal -->
+<div class="payroll-modal" id="employeeModal">
+  <div class="payroll-modal-content">
+    <!-- Header -->
+    <div class="payroll-modal-header">
+      <h3><i class="fas fa-user-plus"></i> <span id="employeeModalTitle">Add Employee</span></h3>
+      <button class="payroll-modal-close" onclick="closeEmployeeModal()">&times;</button>
+    </div>
+    
+    <!-- Body -->
+    <div class="payroll-modal-body">
+      <div class="form-hint">
+        <i class="fas fa-info-circle"></i> Enter employee details. Staff number must be unique.
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Staff Number <span class="required">*</span></label>
+          <input type="text" id="empStaffNumber" placeholder="e.g. STAFF001">
         </div>
-
-        <div class="form-row-two">
-          <div class="form-group">
-            <label for="empDepartment">Department</label>
-            <input id="empDepartment" type="text">
-          </div>
-          <div class="form-group">
-            <label for="empDesignation">Designation</label>
-            <input id="empDesignation" type="text">
-          </div>
+        <div class="form-group">
+          <label>Full Name <span class="required">*</span></label>
+          <input type="text" id="empName" placeholder="Employee full name">
         </div>
-
-        <div class="form-row-two">
-          <div class="form-group">
-            <label for="empEmail">Email</label>
-            <input id="empEmail" type="email">
-          </div>
-          <div class="form-group">
-            <label for="empSSNIT">SSNIT NO.</label>
-            <input id="empSSNIT" type="text">
-          </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Department</label>
+          <input type="text" id="empDepartment" placeholder="e.g. Finance">
         </div>
-
-        <div class="form-row-single">
-          <div class="form-group">
-            <label for="empGhanaCard">Ghana card ID NO.</label>
-            <input id="empGhanaCard" type="text">
-          </div>
+        <div class="form-group">
+          <label>Designation</label>
+          <input type="text" id="empDesignation" placeholder="e.g. Accountant">
         </div>
-
-        <div class="form-actions">
-          <button type="submit" class="primary-btn">Save</button>
-          <button type="button" onclick="closeEmployeeModal()">Cancel</button>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" id="empEmail" placeholder="employee@company.com">
         </div>
-      </form>
+        <div class="form-group">
+          <label>Ssnit Number</label>
+          <input type="text" id="empSSNIT" placeholder="SSNIT number">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Ghana Card Number</label>
+        <input type="text" id="empGhanaCard" placeholder="Ghana Card number">
+      </div>
+    </div>
+    
+    <!-- Footer -->
+    <div class="payroll-modal-footer">
+      <button class="btn-secondary" onclick="closeEmployeeModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEmployee()">
+        <i class="fas fa-save"></i> Save Employee
+      </button>
     </div>
   </div>
 </div>
