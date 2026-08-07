@@ -5,23 +5,24 @@
     <h2><i class="fas fa-money-check-alt"></i> Payroll</h2>
   </div>
 
-<!-- Controls Row -->
-<div class="payroll-controls-row">
-  <div class="payroll-controls-left">
-    <button class="btn-primary" onclick="showAddPayModal()">
-      <i class="fas fa-plus"></i> Add Employee Pay
-    </button>
+  <!-- Controls Row -->
+  <div class="payroll-controls-row">
+    <div class="payroll-controls-left">
+      <button class="btn-primary" onclick="showAddPayModal()">
+        <i class="fas fa-plus"></i> Add Employee Pay
+      </button>
+    </div>
+    <div class="payroll-controls-right">
+      <button class="btn-secondary" onclick="runPayroll()">
+        <i class="fas fa-play"></i> Run Payroll
+      </button>
+      <label for="payPeriod">Pay Period:</label>
+      <input type="month" id="payPeriod" onchange="loadPayrollRows()">
+      <span style="font-size:12px;color:#718096;margin-left:4px;">
+        <i class="fas fa-info-circle"></i> Click row for payslip
+      </span>
+    </div>
   </div>
-  <div class="payroll-controls-right">
-    <button class="btn-secondary" onclick="runPayroll()">
-      <i class="fas fa-play"></i> Run Payroll
-    </button>
-    <label for="payPeriod">Pay Period:</label>
-    <input type="month" id="payPeriod" onchange="loadPayrollRows()">
-    <span style="font-size:12px;color:#718096;margin-left:4px;">
-     </span>
-  </div>
-</div>
 
   <!-- Table -->
   <div class="payroll-table-wrapper">
