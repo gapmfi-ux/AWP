@@ -1,338 +1,277 @@
-/* ============================================
-   PAYROLL MODULE STYLES - COMPACT VERSION
-   Modeled after inventory.css (compact, responsive)
-   Improvements:
-   - Table headings set to Title Case (capitalize each word)
-   - Better spacing, card UX, and consistent variables
-   - Loading spinners and print rules
-   ============================================ */
+/* Combined Payroll + Employee List + Payslip styles
+   - Reduced font sizes for denser UI
+   - Modal show/display fixes
+   - Module headings capitalized (each word)
+*/
 
 :root{
-  --primary:#4361ee;
-  --primary-dark:#3a56d4;
-  --muted:#6c757d;
-  --bg:#ffffff;
-  --border:#e2e8f0;
-  --success:#06d6a0;
-  --danger:#e53e3e;
-  --card-radius:10px;
-  --font-size-sm:11px;
+  --primary-color: #2b6cb0;
+  --muted-color: #2d3748;
+  --accent-1: #7aa7ff;
+  --table-border: #eef3f8;
+  --table-head-bg: #f7fbff;
+  --card-bg: #ffffff;
+  --radius: 8px;
+  --base-font-size: 13px;
+  --small-font-size: 11px;
 }
 
-/* Container */
-.payroll-container {
-  background: var(--bg);
-  border-radius: var(--card-radius);
-  padding: 18px;
-  max-width: 1140px;
-  margin: 12px auto;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
-  font-size: var(--font-size-sm);
-  color: #2d3748;
+/* Apply a slightly smaller base font for these modules */
+.employee-list-container,
+.payroll-container,
+.payslip-container {
+  font-size: var(--base-font-size);
+  color: var(--muted-color);
+  line-height: 1.35;
 }
 
-/* Header */
-.module-header {
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-bottom:14px;
-  border-bottom:2px solid var(--primary);
-  padding-bottom:10px;
-}
-.module-header h1 {
-  font-size:16px;
-  margin:0;
-  color:#2d3748;
-  font-weight:700;
+/* Shared table styles */
+.employee-list-container .data-table,
+.payroll-container .data-table,
+.payslip-container .data-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+  background: var(--card-bg);
+  border: 1px solid #e6edf6;
+  border-radius: var(--radius);
+  overflow: hidden;
+  font-size: 12px; /* slightly smaller table text */
 }
 
-/* Controls Row */
-.payroll-controls {
-  display:flex;
-  gap:10px;
-  align-items:center;
-  flex-wrap:wrap;
-  margin-bottom:14px;
-}
-
-.payroll-controls .primary-btn {
-  background: var(--primary);
-  color: white;
-  border: none;
-  padding:8px 14px;
-  border-radius:8px;
-  font-weight:700;
-  cursor:pointer;
-  display:inline-flex;
-  align-items:center;
-  gap:8px;
-  font-size:13px;
-  box-shadow: 0 2px 8px rgba(67,97,238,0.08);
-}
-
-.payroll-controls .primary-btn:hover {
-  background: var(--primary-dark);
-  transform: translateY(-1px);
-}
-
-/* Date / period input */
-.payroll-controls label {
-  font-size: 12px;
-  color: var(--muted);
-  font-weight:700;
-  margin-left:4px;
-}
-#payPeriod {
-  padding:8px 10px;
-  border:1px solid var(--border);
-  border-radius:8px;
-  background:transparent;
-  cursor:pointer;
-  font-size:13px;
-  min-width:150px;
-}
-
-/* Table wrapper and table */
-#payrollContainer {
-  overflow-x:auto;
-  border:1px solid var(--border);
-  border-radius:10px;
-  background: #fff;
-}
-
-.data-table {
-  width:100%;
-  border-collapse:collapse;
-  font-size:13px;
-  background:var(--bg);
-  min-width: 900px; /* keep layout stable on wide tables */
-}
-
-.data-table thead {
-  background:#f7fafc;
-}
-
-.data-table th, .data-table td {
-  padding:10px 8px;
-  border-bottom:1px solid var(--border);
-  border-right:1px solid var(--border);
-  text-align:center;
-  color:#4a5568;
-  font-size:12px;
-}
-
-.data-table th:last-child,
-.data-table td:last-child {
-  border-right:none;
-}
-
-/* Capitalize each word in table headings */
 .data-table th,
-.report-table th {
-  text-transform: capitalize;
-  letter-spacing: 0.5px;
-  font-weight: 700;
+.data-table td {
+  border-bottom: 1px solid var(--table-border);
+  padding: 8px 10px;
+  text-align: left;
   font-size: 12px;
-  color: #2d3748;
+  color: var(--muted-color);
+  vertical-align: middle;
 }
 
-/* Empty / loading states */
-.data-table .loading-cell,
-.data-table .empty-cell {
-  text-align:center;
-  padding:28px;
-  color:#a0aec0;
-  font-style:italic;
+.data-table thead th {
+  background: var(--table-head-bg);
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
 }
 
-/* Row hover */
 .data-table tbody tr:hover {
-  background:#f9fafb;
+  background: #f6fbff;
 }
 
-/* Modal base */
-.modal {
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  bottom:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:2000;
+/* Fallback cell for empty tables */
+.data-table tbody td[colspan] {
+  text-align: center;
+  color: #6b7280;
+  font-size: 12px;
+  padding: 16px;
 }
 
-.modal .modal-content {
-  background:var(--bg);
-  border-radius:10px;
-  width: 760px;
-  max-width: 98%;
-  padding: 18px;
-  box-shadow: 0 8px 30px rgba(0,0,0,0.12);
-  font-size:13px;
+/* Module header */
+.module-header h1 {
+  font-size: 16px; /* reduced */
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-transform: capitalize; /* capitalize each word */
+  font-weight: 700;
+  color: #1f2937;
 }
 
-/* Form layout helpers */
-.form-row-two {
-  display:flex;
-  gap:12px;
-  margin-bottom:12px;
+/* Controls (Employee + Payroll) */
+.employee-controls,
+.payroll-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
 }
-.form-row-two .form-group {
-  flex:1;
+
+.primary-btn {
+  background: var(--primary-color);
+  color: #fff;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .12s ease, transform .06s ease;
+  font-size: 13px; /* smaller */
+  line-height: 1;
 }
-.form-row-single {
-  margin-bottom:12px;
+.primary-btn:hover { background: #235aa0; transform: translateY(-1px); }
+.primary-btn:active { transform: translateY(0); }
+
+.secondary-btn {
+  background: transparent;
+  color: var(--muted-color);
+  border: 1px solid #e2e8f0;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
 }
-.form-group label {
-  display:block;
-  font-size:12px;
-  font-weight:700;
-  color:#4a5568;
-  margin-bottom:8px;
-  text-transform:uppercase;
-  letter-spacing:0.4px;
-}
-.form-group input[type="text"],
-.form-group input[type="email"],
-.form-group input[type="number"],
-.form-group input[type="date"],
-.form-group select {
-  width:100%;
-  padding:8px 10px;
-  border:1px solid var(--border);
-  border-radius:8px;
-  font-size:13px;
-  box-sizing:border-box;
+
+/* Inputs / search */
+.search-input,
+#employeeSearch,
+input[type="search"],
+input[type="month"],
+input[type="number"],
+input[type="text"],
+input[type="email"],
+select {
+  padding: 7px 9px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  min-width: 160px;
   background: #fff;
+  font-size: 13px;
+  outline: none;
+}
+input:focus, select:focus {
+  border-color: var(--accent-1);
+  box-shadow: 0 2px 6px rgba(67,97,238,0.06);
 }
 
-/* Compact helpers for toggles and small controls */
-.form-group .small-label {
-  font-size:11px;
-  color:var(--muted);
+/* Modal overlay (shared) */
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(9, 30, 66, 0.45);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000; /* raise modal above other overlays */
+  padding: 18px;
+  transition: opacity .15s ease;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* PF / tax / loan sections */
-#pfFields, #taxReliefField, #loanFields {
-  padding:10px;
-  background:#fbfdff;
-  border:1px dashed rgba(67,97,238,0.12);
-  border-radius:8px;
-  margin-top:8px;
+/* Recognize "show" class or inline display:flex as visible */
+.modal.show,
+.modal[style*="display: flex"],
+.modal[style*="display:flex"] {
+  display: flex;
+  opacity: 1;
 }
 
-/* Modal actions */
+/* Modal content */
+.modal-content {
+  background: var(--card-bg);
+  padding: 14px;
+  border-radius: 10px;
+  width: 100%;
+  max-width: 680px;
+  box-shadow: 0 10px 30px rgba(17, 24, 39, 0.08);
+  max-height: 90vh;
+  overflow: auto;
+  transform: translateY(0);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+/* Employee modal adjustments (smaller) */
+.employee-list-container .modal-content {
+  max-width: 680px;
+  padding: 14px;
+}
+
+/* Form layout */
+.form-row-two {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.form-row-single {
+  display: block;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 12px;
+  margin-bottom: 6px;
+  color: #3b4852;
+  font-weight: 600;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+  padding: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  outline: none;
+  font-size: 13px;
+}
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: var(--accent-1);
+  box-shadow: 0 2px 6px rgba(67,97,238,0.08);
+}
+
+/* Actions */
 .form-actions {
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
-  margin-top:14px;
-}
-.form-actions .primary-btn {
-  padding:10px 18px;
-  border-radius:8px;
-}
-.form-actions button[type="button"] {
-  padding:8px 14px;
-  border-radius:8px;
-  border:1px solid var(--border);
-  background:#fff;
-  cursor:pointer;
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
-/* Small loader styles */
-.payroll-loading-modal {
-  position:fixed;
-  top:0;
-  left:0;
-  right:0;
-  bottom:0;
-  background:rgba(0,0,0,0.5);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:2500;
+/* Payslip card */
+.payslip-card {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 12px;
+  box-shadow: 0 6px 20px rgba(17,24,39,0.06);
+  max-width: 720px;
 }
-.payroll-loading-modal .loading-modal-content {
-  background: white;
-  padding:20px;
-  border-radius:8px;
-  text-align:center;
-  min-width:140px;
-  box-shadow:0 8px 20px rgba(0,0,0,0.12);
-}
-.payroll-loading-modal .loading-spinner {
-  width:36px;
-  height:36px;
-  border:3px solid #f3f3f3;
-  border-top:3px solid var(--primary);
-  border-radius:50%;
-  animation: spin 0.8s linear infinite;
-  margin: 0 auto 10px;
-}
-@keyframes spin {
-  0% { transform:rotate(0deg); }
-  100% { transform:rotate(360deg); }
+.payslip-card h2 { margin: 0 0 8px 0; font-size: 15px; text-transform: capitalize; }
+.payslip-card p { margin: 6px 0; font-size: 13px; color: var(--muted-color); }
+
+/* Small helper text */
+.small { font-size: var(--small-font-size); color: #6b7280; }
+
+/* Buttons inside cards */
+.payslip-card .primary-btn { padding: 6px 10px; font-size: 13px; }
+
+/* Utility responsive tweaks */
+@media (max-width: 760px) {
+  .modal-content { max-width: 96%; padding: 12px; }
+  .form-row-two { flex-direction: column; }
+  .search-input { min-width: 140px; width: 100%; }
+  .data-table th, .data-table td { padding: 7px; font-size: 11px; }
+  .module-header h1 { font-size: 15px; }
+  .primary-btn { padding: 8px 10px; font-size: 13px; }
 }
 
-/* Inline spinner */
-.spinner-small {
-  width:18px;
-  height:18px;
-  border:2px solid #f3f3f3;
-  border-top:2px solid var(--primary);
-  border-radius:50%;
-  animation: spin 0.6s linear infinite;
-  display:inline-block;
-  vertical-align:middle;
+/* Accessibility: focus outline */
+:focus {
+  outline: 3px solid rgba(122,167,255,0.18);
+  outline-offset: 2px;
 }
 
-/* Print rules */
-@media print {
-  .payroll-controls,
-  .primary-btn,
-  .form-actions,
-  .modal,
-  .payroll-loading-modal {
-    display:none !important;
-  }
-  .payroll-container {
-    box-shadow:none;
-    border:none;
-    padding:0;
-  }
-}
-
-/* Responsive adjustments */
-@media (max-width: 900px) {
-  .form-row-two {
-    flex-direction:column;
-  }
-  .data-table thead th,
-  .data-table td {
-    padding:8px 6px;
-    font-size:12px;
-  }
-  .module-header h1 {
-    font-size:15px;
-  }
-  #payPeriod {
-    min-width:140px;
-  }
-  .modal .modal-content {
-    padding:12px;
-  }
-}
-
-/* Very small screens */
-@media (max-width: 480px) {
-  .data-table th, .data-table td { font-size:11px; padding:6px 4px; }
-  .module-header h1 { font-size:14px; }
-  .primary-btn { padding:8px 12px; font-size:12px; }
-  .form-actions { flex-direction:column; align-items:stretch; }
-  .form-actions .primary-btn { width:100%; }
+/* Minor visual polish */
+.employee-controls .primary-btn i,
+.payroll-controls .primary-btn i,
+.module-header i {
+  font-size: 14px;
+  line-height: 1;
+  display: inline-block;
+  vertical-align: middle;
 }
