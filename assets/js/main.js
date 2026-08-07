@@ -161,7 +161,10 @@ async function loadModuleFile(moduleName) {
     'addAsset': 'modules/add-asset.html',
     'viewAssetRegister': 'modules/asset-register.html',
     'investmentAdd': 'modules/add-investment.html',
-    'investmentReport': 'modules/investment-report.html'
+    'investmentReport': 'modules/investment-report.html',
+    'employeeList': 'modules/employee-list.html',
+    'payroll': 'modules/payroll.html',
+    'payslip': 'modules/payslip.html'
   };
   
   try {
