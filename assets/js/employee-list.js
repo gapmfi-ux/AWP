@@ -1,20 +1,38 @@
-/* Employee list client logic (localStorage-backed stub) */
+/* Employee list client logic (localStorage-backed stub)
+   Updated: robust Add Employee button binding + modal show/hide exports
+*/
 
 function initEmployeeList() {
   renderEmployeeTable();
-}
 
-function getEmployees() {
-  try {
-    return JSON.parse(localStorage.getItem('awp_employees') || '[]');
-  } catch (e) {
-    return [];
+  // Try to bind directly if button is present
+  const btn = document.getElementById('addEmployeeBtn');
+  if (btn) {
+    btn.removeEventListener('click', _directAddHandler);
+    btn.addEventListener('click', _directAddHandler);
+  } else {
+    // Fallback: delegated click listener (handles module inserted later)
+    document.removeEventListener('click', _delegatedClickHandler);
+    document.addEventListener('click', _delegatedClickHandler);
+  }
+
+  // local functions
+  function _directAddHandler(e) {
+    showAddEmployeeModal();
+  }
+  function _delegatedClickHandler(e) {
+    const el = e.target.closest && e.target.closest('#addEmployeeBtn');
+    if (el) {
+      showAddEmployeeModal();
+    }
   }
 }
 
-function saveEmployees(arr) {
-  localStorage.setItem('awp_employees', JSON.stringify(arr));
+function getEmployees() {
+  try { return JSON.parse(localStorage.getItem('awp_employees') || '[]'); }
+  catch (e) { return []; }
 }
+function saveEmployees(arr) { localStorage.setItem('awp_employees', JSON.stringify(arr)); }
 
 function renderEmployeeTable() {
   const employees = getEmployees();
@@ -36,56 +54,54 @@ function renderEmployeeTable() {
 function showAddEmployeeModal() {
   const modal = document.getElementById('employeeModal');
   if (!modal) return;
-  document.getElementById('employeeModalTitle').textContent = 'Add Employee';
+  document.getElementById('employeeModalTitle').textContent = 'Add employee';
   // clear form
   ['empStaffNumber','empName','empDepartment','empDesignation','empEmail','empSSNIT','empGhanaCard'].forEach(id=>{
     const el = document.getElementById(id);
     if (el) el.value = '';
   });
+  modal.classList.add('show');
   modal.style.display = 'flex';
 }
 
 function closeEmployeeModal() {
   const modal = document.getElementById('employeeModal');
   if (!modal) return;
+  modal.classList.remove('show');
   modal.style.display = 'none';
 }
 
 function saveEmployee() {
-  const staff = document.getElementById('empStaffNumber').value.trim();
-  const name = document.getElementById('empName').value.trim();
+  const staff = (document.getElementById('empStaffNumber') || {}).value.trim();
+  const name = (document.getElementById('empName') || {}).value.trim();
   if (!staff || !name) {
     alert('Staff number and name are required');
     return;
   }
-  const department = document.getElementById('empDepartment').value.trim();
-  const designation = document.getElementById('empDesignation').value.trim();
-  const email = document.getElementById('empEmail').value.trim();
-  const ssnit = document.getElementById('empSSNIT').value.trim();
-  const ghanaCard = document.getElementById('empGhanaCard').value.trim();
+  const department = (document.getElementById('empDepartment') || {}).value.trim();
+  const designation = (document.getElementById('empDesignation') || {}).value.trim();
+  const email = (document.getElementById('empEmail') || {}).value.trim();
+  const ssnit = (document.getElementById('empSSNIT') || {}).value.trim();
+  const ghanaCard = (document.getElementById('empGhanaCard') || {}).value.trim();
 
   const employees = getEmployees();
-  // if staff exists, update
   const idx = employees.findIndex(x=>x.staff === staff);
   const record = { staff, name, department, designation, email, ssnit, ghanaCard };
-  if (idx >= 0) {
-    employees[idx] = record;
-  } else {
-    employees.push(record);
-  }
+  if (idx >= 0) employees[idx] = record; else employees.push(record);
   saveEmployees(employees);
   renderEmployeeTable();
   closeEmployeeModal();
 }
 
 function filterEmployeeList() {
-  const q = document.getElementById('employeeSearch').value.trim().toLowerCase();
+  const q = (document.getElementById('employeeSearch') || {}).value || '';
+  const qn = q.trim().toLowerCase();
   const employees = getEmployees();
   const filtered = employees.filter(e => {
-    return (e.staff||'').toLowerCase().includes(q)
-      || (e.name||'').toLowerCase().includes(q)
-      || (e.department||'').toLowerCase().includes(q)
-      || (e.designation||'').toLowerCase().includes(q);
+    return (e.staff||'').toLowerCase().includes(qn)
+      || (e.name||'').toLowerCase().includes(qn)
+      || (e.department||'').toLowerCase().includes(qn)
+      || (e.designation||'').toLowerCase().includes(qn);
   });
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) return;
@@ -102,7 +118,7 @@ function filterEmployeeList() {
   `).join('') || '<tr><td colspan="7">No employees found</td></tr>';
 }
 
-// Utility
+// Utility escape
 function escapeHtml(str){
   if (!str) return '';
   return String(str).replace(/[&<>"'`]/g, s=>({
