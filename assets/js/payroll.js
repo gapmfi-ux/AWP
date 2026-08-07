@@ -233,7 +233,7 @@ function togglePFFields() {
   const checked = document.getElementById('payPF')?.checked || false;
   const fields = document.getElementById('pfFields');
   if (fields) {
-    fields.style.display = checked ? 'block' : 'none';
+    fields.classList.toggle('hidden', !checked);
   }
   recalcPayrollPreview();
 }
@@ -242,7 +242,7 @@ function toggleTaxReliefField() {
   const checked = document.getElementById('payTaxRelief')?.checked || false;
   const field = document.getElementById('taxReliefField');
   if (field) {
-    field.style.display = checked ? 'block' : 'none';
+    field.classList.toggle('hidden', !checked);
   }
   recalcPayrollPreview();
 }
@@ -251,7 +251,7 @@ function toggleLoanFields() {
   const checked = document.getElementById('payLoanCheck')?.checked || false;
   const field = document.getElementById('loanFields');
   if (field) {
-    field.style.display = checked ? 'block' : 'none';
+    field.classList.toggle('hidden', !checked);
   }
   recalcPayrollPreview();
 }
