@@ -119,6 +119,24 @@
   <i class="fas fa-water"></i>
   <span>Daily Liquidity</span>
 </div>
+
+    <!-- Payroll module with dropdown -->
+    <div class="menu-item has-dropdown" onclick="toggleSubmenu('payrollSubmenu')">
+      <i class="fas fa-money-check-alt"></i>
+      <span>Payroll</span>
+      <i class="fas fa-chevron-right dropdown-icon" id="payrollIcon"></i>
+    </div>
+    <div class="submenu" id="payrollSubmenu">
+      <div class="submenu-item" onclick="loadModule('employeeList')">
+        <i class="fas fa-users"></i> Employee List
+      </div>
+      <div class="submenu-item" onclick="loadModule('payroll')">
+        <i class="fas fa-calculator"></i> Payroll
+      </div>
+      <div class="submenu-item" onclick="loadModule('payslip')">
+        <i class="fas fa-file-invoice"></i> Payslip
+      </div>
+    </div>
   </div>
 </aside>
     <!-- Main Content Area -->
