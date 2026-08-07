@@ -7,7 +7,7 @@
   <div class="report-controls-row">
     <!-- Tabs on the left -->
     <div class="report-tabs">
-      <button class="tab-btn active" onclick="switchInventoryTab('inventoryList')">
+      <button class="tab-btn active" onclick="switchInventoryTab('inventoryList'); loadInventoryList();">
         <i class="fas fa-list"></i> Inventory List
       </button>
       <button class="tab-btn" onclick="switchInventoryTab('purchaseReport')">
@@ -198,7 +198,7 @@
 </div>
 
 <style>
-  .inventory-report-container {
+    .inventory-report-container {
     background: white;
     border-radius: 10px;
     padding: 16px;
@@ -737,3 +737,14 @@
     }
   }
 </style>
+
+<script>
+  // Ensure the module initializes when this fragment is injected
+  if (typeof initInventoryReportModule === 'function') {
+    try {
+      initInventoryReportModule();
+    } catch (e) {
+      console.error('Error initializing Inventory Report Module:', e);
+    }
+  }
+</script>
