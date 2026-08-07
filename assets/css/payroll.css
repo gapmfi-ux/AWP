@@ -549,7 +549,7 @@
   color: #718096;
 }
 
-/* ---- Inline Toggle Layout (NEW) ---- */
+/* ---- Inline Toggle Layout ---- */
 .payroll-modal .toggle-inline-row {
   display: flex;
   align-items: flex-end;
@@ -642,14 +642,17 @@
 /* Specific max-widths for certain fields */
 .payroll-modal .toggle-inline-row .toggle-section .form-group.tax-relief-field {
   max-width: 220px;
+  flex: 0 1 220px;
 }
 
 .payroll-modal .toggle-inline-row .toggle-section .form-group.loan-amount-field {
   max-width: 160px;
+  flex: 0 1 160px;
 }
 
 .payroll-modal .toggle-inline-row .toggle-section .form-group.loan-date-field {
   max-width: 150px;
+  flex: 0 1 150px;
 }
 
 /* ---- Staff lookup ---- */
@@ -1014,6 +1017,7 @@
   .payroll-modal .toggle-inline-row .toggle-section .form-group {
     min-width: unset;
     max-width: unset !important;
+    flex: 1 1 auto;
   }
 
   .payroll-modal .toggle-inline-row .toggle-section .form-group input {
@@ -1093,6 +1097,23 @@
 
   .payroll-controls-right {
     gap: 6px;
+  }
+
+  /* Inline toggle mobile */
+  .payroll-modal .toggle-inline-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section.show {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section .form-group {
+    min-width: unset;
+    max-width: unset !important;
   }
 }
 
