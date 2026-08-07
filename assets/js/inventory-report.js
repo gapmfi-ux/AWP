@@ -6,12 +6,39 @@
 let inventoryPortalOpen = false;
 let currentUsageItem = null;
 
+// Ensure delegated listeners for inventory module are attached only once
+function attachInventoryEventListeners() {
+  if (window._inventoryListenersAttached) return;
+  window._inventoryListenersAttached = true;
+
+  // Delegated 'change' (date picker)
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'inventoryToDate') {
+      console.log('inventoryToDate change ->', e.target.value);
+      if (typeof loadInventoryList === 'function') loadInventoryList();
+    }
+  });
+
+  // Delegated 'input' (typing/paste) with small debounce
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'inventoryToDate') {
+      if (window._inventoryDateDebounce) clearTimeout(window._inventoryDateDebounce);
+      window._inventoryDateDebounce = setTimeout(() => {
+        console.log('inventoryToDate input ->', e.target.value);
+        if (typeof loadInventoryList === 'function') loadInventoryList();
+      }, 200);
+    }
+  });
+}
+
 // ============================================
 // INITIALIZATION
 // ============================================
 
 function initInventoryReportModule() {
   console.log('Initializing Inventory Report Module');
+
+attachInventoryEventListeners();
   
   // Set default dates
   const today = new Date().toISOString().split('T')[0];
