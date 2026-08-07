@@ -1,4 +1,4 @@
-/* Payroll client logic - Corrected calculation */
+/* Payroll client logic - Corrected PAYE calculation with progressive tax rates */
 
 function initPayroll() {
   renderPayrollTable();
@@ -239,6 +239,53 @@ function toggleLoanFields() {
   recalcPayrollPreview();
 }
 
+// ============================================
+// PROGRESSIVE TAX RATES
+// ============================================
+
+function getTaxBrackets() {
+  return [
+    { bracket: 'First', amount: 490, rate: 0 },        // 0%
+    { bracket: 'Next', amount: 110, rate: 0.05 },      // 5%
+    { bracket: 'Next', amount: 130, rate: 0.10 },      // 10%
+    { bracket: 'Next', amount: 3166.67, rate: 0.175 }, // 17.5%
+    { bracket: 'Next', amount: 16000, rate: 0.25 },    // 25%
+    { bracket: 'Next', amount: 30520, rate: 0.30 },    // 30%
+    { bracket: 'Exceeding', amount: 50000, rate: 0.35 } // 35%
+  ];
+}
+
+// ============================================
+// CALCULATE PAYE USING PROGRESSIVE RATES
+// ============================================
+
+function calculatePAYE(taxableIncome) {
+  const brackets = getTaxBrackets();
+  let remainingIncome = taxableIncome;
+  let totalTax = 0;
+  
+  for (let i = 0; i < brackets.length; i++) {
+    const bracket = brackets[i];
+    const bracketAmount = bracket.amount;
+    const bracketRate = bracket.rate;
+    
+    if (remainingIncome <= 0) break;
+    
+    if (i === brackets.length - 1) {
+      // Last bracket - applies to all remaining income
+      totalTax += remainingIncome * bracketRate;
+      break;
+    } else {
+      // Calculate tax for this bracket
+      const taxableInThisBracket = Math.min(remainingIncome, bracketAmount);
+      totalTax += taxableInThisBracket * bracketRate;
+      remainingIncome -= taxableInThisBracket;
+    }
+  }
+  
+  return roundToTwo(totalTax);
+}
+
 function recalcPayrollPreview() {
   const basicSalary = parseFloat(document.getElementById('payBasicSalary')?.value) || 0;
   const pfChecked = document.getElementById('payPF')?.checked || false;
@@ -287,14 +334,14 @@ function computePayrollRow({ basicSalary = 0, employeePFpct = 5, employerPFpct =
   // 1. Employee Pension (5.5% - Fixed)
   const employeePension = roundToTwo(basicSalary * 0.055);
   
-  // 2. Employee Pf (5% - From input)
+  // 2. Employee Pf (10% - From input)
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
   
   // 3. Taxable Income = Basic - Employee Pension - Employee Pf - Tax Relief (Loan NOT deducted)
   const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePension - employeePf - reliefAmount));
   
-  // 4. PAYE (10% of Taxable Income)
-  const paye = roundToTwo(taxableIncome * 0.10);
+  // 4. PAYE (Calculated using progressive tax rates)
+  const paye = calculatePAYE(taxableIncome);
   
   // 5. NET PAY (For Payroll Table) = Taxable Income - PAYE
   const netPay = roundToTwo(taxableIncome - paye);
