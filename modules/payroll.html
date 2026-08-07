@@ -103,19 +103,21 @@
         </div>
       </div>
       
-      <!-- PF Toggle - all on one row -->
-      <div class="toggle-inline-row">
-        <label class="toggle-label">
-          <input type="checkbox" id="payPF" checked onchange="togglePFFields(); recalcPayrollPreview();">
-          Apply Pf Contributions
-        </label>
-        <div class="toggle-section show" id="pfFields">
-          <div class="form-group">
+      <!-- PF Toggle - all on one row using flex -->
+      <div class="toggle-row">
+        <div class="toggle-checkbox">
+          <label>
+            <input type="checkbox" id="payPF" checked onchange="togglePFFields(); recalcPayrollPreview();">
+            Apply Pf Contributions
+          </label>
+        </div>
+        <div class="toggle-fields" id="pfFields">
+          <div class="field-group">
             <label>Employee Pf (%)</label>
             <input type="number" id="payEmployeePF" value="5.5" step="0.1" min="0" max="20"
                    oninput="recalcPayrollPreview()">
           </div>
-          <div class="form-group">
+          <div class="field-group">
             <label>Employer Pf (%)</label>
             <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20"
                    oninput="recalcPayrollPreview()">
@@ -124,13 +126,15 @@
       </div>
       
       <!-- Tax Relief Toggle - all on one row -->
-      <div class="toggle-inline-row">
-        <label class="toggle-label">
-          <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField(); recalcPayrollPreview();">
-          Apply Tax Relief
-        </label>
-        <div class="toggle-section" id="taxReliefField">
-          <div class="form-group tax-relief-field">
+      <div class="toggle-row">
+        <div class="toggle-checkbox">
+          <label>
+            <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField(); recalcPayrollPreview();">
+            Apply Tax Relief
+          </label>
+        </div>
+        <div class="toggle-fields" id="taxReliefField">
+          <div class="field-group" style="max-width: 200px;">
             <label>Relief Amount (Ghs)</label>
             <input type="number" id="payReliefAmount" placeholder="0.00" step="0.01" min="0"
                    oninput="recalcPayrollPreview()">
@@ -139,22 +143,24 @@
       </div>
       
       <!-- Loan Toggle - all on one row -->
-      <div class="toggle-inline-row">
-        <label class="toggle-label">
-          <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields(); recalcPayrollPreview();">
-          Apply Loan Deduction
-        </label>
-        <div class="toggle-section" id="loanFields">
-          <div class="form-group loan-amount-field">
+      <div class="toggle-row">
+        <div class="toggle-checkbox">
+          <label>
+            <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields(); recalcPayrollPreview();">
+            Apply Loan Deduction
+          </label>
+        </div>
+        <div class="toggle-fields" id="loanFields">
+          <div class="field-group" style="max-width: 150px;">
             <label>Monthly Deduction (Ghs)</label>
             <input type="number" id="payLoanMonthly" placeholder="0.00" step="0.01" min="0"
                    oninput="recalcPayrollPreview()">
           </div>
-          <div class="form-group loan-date-field">
+          <div class="field-group" style="max-width: 140px;">
             <label>From Date</label>
             <input type="date" id="payLoanFrom">
           </div>
-          <div class="form-group loan-date-field">
+          <div class="field-group" style="max-width: 140px;">
             <label>To Date</label>
             <input type="date" id="payLoanTo">
           </div>
