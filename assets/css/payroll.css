@@ -1,7 +1,7 @@
 /* Combined Payroll + Employee List + Payslip styles
    - Reduced font sizes for denser UI
    - Modal show/display fixes
-   - Module headings capitalized (each word)
+   - Headings: only first letter uppercase (lowercase + ::first-letter)
 */
 
 :root{
@@ -36,7 +36,7 @@
   border: 1px solid #e6edf6;
   border-radius: var(--radius);
   overflow: hidden;
-  font-size: 12px; /* slightly smaller table text */
+  font-size: 12px;
 }
 
 .data-table th,
@@ -70,17 +70,18 @@
   padding: 16px;
 }
 
-/* Module header */
+/* Module header: lowercase + only first-letter uppercase */
 .module-header h1 {
-  font-size: 16px; /* reduced */
+  font-size: 16px;
   margin: 0 0 8px 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  text-transform: capitalize; /* capitalize each word */
+  text-transform: lowercase; /* make all lower then uppercase first letter */
   font-weight: 700;
   color: #1f2937;
 }
+.module-header h1::first-letter { text-transform: uppercase; }
 
 /* Controls (Employee + Payroll) */
 .employee-controls,
@@ -104,7 +105,7 @@
   align-items: center;
   gap: 8px;
   transition: background .12s ease, transform .06s ease;
-  font-size: 13px; /* smaller */
+  font-size: 13px;
   line-height: 1;
 }
 .primary-btn:hover { background: #235aa0; transform: translateY(-1px); }
@@ -137,10 +138,7 @@ select {
   font-size: 13px;
   outline: none;
 }
-input:focus, select:focus {
-  border-color: var(--accent-1);
-  box-shadow: 0 2px 6px rgba(67,97,238,0.06);
-}
+input:focus, select:focus { border-color: var(--accent-1); box-shadow: 0 2px 6px rgba(67,97,238,0.06); }
 
 /* Modal overlay (shared) */
 .modal {
@@ -150,19 +148,14 @@ input:focus, select:focus {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 10000; /* raise modal above other overlays */
+  z-index: 10000;
   padding: 18px;
   transition: opacity .15s ease;
   -webkit-overflow-scrolling: touch;
 }
-
-/* Recognize "show" class or inline display:flex as visible */
 .modal.show,
 .modal[style*="display: flex"],
-.modal[style*="display:flex"] {
-  display: flex;
-  opacity: 1;
-}
+.modal[style*="display:flex"] { display: flex; opacity: 1; }
 
 /* Modal content */
 .modal-content {
@@ -178,70 +171,28 @@ input:focus, select:focus {
   transition: transform .12s ease, box-shadow .12s ease;
 }
 
-/* Employee modal adjustments (smaller) */
-.employee-list-container .modal-content {
-  max-width: 680px;
-  padding: 14px;
-}
+/* Employee modal adjustments */
+.employee-list-container .modal-content { max-width: 680px; padding: 14px; }
 
 /* Form layout */
-.form-row-two {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+.form-row-two { display: flex; gap: 10px; flex-wrap: wrap; }
+.form-row-single { display: block; }
+.form-group { flex: 1; display: flex; flex-direction: column; }
+.form-group label { font-size: 12px; margin-bottom: 6px; color: #3b4852; font-weight: 600; }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; outline: none; font-size: 13px;
 }
-
-.form-row-single {
-  display: block;
-}
-
-.form-group {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.form-group label {
-  font-size: 12px;
-  margin-bottom: 6px;
-  color: #3b4852;
-  font-weight: 600;
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  padding: 8px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  background: #fff;
-  outline: none;
-  font-size: 13px;
-}
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  border-color: var(--accent-1);
-  box-shadow: 0 2px 6px rgba(67,97,238,0.08);
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--accent-1); box-shadow: 0 2px 6px rgba(67,97,238,0.08);
 }
 
 /* Actions */
-.form-actions {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
+.form-actions { margin-top: 12px; display: flex; gap: 8px; justify-content: flex-end; }
 
 /* Payslip card */
-.payslip-card {
-  background: #ffffff;
-  border-radius: 10px;
-  padding: 12px;
-  box-shadow: 0 6px 20px rgba(17,24,39,0.06);
-  max-width: 720px;
-}
-.payslip-card h2 { margin: 0 0 8px 0; font-size: 15px; text-transform: capitalize; }
+.payslip-card { background: #ffffff; border-radius: 10px; padding: 12px; box-shadow: 0 6px 20px rgba(17,24,39,0.06); max-width: 720px; }
+.payslip-card h2 { margin: 0 0 8px 0; font-size: 15px; text-transform: lowercase; }
+.payslip-card h2::first-letter { text-transform: uppercase; }
 .payslip-card p { margin: 6px 0; font-size: 13px; color: var(--muted-color); }
 
 /* Small helper text */
@@ -250,7 +201,7 @@ input:focus, select:focus {
 /* Buttons inside cards */
 .payslip-card .primary-btn { padding: 6px 10px; font-size: 13px; }
 
-/* Utility responsive tweaks */
+/* Responsive tweaks */
 @media (max-width: 760px) {
   .modal-content { max-width: 96%; padding: 12px; }
   .form-row-two { flex-direction: column; }
@@ -261,17 +212,9 @@ input:focus, select:focus {
 }
 
 /* Accessibility: focus outline */
-:focus {
-  outline: 3px solid rgba(122,167,255,0.18);
-  outline-offset: 2px;
-}
+:focus { outline: 3px solid rgba(122,167,255,0.18); outline-offset: 2px; }
 
-/* Minor visual polish */
+/* Icon sizing */
 .employee-controls .primary-btn i,
 .payroll-controls .primary-btn i,
-.module-header i {
-  font-size: 14px;
-  line-height: 1;
-  display: inline-block;
-  vertical-align: middle;
-}
+.module-header i { font-size: 14px; line-height: 1; display: inline-block; vertical-align: middle; }
