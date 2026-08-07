@@ -215,6 +215,11 @@ function loadUsageReport() {
 
 function loadInventoryList() {
   console.log('Loading inventory list');
+
+  // read as-of date from UI
+  const inventoryToDate = document.getElementById('inventoryToDate');
+  const asOf = inventoryToDate ? inventoryToDate.value : '';
+
   showInventoryLoadingSpinner('inventoryListTableBody', 7);
   
   google.script.run
@@ -245,7 +250,7 @@ function loadInventoryList() {
       console.error('Error loading inventory list:', error);
       showInventoryEmptyState('inventoryListTableBody', 'Error loading inventory list: ' + (error.message || error), 7);
     })
-    .getInventoryListData();
+    .getInventoryListData(asOf); // <-- pass as-of date to server
 }
 
 // ============================================
