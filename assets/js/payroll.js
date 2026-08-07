@@ -1,4 +1,4 @@
-/* Payroll client logic - Enhanced with renamed columns */
+/* Payroll client logic - Corrected calculation */
 
 function initPayroll() {
   renderPayrollTable();
@@ -59,15 +59,15 @@ function renderPayrollTable(rows) {
       <td class="col-name">${escapeHtml(r.name)}</td>
       <td>${escapeHtml(r.designation || '-')}</td>
       <td class="col-number">${formatMoney(r.basicSalary)}</td>
-      <td class="col-number">${formatMoney(r.employeePFAmount)}</td>
-      <td class="col-number">${formatMoney(r.pf10Amount)}</td>
+      <td class="col-number">${formatMoney(r.employeePension)}</td>
+      <td class="col-number">${formatMoney(r.employeePf)}</td>
       <td class="col-number">${formatMoney(r.taxRelief || 0)}</td>
       <td class="col-number">${formatMoney(r.taxableIncome)}</td>
       <td class="col-number ${r.paye > 0 ? 'negative' : ''}">${formatMoney(r.paye)}</td>
       <td class="col-number negative">${formatMoney(r.totalDeduction)}</td>
       <td class="col-number positive">${formatMoney(r.netPay)}</td>
-      <td class="col-number">${formatMoney(r.employer13Amount)}</td>
-      <td class="col-number">${formatMoney(r.employerPFAmount)}</td>
+      <td class="col-number">${formatMoney(r.employerPension)}</td>
+      <td class="col-number">${formatMoney(r.employerPf)}</td>
       <td class="col-center">
         <button class="btn-edit-icon" onclick="event.stopPropagation(); editPayrollRecord('${escapeHtml(r.staff)}')" title="Edit record">
           <i class="fas fa-pencil-alt"></i>
@@ -130,7 +130,7 @@ function showAddPayModal(editData) {
     document.getElementById('payName').value = editData.name || '';
     document.getElementById('payDesignation').value = editData.designation || '';
     document.getElementById('payBasicSalary').value = editData.basicSalary || '';
-    document.getElementById('payEmployeePF').value = editData.employeePFpct || '5.5';
+    document.getElementById('payEmployeePF').value = editData.employeePFpct || '5';
     document.getElementById('payEmployerPF').value = editData.employerPFpct || '5';
     document.getElementById('payReliefAmount').value = editData.taxRelief || '';
     document.getElementById('payPeriod').value = editData.period || '';
@@ -139,7 +139,7 @@ function showAddPayModal(editData) {
     document.getElementById('payLoanTo').value = editData.loanTo || '';
     
     const pfCheck = document.getElementById('payPF');
-    if (pfCheck) pfCheck.checked = (editData.employeePFpct > 0 || editData.employerPFpct > 0);
+    if (pfCheck) pfCheck.checked = true;
     
     const taxCheck = document.getElementById('payTaxRelief');
     if (taxCheck) taxCheck.checked = (editData.taxRelief > 0);
@@ -151,7 +151,7 @@ function showAddPayModal(editData) {
   } else {
     const ePF = document.getElementById('payEmployeePF');
     const erPF = document.getElementById('payEmployerPF');
-    if (ePF) ePF.value = '5.5';
+    if (ePF) ePF.value = '5';
     if (erPF) erPF.value = '5';
     
     const pfCheck = document.getElementById('payPF');
@@ -257,55 +257,65 @@ function recalcPayrollPreview() {
     pfChecked
   });
   
-  updateCalcPreview(calc.netPay, calc.paye, calc.totalDeduction, calc.taxableIncome, calc.employeePFAmount);
+  updateCalcPreview(calc.netPay, calc.paye, calc.totalDeduction, calc.taxableIncome, calc.employeePension);
 }
 
-function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome, employeePF) {
+function updateCalcPreview(netPay, paye, totalDeduction, taxableIncome, employeePension) {
   const netEl = document.getElementById('previewNetPay');
   const payeEl = document.getElementById('previewPaye');
   const dedEl = document.getElementById('previewDeductions');
   const taxEl = document.getElementById('previewTaxable');
-  const pfEl = document.getElementById('previewEmployeePF');
+  const pensionEl = document.getElementById('previewEmployeePension');
   
   if (netEl) netEl.textContent = formatMoney(netPay);
   if (payeEl) payeEl.textContent = formatMoney(paye);
   if (dedEl) dedEl.textContent = formatMoney(totalDeduction);
   if (taxEl) taxEl.textContent = formatMoney(taxableIncome);
-  if (pfEl) pfEl.textContent = formatMoney(employeePF);
+  if (pensionEl) pensionEl.textContent = formatMoney(employeePension);
 }
 
-function computePayrollRow({ basicSalary = 0, employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
-  // 1. Employee Pension (Employee PF)
-  const employeePFAmount = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
+function computePayrollRow({ basicSalary = 0, employeePFpct = 5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+  // 1. Employee Pension (5.5% - Fixed)
+  const employeePension = roundToTwo(basicSalary * 0.055);
   
-  // 2. Pf 10% (for information only)
-  const pf10Amount = roundToTwo(basicSalary * 0.10);
+  // 2. Employee Pf (5% - From input)
+  const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
   
-  // 3. Taxable Income = Basic - Employee Pension - Tax Relief - Loan
-  const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePFAmount - reliefAmount - loanMonthly));
+  // 3. Taxable Income = Basic - Employee Pension - Employee Pf - Tax Relief (Loan NOT deducted)
+  const taxableIncome = Math.max(0, roundToTwo(basicSalary - employeePension - employeePf - reliefAmount));
   
-  // 4. PAYE = Taxable Income × 10% (simplified - backend will use dynamic rates)
+  // 4. PAYE (calculated from Rates sheet - simplified to 10% for demo)
   const paye = roundToTwo(taxableIncome * 0.10);
   
-  // 5. Total Deduction (for information only)
-  const totalDeduction = roundToTwo(employeePFAmount + pf10Amount + paye + loanMonthly);
-  
-  // 6. Net Pay = Taxable Income - PAYE
+  // 5. NET PAY (For Payroll Table)
   const netPay = roundToTwo(taxableIncome - paye);
   
-  // 7. Employer contributions (for information only)
-  const employer13Amount = roundToTwo(basicSalary * 0.13);
-  const employerPFAmount = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
+  // 6. Pf 10% (for information only)
+  const pf10Amount = roundToTwo(basicSalary * 0.10);
+  
+  // 7. Total Deduction (for information only)
+  const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye);
+  
+  // 8. Employer Pension (13% - For information only)
+  const employerPension = roundToTwo(basicSalary * 0.13);
+  
+  // 9. Employer Pf (5% - For information only)
+  const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
+  
+  // 10. Take Home Pay (For Payslip Only - NOT in Payroll Table)
+  const takeHomePay = roundToTwo(netPay - loanMonthly);
   
   return {
-    employeePFAmount,
-    pf10Amount,
+    employeePension,
+    employeePf,
     taxableIncome,
     paye,
-    totalDeduction,
     netPay,
-    employer13Amount,
-    employerPFAmount
+    pf10Amount,
+    totalDeduction,
+    employerPension,
+    employerPf,
+    takeHomePay
   };
 }
 
@@ -364,15 +374,16 @@ function saveEmployeePay() {
     basicSalary,
     employeePFpct,
     employerPFpct,
-    employeePFAmount: calc.employeePFAmount,
+    employeePension: calc.employeePension,
+    employeePf: calc.employeePf,
     pf10Amount: calc.pf10Amount,
     taxRelief: reliefAmount,
     taxableIncome: calc.taxableIncome,
     paye: calc.paye,
     totalDeduction: calc.totalDeduction,
     netPay: calc.netPay,
-    employer13Amount: calc.employer13Amount,
-    employerPFAmount: calc.employerPFAmount,
+    employerPension: calc.employerPension,
+    employerPf: calc.employerPf,
     loanMonthly,
     loanFrom,
     loanTo,
