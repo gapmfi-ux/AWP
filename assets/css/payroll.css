@@ -1,5 +1,5 @@
 /* ============================================
-   PAYROLL & EMPLOYEE LIST - ENHANCED STYLES
+   PAYROLL & EMPLOYEE LIST - COMPLETE STYLES
    ============================================ */
 
 /* ---- Container ---- */
@@ -51,13 +51,20 @@
   flex-wrap: wrap;
 }
 
-.payroll-controls-left label {
+.payroll-controls-right {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.payroll-controls-right label {
   font-size: 12px;
   font-weight: 500;
   color: #4a5568;
 }
 
-.payroll-controls-left input[type="month"] {
+.payroll-controls-right input[type="month"] {
   padding: 6px 10px;
   border: 1px solid #e2e8f0;
   border-radius: 6px;
@@ -66,17 +73,10 @@
   color: #2d3748;
 }
 
-.payroll-controls-left input[type="month"]:focus {
+.payroll-controls-right input[type="month"]:focus {
   border-color: #4361ee;
   outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
-}
-
-.payroll-controls-right {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
 }
 
 /* ---- Buttons ---- */
@@ -372,7 +372,7 @@
   background: #ffffff;
   border-radius: 12px;
   width: 100%;
-  max-width: 640px;
+  max-width: 820px;
   max-height: 92vh;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
@@ -547,6 +547,38 @@
   font-weight: 400;
   font-size: 11px;
   color: #718096;
+}
+
+/* ---- Inline Toggle Layout ---- */
+.payroll-modal .toggle-inline-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.payroll-modal .toggle-inline-row .toggle-label {
+  flex: 0 0 auto;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section-inline {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section-inline .form-group {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.payroll-modal .toggle-inline-row .toggle-section-inline .form-group input {
+  width: 100%;
 }
 
 /* ---- Calculated Fields Display ---- */
@@ -818,8 +850,11 @@
     padding: 14px 16px 12px 16px;
   }
 
-  .payroll-modal .form-row,
   .payroll-modal .form-row-3 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .payroll-modal .form-row {
     grid-template-columns: 1fr;
     gap: 8px;
   }
@@ -844,14 +879,16 @@
     justify-content: center;
   }
 
-  .payroll-controls-left input[type="month"] {
-    width: 100%;
-  }
-
+  .payroll-controls-left .btn-primary,
+  .payroll-controls-left .btn-secondary,
   .payroll-controls-right .btn-primary,
   .payroll-controls-right .btn-secondary {
     flex: 1;
     justify-content: center;
+  }
+
+  .payroll-controls-right input[type="month"] {
+    width: 100%;
   }
 
   .payroll-header h2 {
@@ -885,6 +922,16 @@
   .employee-controls input[type="text"] {
     width: 100%;
     min-width: unset;
+  }
+
+  /* Inline toggle responsive */
+  .payroll-modal .toggle-inline-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .payroll-modal .toggle-inline-row .toggle-section-inline {
+    flex-direction: column;
   }
 }
 
@@ -920,6 +967,10 @@
     padding: 12px 14px 10px 14px;
   }
 
+  .payroll-modal .form-row-3 {
+    grid-template-columns: 1fr;
+  }
+
   .payroll-modal-footer {
     padding: 10px 14px;
     flex-wrap: wrap;
@@ -940,4 +991,60 @@
   .payroll-modal .calc-item .calc-value {
     font-size: 13px;
   }
+
+  .payroll-controls-left,
+  .payroll-controls-right {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .payroll-controls-left .btn-primary,
+  .payroll-controls-left .btn-secondary,
+  .payroll-controls-right .btn-primary,
+  .payroll-controls-right .btn-secondary {
+    width: 100%;
+  }
+
+  .payroll-controls-right {
+    gap: 6px;
+  }
+}
+
+/* ============================================
+   TOAST NOTIFICATIONS
+   ============================================ */
+
+#global-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 99999;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  max-width: 380px;
+  display: none;
+  transition: all 0.3s ease;
+}
+
+#global-toast.success {
+  background: #38a169;
+  color: #fff;
+}
+
+#global-toast.error {
+  background: #e53e3e;
+  color: #fff;
+}
+
+#global-toast.warning {
+  background: #d69e2e;
+  color: #fff;
+}
+
+#global-toast.info {
+  background: #4361ee;
+  color: #fff;
 }
