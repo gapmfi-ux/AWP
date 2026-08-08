@@ -93,7 +93,6 @@ async function showAddEmployeeModal(editData) {
   document.getElementById('empHasTaxRelief').checked = false;
   document.getElementById('empHasAllowances').checked = false;
   document.getElementById('empHasLoan').checked = false;
-  document.getElementById('empCreatePayroll').checked = false;
 
   toggleEmployeePFFields();
   toggleEmployeeTaxReliefField();
@@ -164,7 +163,6 @@ async function editEmployee(staff) {
   try {
     showLoadingModal('Loading employee...');
     const resp = await API.getEmployeeByStaffNumber(staff);
-    // map server rec to client shape
     const rec = resp || {};
     const client = {
       staff: rec['Staff Number'] || rec.staff || staff,
@@ -189,7 +187,7 @@ async function editEmployee(staff) {
   }
 }
 
-/* ============== Save employee + optional payroll ============== */
+/* ============== Save employee + automatic payroll ============== */
 
 async function saveEmployee() {
   const staff = document.getElementById('empStaffNumber').value.trim();
@@ -212,10 +210,8 @@ async function saveEmployee() {
   const employerPFrate = hasPF ? (parseFloat(document.getElementById('empEmployerPFRate').value) || 0) : 0;
   const hasTaxRelief = document.getElementById('empHasTaxRelief').checked;
   const taxRelief = hasTaxRelief ? (parseFloat(document.getElementById('empTaxRelief').value) || 0) : 0;
-  const hasAllowances = document.getElementById('empHasAllowances').checked;
   const hasLoan = document.getElementById('empHasLoan').checked;
   const loanMonthly = hasLoan ? (parseFloat(document.getElementById('empLoanMonthly').value) || 0) : 0;
-  const createPayroll = document.getElementById('empCreatePayroll').checked;
 
   // gather allowances from modal
   const allowances = [];
@@ -228,7 +224,7 @@ async function saveEmployee() {
   const modal = document.getElementById('employeeModal');
   const editStaff = modal?.dataset?.editStaff || null;
 
-  // Employee record to send to server (server expects formData JSON)
+  // Employee record to send to server (direct object, not nested)
   const employeeRecord = {
     staff,
     name,
@@ -257,53 +253,48 @@ async function saveEmployee() {
       throw new Error((empResp && empResp.error) ? empResp.error : 'Failed to save employee');
     }
 
-    // Optionally create payroll record
-    if (createPayroll) {
-      if (basicSalary <= 0) {
-        showToast('Cannot create payroll record: Basic salary required', 'warning');
+    // Always create payroll record if basic salary > 0
+    if (basicSalary > 0) {
+      const calc = computePayrollRow({
+        basicSalary: basicSalary,
+        allowances: allowances,
+        employeePFpct: employeePFrate,
+        employerPFpct: employerPFrate,
+        reliefAmount: taxRelief,
+        loanMonthly: loanMonthly,
+        pfChecked: hasPF
+      });
+
+      const payrollData = {
+        staffNumber: staff,
+        fullName: name,
+        designation: designation,
+        payPeriod: (document.getElementById('payPeriod') ? document.getElementById('payPeriod').value : (new Date()).toISOString().slice(0,7)),
+        basicSalary: basicSalary,
+        allowances: allowances,
+        totalAllowances: calc.totalAllowances,
+        grossSalary: calc.grossSalary,
+        employeePension: calc.employeePension,
+        employeePf: calc.employeePf,
+        pf10Amount: calc.pf10Amount,
+        taxRelief: taxRelief,
+        taxableIncome: calc.taxableIncome,
+        paye: calc.paye,
+        totalDeduction: calc.totalDeduction,
+        netPay: calc.netPay,
+        employerPension: calc.employerPension,
+        employerPf: calc.employerPf,
+        loanMonthly: loanMonthly,
+        loanFrom: '',
+        loanTo: ''
+      };
+
+      const payResp = await API.savePayrollRun(payrollData);
+      if (!(payResp && (payResp.success !== false))) {
+        console.warn('Payroll save returned error', payResp);
+        showToast('Employee saved but failed to create payroll record', 'warning');
       } else {
-        // compute payroll using client compute helper
-        const calc = computePayrollRow({
-          basicSalary: basicSalary,
-          allowances: allowances,
-          employeePFpct: employeePFrate,
-          employerPFpct: employerPFrate,
-          reliefAmount: taxRelief,
-          loanMonthly: loanMonthly,
-          pfChecked: hasPF
-        });
-
-        const payrollData = {
-          staffNumber: staff,
-          fullName: name,
-          designation: designation,
-          payPeriod: (document.getElementById('payPeriod') ? document.getElementById('payPeriod').value : (new Date()).toISOString().slice(0,7)),
-          basicSalary: basicSalary,
-          allowances: allowances,
-          totalAllowances: calc.totalAllowances,
-          grossSalary: calc.grossSalary,
-          employeePension: calc.employeePension,
-          employeePf: calc.employeePf,
-          pf10Amount: calc.pf10Amount,
-          taxRelief: taxRelief,
-          taxableIncome: calc.taxableIncome,
-          paye: calc.paye,
-          totalDeduction: calc.totalDeduction,
-          netPay: calc.netPay,
-          employerPension: calc.employerPension,
-          employerPf: calc.employerPf,
-          loanMonthly: loanMonthly,
-          loanFrom: '',
-          loanTo: ''
-        };
-
-        const payResp = await API.savePayrollRun(payrollData);
-        if (!(payResp && (payResp.success !== false))) {
-          console.warn('Payroll save returned error', payResp);
-          showToast('Employee saved but failed to create payroll record', 'warning');
-        } else {
-          showToast('Employee and payroll record saved', 'success');
-        }
+        showToast(editStaff ? 'Employee updated with payroll' : 'Employee added with payroll', 'success');
       }
     } else {
       showToast(editStaff ? 'Employee updated' : 'Employee added', 'success');
@@ -396,7 +387,6 @@ function toggleEmployeeLoanFields() {
 /* ============== Auto-fill payroll defaults when staff is selected ============== */
 
 async function autoFillEmployeePayrollDefaults(staffNumber) {
-  // If staff exists, fetch server record and prefill payroll defaults
   if (!staffNumber || staffNumber.trim() === '') return;
   try {
     const rec = await API.getEmployeeByStaffNumber(staffNumber).catch(()=>null);
@@ -417,7 +407,6 @@ async function autoFillEmployeePayrollDefaults(staffNumber) {
     toggleEmployeeTaxReliefField();
     toggleEmployeeLoanFields();
 
-    // load allowances
     const allowances = await API.getAllowancesByStaff(staffNumber).catch(()=>[]);
     if (allowances && allowances.length > 0) {
       document.getElementById('empHasAllowances').checked = true;
@@ -522,13 +511,7 @@ function recalcPayrollPreviewFromEmployeeModal() {
     if (type && amt > 0) allowances.push({ type, amount: amt });
   });
 
-  const createPayroll = document.getElementById('empCreatePayroll').checked;
-  if (!createPayroll) {
-    // reset preview
-    updateEmployeeCalcPreview(0,0,0,0,0,0);
-    return;
-  }
-
+  // Always calculate preview
   const calc = computePayrollRow({
     basicSalary,
     allowances,
