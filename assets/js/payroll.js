@@ -490,19 +490,28 @@ function updateCalcPreview(grossSalary, netPay, paye, taxableIncome, employeePen
   if (pfEl) pfEl.textContent = formatMoney(employeePf);
 }
 
-function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+function computePayrollRow({ 
+  basicSalary = 0, 
+  allowances = [], 
+  employeePFpct = 5, 
+  employerPFpct = 5, 
+  reliefAmount = 0, 
+  loanMonthly = 0, 
+  pfChecked = true 
+}) {
   // 1. Calculate Total Allowances
   const totalAllowances = allowances.reduce((sum, a) => sum + (a.amount || 0), 0);
   
-  // 2. Gross Salary = Basic + Allowances  const grossSalary = roundToTwo(basicSalary + totalAllowances);
+  // 2. Gross Salary = Basic + Allowances
+  const grossSalary = roundToTwo(basicSalary + totalAllowances);
   
-  // 3. Employee Pension (5.5% of Basic Salary only)
-  const employeePension = roundToTwo(basicSalary * 0.055);
+  // 3. Employee Pension (5.5% of Gross Salary)
+  const employeePension = roundToTwo(grossSalary * 0.055);
   
   // 4. Employee Pf (5% of Basic Salary only)
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
   
-  // 5. Taxable Income = Gross - Employee Pension - Employee Pf - Tax Relief (Loan NOT deducted)
+  // 5. Taxable Income = Gross - Employee Pension - Employee Pf - Tax Relief
   const taxableIncome = Math.max(0, roundToTwo(grossSalary - employeePension - employeePf - reliefAmount));
   
   // 6. PAYE (Progressive Tax)
@@ -517,8 +526,8 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
   // 9. Total Deduction (for information only)
   const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye + loanMonthly);
   
-  // 10. Employer Pension (13% of Basic Salary - For Information Only)
-  const employerPension = roundToTwo(basicSalary * 0.13);
+  // 10. Employer Pension (13% of Gross Salary - For Information Only)
+  const employerPension = roundToTwo(grossSalary * 0.13);
   
   // 11. Employer Pf (5% of Basic Salary - For Information Only)
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
