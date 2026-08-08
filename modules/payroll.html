@@ -8,12 +8,12 @@
   <!-- Controls Row -->
   <div class="payroll-controls-row">
     <div class="payroll-controls-left">
-      <button class="btn-primary" onclick="showAddPayModal()">
+      <button class="btn-primary" onclick="showAddPayModal(); loadPayrollRows()">
         <i class="fas fa-plus"></i> Add Employee Pay
       </button>
     </div>
     <div class="payroll-controls-right">
-      <button class="btn-secondary" onclick="runPayroll()">
+      <button class="btn-secondary" onclick="runPayrollHandler()">
         <i class="fas fa-play"></i> Run Payroll
       </button>
       <label for="payPeriod">Pay Period:</label>
@@ -32,19 +32,19 @@
           <th>Staff #</th>
           <th>Name</th>
           <th>Designation</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:80px;">Basic Salary</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Allowances</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Gross Salary</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Employee Pension</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:60px;">Employee Pf</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:60px;">Tax Relief</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Taxable Income</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:50px;">Paye</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Total Deduction</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:60px;">Net Pay</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:70px;">Employer Pension</th>
-          <th style="text-align:right;white-space:normal;word-wrap:break-word;min-width:60px;">Employer Pf</th>
-          <th style="text-align:center;white-space:normal;word-wrap:break-word;min-width:50px;">Action</th>
+          <th style="text-align:right;min-width:80px;">Basic Salary</th>
+          <th style="text-align:right;min-width:70px;">Allowances</th>
+          <th style="text-align:right;min-width:70px;">Gross Salary</th>
+          <th style="text-align:right;min-width:70px;">Employee Pension</th>
+          <th style="text-align:right;min-width:60px;">Employee Pf</th>
+          <th style="text-align:right;min-width:60px;">Tax Relief</th>
+          <th style="text-align:right;min-width:70px;">Taxable Income</th>
+          <th style="text-align:right;min-width:50px;">Paye</th>
+          <th style="text-align:right;min-width:70px;">Total Deduction</th>
+          <th style="text-align:right;min-width:60px;">Net Pay</th>
+          <th style="text-align:right;min-width:70px;">Employer 13%</th>
+          <th style="text-align:right;min-width:60px;">Employer Pf</th>
+          <th style="text-align:right;min-width:70px;">Monthly Loan</th>
         </tr>
       </thead>
       <tbody id="payrollTableBody">
@@ -60,7 +60,7 @@
   </div>
 </div>
 
-<!-- Add/Edit Payroll Modal -->
+<!-- Add/Edit Payroll Modal (kept for backwards compatibility; Add-pay has been moved into employee modal) -->
 <div class="payroll-modal" id="addPayModal">
   <div class="payroll-modal-content" style="max-width: 860px;">
     <!-- Header -->
@@ -68,167 +68,19 @@
       <h3><i class="fas fa-user-plus"></i> <span id="payModalTitle">Add Employee Pay</span></h3>
       <button class="payroll-modal-close" onclick="closeAddPayModal()">&times;</button>
     </div>
-    
     <!-- Body -->
     <div class="payroll-modal-body" style="padding: 14px 20px 12px 20px;">
       <div class="form-hint" style="margin-bottom: 10px; padding: 6px 12px; font-size: 11px;">
         <i class="fas fa-info-circle"></i> Enter staff number and basic salary. Calculations update automatically.
       </div>
-      
-      <!-- Staff Lookup - 3 columns -->
-      <div class="form-row-3" style="gap: 8px;">
-        <div class="form-group" style="margin-bottom: 6px;">
-          <label style="font-size: 10px; margin-bottom: 2px;">Staff Number <span class="required">*</span></label>
-          <input type="text" id="payStaffNumber" placeholder="e.g. STAFF001" style="padding: 4px 8px; font-size: 12px; height: 28px;"
-                 oninput="autoFillEmployeeDetails(this.value); recalcPayrollPreview();">
-        </div>
-        <div class="form-group" style="margin-bottom: 6px;">
-          <label style="font-size: 10px; margin-bottom: 2px;">Name of Employee <span class="required">*</span></label>
-          <input type="text" id="payName" placeholder="Auto-displays" readonly style="padding: 4px 8px; font-size: 12px; height: 28px;">
-        </div>
-        <div class="form-group" style="margin-bottom: 6px;">
-          <label style="font-size: 10px; margin-bottom: 2px;">Designation</label>
-          <input type="text" id="payDesignation" placeholder="Auto-displays" readonly style="padding: 4px 8px; font-size: 12px; height: 28px;">
-        </div>
-      </div>
-      
-      <!-- Basic Salary and Pay Period - 2 columns -->
-      <div class="form-row" style="gap: 8px;">
-        <div class="form-group" style="margin-bottom: 6px;">
-          <label style="font-size: 10px; margin-bottom: 2px;">Basic Salary (GHS) <span class="required">*</span></label>
-          <input type="number" id="payBasicSalary" placeholder="0.00" step="0.01" min="0" style="padding: 4px 8px; font-size: 12px; height: 28px;"
-                 oninput="recalcPayrollPreview()">
-        </div>
-        <div class="form-group" style="margin-bottom: 6px;">
-          <label style="font-size: 10px; margin-bottom: 2px;">Pay Period</label>
-          <input type="month" id="payPeriod" style="padding: 4px 8px; font-size: 12px; height: 28px;">
-        </div>
-      </div>
-      
-      <!-- Allowances Toggle -->
-      <div class="toggle-row" style="margin-top: 4px; padding-bottom: 4px; min-height: 40px;">
-        <div class="toggle-checkbox" style="flex: 0 0 140px; min-width: 140px;">
-          <label style="font-size: 12px; padding-top: 8px;">
-            <input type="checkbox" id="payAllowances" onchange="toggleAllowanceFields(); recalcPayrollPreview();">
-            Allowances
-          </label>
-        </div>
-        <div class="toggle-fields" id="allowanceFields" style="display: none; flex-direction: column; gap: 4px; flex: 1;">
-          <div id="allowanceList" style="width: 100%;">
-            <!-- Allowance rows will be added here dynamically -->
-          </div>
-          <div style="display: flex; gap: 8px; align-items: center; margin-top: 2px;">
-            <button type="button" class="btn-outline" onclick="addAllowanceRow()" style="padding: 2px 10px; font-size: 11px; height: 24px;">
-              <i class="fas fa-plus"></i> Add Allowance
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- PF Toggle - all on one row -->
-      <div class="toggle-row" style="margin-top: 2px; padding-bottom: 4px; min-height: 38px;">
-        <div class="toggle-checkbox" style="flex: 0 0 140px; min-width: 140px;">
-          <label style="font-size: 12px; padding-top: 6px;">
-            <input type="checkbox" id="payPF" checked onchange="togglePFFields(); recalcPayrollPreview();">
-            Apply Pf
-          </label>
-        </div>
-        <div class="toggle-fields" id="pfFields" style="gap: 8px;">
-          <div class="field-group" style="min-width: 60px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">Employee Pf (%)</label>
-            <input type="number" id="payEmployeePF" value="5" step="0.1" min="0" max="20" style="padding: 3px 6px; font-size: 12px; height: 26px;"
-                   oninput="recalcPayrollPreview()">
-          </div>
-          <div class="field-group" style="min-width: 60px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">Employer Pf (%)</label>
-            <input type="number" id="payEmployerPF" value="5" step="0.1" min="0" max="20" style="padding: 3px 6px; font-size: 12px; height: 26px;"
-                   oninput="recalcPayrollPreview()">
-          </div>
-        </div>
-      </div>
-      
-      <!-- Tax Relief Toggle - all on one row -->
-      <div class="toggle-row" style="margin-top: 2px; padding-bottom: 4px; min-height: 38px;">
-        <div class="toggle-checkbox" style="flex: 0 0 140px; min-width: 140px;">
-          <label style="font-size: 12px; padding-top: 6px;">
-            <input type="checkbox" id="payTaxRelief" onchange="toggleTaxReliefField(); recalcPayrollPreview();">
-            Tax Relief
-          </label>
-        </div>
-        <div class="toggle-fields" id="taxReliefField" style="gap: 8px;">
-          <div class="field-group" style="max-width: 180px; min-width: 100px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">Relief Amount (Ghs)</label>
-            <input type="number" id="payReliefAmount" placeholder="0.00" step="0.01" min="0" style="padding: 3px 6px; font-size: 12px; height: 26px;"
-                   oninput="recalcPayrollPreview()">
-          </div>
-        </div>
-      </div>
-      
-      <!-- Loan Toggle - all on one row -->
-      <div class="toggle-row" style="margin-top: 2px; padding-bottom: 4px; min-height: 38px; border-bottom: none;">
-        <div class="toggle-checkbox" style="flex: 0 0 140px; min-width: 140px;">
-          <label style="font-size: 12px; padding-top: 6px;">
-            <input type="checkbox" id="payLoanCheck" onchange="toggleLoanFields(); recalcPayrollPreview();">
-            Loan Deduction
-          </label>
-        </div>
-        <div class="toggle-fields" id="loanFields" style="gap: 8px;">
-          <div class="field-group" style="max-width: 130px; min-width: 80px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">Monthly (Ghs)</label>
-            <input type="number" id="payLoanMonthly" placeholder="0.00" step="0.01" min="0" style="padding: 3px 6px; font-size: 12px; height: 26px;"
-                   oninput="recalcPayrollPreview()">
-          </div>
-          <div class="field-group" style="max-width: 120px; min-width: 80px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">From</label>
-            <input type="date" id="payLoanFrom" style="padding: 3px 6px; font-size: 12px; height: 26px;">
-          </div>
-          <div class="field-group" style="max-width: 120px; min-width: 80px;">
-            <label style="font-size: 9px; margin-bottom: 2px;">To</label>
-            <input type="date" id="payLoanTo" style="padding: 3px 6px; font-size: 12px; height: 26px;">
-          </div>
-        </div>
-      </div>
-      
-      <!-- Calculation Preview - 6 columns -->
-      <div style="margin-top: 10px;">
-        <div style="font-size: 11px; font-weight: 600; color: #4a5568; margin-bottom: 4px;">
-          <i class="fas fa-calculator"></i> Calculation Preview
-        </div>
-        <div class="calc-summary" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap: 4px; padding: 6px 10px;">
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Gross Salary</div>
-            <div class="calc-value" style="font-size: 12px;" id="previewGrossSalary">0.00</div>
-          </div>
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Emp Pension</div>
-            <div class="calc-value" style="font-size: 12px;" id="previewEmployeePension">0.00</div>
-          </div>
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Emp Pf</div>
-            <div class="calc-value" style="font-size: 12px;" id="previewEmployeePf">0.00</div>
-          </div>
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Taxable Income</div>
-            <div class="calc-value" style="font-size: 12px;" id="previewTaxable">0.00</div>
-          </div>
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Paye</div>
-            <div class="calc-value negative" style="font-size: 12px;" id="previewPaye">0.00</div>
-          </div>
-          <div class="calc-item">
-            <div class="calc-label" style="font-size: 7px;">Net Pay</div>
-            <div class="calc-value positive" style="font-size: 12px;" id="previewNetPay">0.00</div>
-          </div>
-        </div>
+      <div id="addPayModalBody">
+        <!-- The add-pay modal content will be filled/populated by showAddPayModal which still supports showing employee-pay details when called from Payroll page -->
+        <p style="color:#718096;">Use the Employee modal to edit payroll snapshot. When opened here, the same modal will appear.</p>
       </div>
     </div>
-    
     <!-- Footer -->
     <div class="payroll-modal-footer" style="padding: 10px 20px;">
-      <button class="btn-secondary" onclick="closeAddPayModal()" style="padding: 5px 14px; font-size: 12px;">Cancel</button>
-      <button class="btn-primary" onclick="saveEmployeePay()" style="padding: 5px 14px; font-size: 12px;">
-        <i class="fas fa-save"></i> Save Record
-      </button>
+      <button class="btn-secondary" onclick="closeAddPayModal()" style="padding: 5px 14px; font-size: 12px;">Close</button>
     </div>
   </div>
 </div>
