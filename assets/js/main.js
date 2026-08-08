@@ -348,7 +348,7 @@ function loadModule(moduleName) {
   
   // Update active state in sidebar
   updateActiveMenuItem(moduleName);
-  
+
   const modules = {
     'paymentVoucher': { file: 'modules/payment-voucher.html', init: 'initPVModule' },
     'inventoryAdd': { file: 'modules/add-inventory.html', init: 'initInventoryModule' },
@@ -366,7 +366,6 @@ function loadModule(moduleName) {
     'dashboard': null
   };
   
-  // Handle dashboard separately
   if (moduleName === 'dashboard') {
     if (typeof loadDashboardContent === 'function') {
       loadDashboardContent();
@@ -472,13 +471,11 @@ function initSubscriptionScheduleModule() {
 
 function initDailyLiquidityModule() {
   console.log('Daily Liquidity module loaded');
-  // The actual init is in dailyliquidity.js
   if (typeof window.initDailyLiquidityModule === 'function') {
     window.initDailyLiquidityModule();
   }
 }
 
-// New payroll/employee/payslip init wrappers
 function initEmployeeListModule() {
   console.log('Employee List module loaded');
   if (typeof window.initEmployeeList === 'function') window.initEmployeeList();
@@ -546,7 +543,6 @@ function getStartOfYear() {
 // EXPORT FOR MODULES
 // ============================================
 
-// Make functions available globally
 window.loadModule = loadModule;
 window.toggleSidebar = toggleSidebar;
 window.toggleUserMenu = toggleUserMenu;
@@ -574,7 +570,7 @@ window.showLoadingModal = showLoadingModal;
 window.hideLoadingModal = hideLoadingModal;
 
 // ============================================
-// ADD CSS FOR LOADING MODAL
+// ADD CSS FOR LOADING MODAL (z-index increased so it appears above modals)
 // ============================================
 
 const homepageLoadingStyle = document.createElement('style');
@@ -589,7 +585,7 @@ homepageLoadingStyle.textContent = `
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 999;
+    z-index: 20000; /* increased so loading overlay appears above modals */
   }
 
   .loading-modal-content {
