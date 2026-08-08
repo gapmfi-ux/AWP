@@ -38,20 +38,12 @@ API.deletePayrollRun = async function(runId, options = {}) {
   return this.request('deletePayrollRun', { runId }, options);
 };
 
-/**
- * savePayrollRun(payrollData)
- * - Inserts or updates a single payroll row on the server.
- * NOTE: send payrollData object directly so the JSONP handler receives it as expected.
- */
 API.savePayrollRun = async function(payrollData = {}, options = {}) {
-  return this.request('savePayrollRun', payrollData, options);
+  return this.request('savePayrollRun', { formData: JSON.stringify(payrollData) }, options);
 };
 
-/**
- * updatePayrollRecord(staffNumber, period, updateData)
- */
 API.updatePayrollRecord = async function(staffNumber, period, updateData = {}, options = {}) {
-  const payload = { staffNumber, period, updateData };
+  const payload = Object.assign({}, updateData, { staffNumber, period, formData: JSON.stringify(updateData) });
   return this.request('updatePayrollRecord', payload, options);
 };
 
@@ -100,15 +92,13 @@ API.getEmployeeByStaffNumber = async function(staffNumber, options = {}) {
   return this.request('getEmployeeByStaffNumber', { staffNumber }, options);
 };
 
-/**
- * addEmployee/updateEmployee now send the employee object directly (not wrapped in formData)
- * so handleJsonpRequest (GET/JSONP) receives the expected structure.
- */
 API.addEmployee = async function(employeeData = {}, options = {}) {
+  // Send as direct params, not nested formData
   return this.request('addEmployee', employeeData, options);
 };
 
 API.updateEmployee = async function(employeeData = {}, options = {}) {
+  // Send as direct params, not nested formData
   return this.request('updateEmployee', employeeData, options);
 };
 
