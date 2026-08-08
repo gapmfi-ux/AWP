@@ -1,6 +1,6 @@
 /**
  * API - Payroll, Allowance & Employee wrapper
- * Requires api-core.js loaded first (window.API)
+ * (Direct assignment style like api-inventory.js)
  *
  * Place this file at assets/js/api/api-payroll.js and load it after api-core.js in index.html.
  */
@@ -9,7 +9,7 @@ if (!window.API || typeof window.API.request !== 'function') {
   throw new Error('API core (api-core.js) must be loaded before api-payroll.js');
 }
 
-// PAYROLL endpoints
+// ---------- PAYROLL ----------
 API.processPayrollRun = async function(period, options = {}) {
   return this.request('processPayrollRun', { period }, options);
 };
@@ -38,14 +38,21 @@ API.deletePayrollRun = async function(runId, options = {}) {
   return this.request('deletePayrollRun', { runId }, options);
 };
 
+/**
+ * savePayrollRun(payrollData)
+ * - Inserts or updates a single payroll row on the server.
+ * payrollData should include keys expected by savePayrollRun server function:
+ *   staffNumber, fullName, designation, payPeriod, basicSalary, allowances (array), totalAllowances, grossSalary,
+ *   employeePension, employeePf, pf10Amount, taxRelief, taxableIncome, paye, totalDeduction, netPay,
+ *   employerPension, employerPf, loanMonthly, loanFrom, loanTo, runId (optional)
+ */
 API.savePayrollRun = async function(payrollData = {}, options = {}) {
-  // server expects formData (for consistency with other endpoints) OR direct payload
-  // We'll send as formData JSON string (server handles savePayrollRun from formData in doPost).
-  return this.request('savePayrollRun', { formData: JSON.stringify(payrollData) }, options);
+  return this.request('savePayrollRun', payrollData, options);
 };
 
 API.updatePayrollRecord = async function(staffNumber, period, updateData = {}, options = {}) {
-  return this.request('updatePayrollRecord', { staffNumber, period, formData: JSON.stringify(updateData) }, options);
+  const payload = Object.assign({}, updateData, { staffNumber, period });
+  return this.request('updatePayrollRecord', payload, options);
 };
 
 API.getTaxRates = async function(options = {}) {
@@ -56,17 +63,21 @@ API.initializePayrollSheets = async function(options = {}) {
   return this.request('initializePayrollSheets', {}, options);
 };
 
-// ALLOWANCES endpoints
+// ---------- ALLOWANCES ----------
 API.getAllowancesByStaff = async function(staffNumber, options = {}) {
-  return this.request('getAllowancesByStaff', { staffNumber }, options);
+  return this.request('getAllowancesByStaff', { staffNumber, options }, options);
 };
 
 API.getAllAllowanceTypes = async function(options = {}) {
   return this.request('getAllAllowanceTypes', {}, options);
 };
 
+/**
+ * saveAllowance(staffNumber, allowanceType, allowanceAmount, effectiveDate, options)
+ * options can include overwriteIfExists: true
+ */
 API.saveAllowance = async function(staffNumber, allowanceType, allowanceAmount, effectiveDate, options = {}) {
-  const payload = { staffNumber, allowanceType, allowanceAmount, effectiveDate };
+  const payload = { staffNumber, allowanceType, allowanceAmount, effectiveDate, options };
   return this.request('saveAllowance', payload, options);
 };
 
@@ -75,7 +86,7 @@ API.deleteAllowance = async function(staffNumber, allowanceType, effectiveDate =
 };
 
 API.updateAllowance = async function(staffNumber, oldAllowanceType, newAllowanceType, newAllowanceAmount, newEffectiveDate, options = {}) {
-  const payload = { staffNumber, oldAllowanceType, newAllowanceType, newAllowanceAmount, newEffectiveDate };
+  const payload = { staffNumber, oldAllowanceType, newAllowanceType, newAllowanceAmount, newEffectiveDate, options };
   return this.request('updateAllowance', payload, options);
 };
 
@@ -83,7 +94,10 @@ API.initializeAllowanceSheet = async function(options = {}) {
   return this.request('initializeAllowanceSheet', {}, options);
 };
 
-// EMPLOYEE endpoints
+// ---------- EMPLOYEES ----------
+/**
+ * addEmployee/updateEmployee expect formData JSON (server's doPost uses params.formData)
+ */
 API.getEmployees = async function(options = {}) {
   return this.request('getEmployees', {}, options);
 };
