@@ -41,18 +41,17 @@ API.deletePayrollRun = async function(runId, options = {}) {
 /**
  * savePayrollRun(payrollData)
  * - Inserts or updates a single payroll row on the server.
+ * NOTE: send payrollData object directly so the JSONP handler receives it as expected.
  */
 API.savePayrollRun = async function(payrollData = {}, options = {}) {
-  // server expects formData? In your App_Entry you wired savePayrollRun to accept raw object via formData parsing.
-  // We'll send as formData JSON (matches many other calls)
-  return this.request('savePayrollRun', { formData: JSON.stringify(payrollData) }, options);
+  return this.request('savePayrollRun', payrollData, options);
 };
 
 /**
  * updatePayrollRecord(staffNumber, period, updateData)
  */
 API.updatePayrollRecord = async function(staffNumber, period, updateData = {}, options = {}) {
-  const payload = Object.assign({}, updateData, { staffNumber, period, formData: JSON.stringify(updateData) });
+  const payload = { staffNumber, period, updateData };
   return this.request('updatePayrollRecord', payload, options);
 };
 
@@ -75,7 +74,6 @@ API.getAllAllowanceTypes = async function(options = {}) {
 
 API.saveAllowance = async function(staffNumber, allowanceType, allowanceAmount, effectiveDate, options = {}) {
   const payload = { staffNumber, allowanceType, allowanceAmount, effectiveDate };
-  // If you want to support options.overwriteIfExists on server, include in payload
   if (options && options.overwriteIfExists) payload.options = { overwriteIfExists: true };
   return this.request('saveAllowance', payload, options);
 };
@@ -102,12 +100,16 @@ API.getEmployeeByStaffNumber = async function(staffNumber, options = {}) {
   return this.request('getEmployeeByStaffNumber', { staffNumber }, options);
 };
 
+/**
+ * addEmployee/updateEmployee now send the employee object directly (not wrapped in formData)
+ * so handleJsonpRequest (GET/JSONP) receives the expected structure.
+ */
 API.addEmployee = async function(employeeData = {}, options = {}) {
-  return this.request('addEmployee', { formData: JSON.stringify(employeeData) }, options);
+  return this.request('addEmployee', employeeData, options);
 };
 
 API.updateEmployee = async function(employeeData = {}, options = {}) {
-  return this.request('updateEmployee', { formData: JSON.stringify(employeeData) }, options);
+  return this.request('updateEmployee', employeeData, options);
 };
 
 API.deleteEmployee = async function(staffNumber, options = {}) {
