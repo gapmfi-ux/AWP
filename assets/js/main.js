@@ -206,7 +206,8 @@ function initializeApp() {
   // Check if sidebar should be collapsed based on screen size
   if (window.innerWidth <= 768) {
     sidebarCollapsed = true;
-    document.getElementById('sidebar').classList.add('collapsed');
+    const s = document.getElementById('sidebar');
+    if (s) s.classList.add('collapsed');
   }
 }
 
@@ -227,7 +228,8 @@ function setupSidebarToggleOnResize() {
     if (window.innerWidth > 768 && sidebarCollapsed) {
       // Do nothing, keep collapsed state
     } else if (window.innerWidth <= 768) {
-      document.getElementById('sidebar').classList.remove('show-mobile');
+      const s = document.getElementById('sidebar');
+      if (s) s.classList.remove('show-mobile');
     }
   });
 }
@@ -245,11 +247,13 @@ function loadUserInfo() {
   google.script.run
     .withSuccessHandler(function(user) {
       currentUser = user;
-      document.getElementById('userName').textContent = user.name || 'User';
+      const el = document.getElementById('userName');
+      if (el) el.textContent = user.name || 'User';
     })
     .withFailureHandler(function(error) {
       console.error('Error loading user:', error);
-      document.getElementById('userName').textContent = 'Guest';
+      const el = document.getElementById('userName');
+      if (el) el.textContent = 'Guest';
     })
     .getUserInfo();
 }
@@ -263,13 +267,11 @@ function toggleSidebar() {
   const mainContent = document.querySelector('.main-content');
   
   if (window.innerWidth <= 768) {
-    sidebar.classList.toggle('show-mobile');
+    if (sidebar) sidebar.classList.toggle('show-mobile');
   } else {
-    sidebar.classList.toggle('collapsed');
-    if (mainContent) {
-      mainContent.classList.toggle('expanded');
-    }
-    sidebarCollapsed = sidebar.classList.contains('collapsed');
+    if (sidebar) sidebar.classList.toggle('collapsed');
+    if (mainContent) mainContent.classList.toggle('expanded');
+    sidebarCollapsed = sidebar && sidebar.classList.contains('collapsed');
     
     // Close all submenus when sidebar is collapsed
     if (sidebarCollapsed) {
@@ -286,7 +288,7 @@ function toggleSidebar() {
 
 function toggleUserMenu() {
   const dropdown = document.getElementById('userDropdown');
-  dropdown.classList.toggle('show');
+  if (dropdown) dropdown.classList.toggle('show');
 }
 
 function toggleSubmenu(submenuId) {
@@ -340,65 +342,89 @@ function hideLoadingModal() {
 // MODULE LOADING
 // ============================================
 
+/**
+ * loadModule(moduleName)
+ * - Loads the module HTML into #mainContent and runs its initializer (if any).
+ * - Returns a Promise that resolves when the module is loaded and init called.
+ */
 function loadModule(moduleName) {
-  if (currentModule === moduleName) return;
-  
-  showLoadingModal('Loading module...');
-  currentModule = moduleName;
-  
-  // Update active state in sidebar
-  updateActiveMenuItem(moduleName);
-
-  const modules = {
-    'paymentVoucher': { file: 'modules/payment-voucher.html', init: 'initPVModule' },
-    'inventoryAdd': { file: 'modules/add-inventory.html', init: 'initInventoryModule' },
-    'inventoryReport': { file: 'modules/inventory-report.html', init: 'initInventoryReportModule' },
-    'addAsset': { file: 'modules/add-asset.html', init: 'initAssetModule' },
-    'viewAssetRegister': { file: 'modules/asset-register.html', init: 'initAssetRegisterModule' },
-    'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
-    'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
-    'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
-    'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
-    'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
-    'employeeList': { file: 'modules/employee-list.html', init: 'initEmployeeListModule' },
-    'payroll': { file: 'modules/payroll.html', init: 'initPayrollModule' },
-    'payslip': { file: 'modules/payslip.html', init: 'initPayslipModule' },
-    'dashboard': null
-  };
-  
-  if (moduleName === 'dashboard') {
-    if (typeof loadDashboardContent === 'function') {
-      loadDashboardContent();
+  return new Promise((resolve, reject) => {
+    if (currentModule === moduleName) {
+      resolve();
+      return;
     }
-    hideLoadingModal();
-    closeSidebarMobile();
-    return;
-  }
-  
-  const config = modules[moduleName];
-  if (!config) {
-    showError('Module not found: ' + moduleName);
-    hideLoadingModal();
-    return;
-  }
-  
-  fetch(config.file)
-    .then(response => response.ok ? response.text() : Promise.reject('HTTP ' + response.status))
-    .then(html => {
-      document.getElementById('mainContent').innerHTML = `<div class="content-wrapper">${html}</div>`;
-      setTimeout(() => {
-        if (window[config.init] && typeof window[config.init] === 'function') {
-          window[config.init]();
-        }
-        hideLoadingModal();
-      }, 150);
-      closeSidebarMobile();
-    })
-    .catch(error => {
-      console.error('Error loading module:', error);
-      showError('Could not load module. Please try again.');
+    
+    showLoadingModal('Loading module...');
+    currentModule = moduleName;
+    
+    // Update active state in sidebar
+    updateActiveMenuItem(moduleName);
+    
+    const modules = {
+      'paymentVoucher': { file: 'modules/payment-voucher.html', init: 'initPVModule' },
+      'inventoryAdd': { file: 'modules/add-inventory.html', init: 'initInventoryModule' },
+      'inventoryReport': { file: 'modules/inventory-report.html', init: 'initInventoryReportModule' },
+      'addAsset': { file: 'modules/add-asset.html', init: 'initAssetModule' },
+      'viewAssetRegister': { file: 'modules/asset-register.html', init: 'initAssetRegisterModule' },
+      'investmentAdd': { file: 'modules/add-investment.html', init: 'initInvestmentModule' },
+      'investmentReport': { file: 'modules/investment-report.html', init: 'initInvestmentReportModule' },
+      'subscriptionAdd': { file: 'modules/subscription-add.html', init: 'initSubscriptionAddModule' },
+      'subscriptionSchedule': { file: 'modules/subscription-schedule.html', init: 'initSubscriptionScheduleModule' },
+      'dailyLiquidity': { file: 'modules/dailyliquidity.html', init: 'initDailyLiquidityModule' },
+      'employeeList': { file: 'modules/employee-list.html', init: 'initEmployeeListModule' },
+      'payroll': { file: 'modules/payroll.html', init: 'initPayrollModule' },
+      'payslip': { file: 'modules/payslip.html', init: 'initPayslipModule' },
+      'dashboard': null
+    };
+    
+    // Handle dashboard separately
+    if (moduleName === 'dashboard') {
+      if (typeof loadDashboardContent === 'function') {
+        loadDashboardContent();
+      }
       hideLoadingModal();
-    });
+      closeSidebarMobile();
+      resolve();
+      return;
+    }
+    
+    const config = modules[moduleName];
+    if (!config) {
+      showError('Module not found: ' + moduleName);
+      hideLoadingModal();
+      reject(new Error('Module not found: ' + moduleName));
+      return;
+    }
+    
+    fetch(config.file)
+      .then(response => response.ok ? response.text() : Promise.reject('HTTP ' + response.status))
+      .then(html => {
+        const main = document.getElementById('mainContent');
+        if (main) {
+          main.innerHTML = `<div class="content-wrapper">${html}</div>`;
+        }
+        setTimeout(() => {
+          try {
+            if (window[config.init] && typeof window[config.init] === 'function') {
+              window[config.init]();
+            }
+            hideLoadingModal();
+            closeSidebarMobile();
+            resolve();
+          } catch (initErr) {
+            hideLoadingModal();
+            console.error('Module init error:', initErr);
+            reject(initErr);
+          }
+        }, 150);
+      })
+      .catch(error => {
+        console.error('Error loading module:', error);
+        showError('Could not load module. Please try again.');
+        hideLoadingModal();
+        reject(error);
+      });
+  });
 }
 
 function updateActiveMenuItem(moduleName) {
@@ -471,11 +497,13 @@ function initSubscriptionScheduleModule() {
 
 function initDailyLiquidityModule() {
   console.log('Daily Liquidity module loaded');
+  // The actual init is in dailyliquidity.js
   if (typeof window.initDailyLiquidityModule === 'function') {
     window.initDailyLiquidityModule();
   }
 }
 
+// New payroll/employee/payslip init wrappers
 function initEmployeeListModule() {
   console.log('Employee List module loaded');
   if (typeof window.initEmployeeList === 'function') window.initEmployeeList();
@@ -570,7 +598,7 @@ window.showLoadingModal = showLoadingModal;
 window.hideLoadingModal = hideLoadingModal;
 
 // ============================================
-// ADD CSS FOR LOADING MODAL (z-index increased so it appears above modals)
+// ADD CSS FOR LOADING MODAL
 // ============================================
 
 const homepageLoadingStyle = document.createElement('style');
@@ -585,7 +613,7 @@ homepageLoadingStyle.textContent = `
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 20000; /* increased so loading overlay appears above modals */
+    z-index: 999;
   }
 
   .loading-modal-content {
