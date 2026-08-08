@@ -49,10 +49,10 @@
     <!-- Body -->
     <div class="payroll-modal-body">
       <div class="form-hint">
-        <i class="fas fa-info-circle"></i> Enter employee details. Payroll preview updates automatically.
+        <i class="fas fa-info-circle"></i> Enter employee details. Payroll record will be created automatically when basic salary is set.
       </div>
 
-      <!-- ROW 1: Staff | Name | Department | Designation  (4 columns) -->
+      <!-- ROW 1: Staff | Name | Department | Designation -->
       <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px;">
         <div class="form-group">
           <label>Staff Number <span class="required">*</span></label>
@@ -92,35 +92,27 @@
         </div>
       </div>
 
-      <!-- Feature toggles - each on its own row -->
-      <div style="margin-top:12px;">
-        <div style="margin-bottom:8px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="empHasPF" onchange="toggleEmployeePFFields(); recalcPayrollPreviewFromEmployeeModal()">
-            PF Eligible
-          </label>
-        </div>
+      <!-- Feature toggles - each on separate row -->
+      <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+          <input type="checkbox" id="empHasPF" onchange="toggleEmployeePFFields(); recalcPayrollPreviewFromEmployeeModal()">
+          PF Eligible
+        </label>
 
-        <div style="margin-bottom:8px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="empHasTaxRelief" onchange="toggleEmployeeTaxReliefField(); recalcPayrollPreviewFromEmployeeModal()">
-            Tax Relief
-          </label>
-        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+          <input type="checkbox" id="empHasTaxRelief" onchange="toggleEmployeeTaxReliefField(); recalcPayrollPreviewFromEmployeeModal()">
+          Tax Relief
+        </label>
 
-        <div style="margin-bottom:8px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="empHasAllowances" onchange="toggleEmployeeAllowanceField(); recalcPayrollPreviewFromEmployeeModal()">
-            Has Allowances
-          </label>
-        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+          <input type="checkbox" id="empHasAllowances" onchange="toggleEmployeeAllowanceField(); recalcPayrollPreviewFromEmployeeModal()">
+          Has Allowances
+        </label>
 
-        <div style="margin-bottom:8px;">
-          <label style="display:flex; align-items:center; gap:8px;">
-            <input type="checkbox" id="empHasLoan" onchange="toggleEmployeeLoanFields(); recalcPayrollPreviewFromEmployeeModal()">
-            Loan
-          </label>
-        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+          <input type="checkbox" id="empHasLoan" onchange="toggleEmployeeLoanFields(); recalcPayrollPreviewFromEmployeeModal()">
+          Loan
+        </label>
       </div>
 
       <!-- PF / Tax Relief / Loan fields -->
@@ -154,10 +146,10 @@
         <div id="empAllowanceList" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
 
-      <!-- Calculation Preview -->
+      <!-- Calculation Preview - always shown -->
       <div style="margin-top:12px;">
         <div style="font-size:11px; font-weight:600; color:#4a5568; margin-bottom:6px;">
-          <i class="fas fa-calculator"></i> Payroll Preview
+          <i class="fas fa-calculator"></i> Payroll Preview (auto-calculated)
         </div>
         <div class="calc-summary" style="grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr; gap:6px;">
           <div class="calc-item">
