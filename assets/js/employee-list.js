@@ -1,23 +1,37 @@
-/* Employee list client logic - Updated for new table design */
+/* Employee list client logic - Server-backed */
 
 function initEmployeeList() {
   renderEmployeeTable();
 }
 
-function getEmployees() {
+async function getEmployeesFromServer() {
   try {
-    return JSON.parse(localStorage.getItem('awp_employees') || '[]');
-  } catch (e) {
+    showLoadingModal('Loading employees...');
+    const resp = await API.getEmployees({ useCache: false });
+    // Server returns array of records keyed by headers
+    const serverRecords = resp || [];
+    const employees = (Array.isArray(serverRecords) ? serverRecords : serverRecords.records || [])
+      .map(rec => ({
+        staff: rec['Staff Number'] || rec['STAFF_NUMBER'] || rec['Staff'] || '',
+        name: rec['Full Name'] || rec['FULL_NAME'] || rec['Name'] || '',
+        department: rec['Department'] || '',
+        designation: rec['Designation'] || '',
+        email: rec['Email'] || '',
+        ssnit: rec['SSNIT'] || '',
+        ghanaCard: rec['Ghana Card'] || ''
+      }));
+    return employees;
+  } catch (err) {
+    console.error('Error loading employees', err);
+    showToast('Failed to load employees', 'error');
     return [];
+  } finally {
+    hideLoadingModal();
   }
 }
 
-function saveEmployees(arr) {
-  localStorage.setItem('awp_employees', JSON.stringify(arr));
-}
-
-function renderEmployeeTable() {
-  const employees = getEmployees();
+async function renderEmployeeTable() {
+  const employees = await getEmployeesFromServer();
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) return;
   
@@ -51,14 +65,12 @@ function renderEmployeeTable() {
   `).join('');
 }
 
-function showAddEmployeeModal(editData) {
+async function showAddEmployeeModal(editData) {
   const modal = document.getElementById('employeeModal');
   if (!modal) return;
   
   const isEdit = !!editData;
   document.getElementById('employeeModalTitle').textContent = isEdit ? 'Edit Employee' : 'Add Employee';
-  
-  // Clear form
   ['empStaffNumber', 'empName', 'empDepartment', 'empDesignation', 'empEmail', 'empSSNIT', 'empGhanaCard'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -85,7 +97,7 @@ function closeEmployeeModal() {
   if (modal) modal.classList.remove('show');
 }
 
-function saveEmployee() {
+async function saveEmployee() {
   const staff = document.getElementById('empStaffNumber').value.trim();
   const name = document.getElementById('empName').value.trim();
   
@@ -100,60 +112,77 @@ function saveEmployee() {
   const ssnit = document.getElementById('empSSNIT').value.trim();
   const ghanaCard = document.getElementById('empGhanaCard').value.trim();
   
-  const employees = getEmployees();
   const modal = document.getElementById('employeeModal');
   const editStaff = modal?.dataset?.editStaff || null;
   
-  const record = { staff, name, department, designation, email, ssnit, ghanaCard };
+  const record = {
+    staff: staff,
+    name: name,
+    department: department,
+    designation: designation,
+    email: email,
+    ssnit: ssnit,
+    ghanaCard: ghanaCard
+  };
   
-  if (editStaff) {
-    const idx = employees.findIndex(x => x.staff === editStaff);
-    if (idx >= 0) {
-      employees[idx] = record;
-      showToast('Employee updated successfully!', 'success');
-    }
-  } else {
-    const idx = employees.findIndex(x => x.staff === staff);
-    if (idx >= 0) {
-      if (!confirm(`Employee "${staff}" already exists. Update it?`)) return;
-      employees[idx] = record;
+  try {
+    showLoadingModal(editStaff ? 'Updating employee...' : 'Adding employee...');
+    if (editStaff) {
+      // updateEmployee expects a formData object with staff field
+      await API.updateEmployee(record);
       showToast('Employee updated successfully!', 'success');
     } else {
-      employees.push(record);
+      await API.addEmployee(record);
       showToast('Employee added successfully!', 'success');
     }
+    await renderEmployeeTable();
+    closeEmployeeModal();
+    delete modal.dataset.editStaff;
+  } catch (err) {
+    console.error('Error saving employee', err);
+    showToast('Failed to save employee', 'error');
+  } finally {
+    hideLoadingModal();
   }
-  
-  saveEmployees(employees);
-  renderEmployeeTable();
-  closeEmployeeModal();
-  delete modal.dataset.editStaff;
 }
 
-function editEmployee(staff) {
+async function editEmployee(staff) {
   if (!staff) return;
-  const employees = getEmployees();
-  const emp = employees.find(e => e.staff === staff);
-  if (emp) {
-    showAddEmployeeModal(emp);
-  } else {
+  try {
+    showLoadingModal('Loading employee...');
+    const resp = await API.getEmployeeByStaffNumber(staff);
+    // resp will be server-side record or null
+    // map to client shape
+    const rec = resp || {};
+    const client = {
+      staff: rec['Staff Number'] || rec.staff || staff,
+      name: rec['Full Name'] || rec.name || '',
+      department: rec['Department'] || '',
+      designation: rec['Designation'] || '',
+      email: rec['Email'] || '',
+      ssnit: rec['SSNIT'] || '',
+      ghanaCard: rec['Ghana Card'] || ''
+    };
+    showAddEmployeeModal(client);
+  } catch (err) {
+    console.error('Error fetching employee', err);
     showToast('Employee not found.', 'warning');
+  } finally {
+    hideLoadingModal();
   }
 }
 
-function filterEmployeeList() {
+async function filterEmployeeList() {
   const q = document.getElementById('employeeSearch')?.value.trim().toLowerCase() || '';
-  const employees = getEmployees();
+  const employees = await getEmployeesFromServer();
   const filtered = employees.filter(e => {
     return (e.staff || '').toLowerCase().includes(q)
       || (e.name || '').toLowerCase().includes(q)
       || (e.department || '').toLowerCase().includes(q)
       || (e.designation || '').toLowerCase().includes(q);
   });
-  
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) return;
-  
   if (!filtered || filtered.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -166,7 +195,6 @@ function filterEmployeeList() {
     `;
     return;
   }
-  
   tbody.innerHTML = filtered.map(e => `
     <tr>
       <td class="col-staff">${escapeHtml(e.staff || '')}</td>
@@ -184,73 +212,8 @@ function filterEmployeeList() {
   `).join('');
 }
 
-// Utility
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/[&<>"'`]/g, s => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '`': '&#96;'
-  }[s]));
-}
+/* Utility functions (escapeHtml, showToast) remain the same as before */
 
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('global-toast');
-  if (!toast) {
-    const newToast = document.createElement('div');
-    newToast.id = 'global-toast';
-    newToast.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      padding: 12px 20px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      z-index: 99999;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      max-width: 380px;
-      display: none;
-      transition: all 0.3s ease;
-    `;
-    document.body.appendChild(newToast);
-    showToast(message, type);
-    return;
-  }
-  
-  const colors = {
-    success: '#38a169',
-    error: '#e53e3e',
-    warning: '#d69e2e',
-    info: '#4361ee'
-  };
-  
-  toast.style.background = colors[type] || colors.info;
-  toast.style.color = '#fff';
-  toast.textContent = message;
-  toast.style.display = 'block';
-  toast.style.opacity = '0';
-  toast.style.transform = 'translateY(10px)';
-  
-  requestAnimationFrame(() => {
-    toast.style.opacity = '1';
-    toast.style.transform = 'translateY(0)';
-  });
-  
-  clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => {
-    toast.style.opacity = '0';
-    toast.style.transform = 'translateY(10px)';
-    setTimeout(() => {
-      toast.style.display = 'none';
-    }, 300);
-  }, 3000);
-}
-
-// Exports
 window.initEmployeeList = initEmployeeList;
 window.showAddEmployeeModal = showAddEmployeeModal;
 window.closeEmployeeModal = closeEmployeeModal;
