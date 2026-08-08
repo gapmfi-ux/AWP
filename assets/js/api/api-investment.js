@@ -2,7 +2,7 @@ if (!window.API) {
   throw new Error('API core (api-core.js) must be loaded before api-investment.js');
 }
 
-// INVESTMENT API
+// INVESTMENT API 
 API.generateInvestmentCode = async function(investmentType, options = {}) {
   return this.request('generateInvestmentCode', { investmentType }, options);
 };
