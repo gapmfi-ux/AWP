@@ -107,32 +107,42 @@
   // ============================================
   // LOAD FULL INVESTMENT REPORT
   // ============================================
+window.loadFullInvestmentReport = function() {
+  console.log('Loading full investment report...');
 
-  window.loadFullInvestmentReport = function() {
-    console.log('Loading full investment report...');
-    
-    const toDate = document.getElementById('fullReportToDate').value;
-    if (!toDate) return;
-    
-    showFullReportLoading();
-    
-    if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
-      API.getAllInvestments()
-        .then(function(investments) {
-          console.log('All investments loaded:', investments);
-          const reportType = document.getElementById('reportTypeSelect').value || 'byType';
-          displayFullReport(investments, reportType, toDate);
-        })
-        .catch(function(error) {
-          console.error('Error loading investments:', error);
-          showReportError('fullReportContainer', 'Error loading investments: ' + error.message);
-        });
-    } else {
-      console.warn('API not available');
-      showReportError('fullReportContainer', 'API not available');
-    }
-  };
+  // Find the To date input safely
+  const toEl = document.getElementById('fullReportToDate');
+  if (!toEl) {
+    console.warn('fullReportToDate element not found — deferring full report load');
+    // Option 1: show an error in the report container
+    showReportError('fullReportContainer', 'Date input missing from page. Please open the Full Report tab.');
+    // Option 2 (alternative): attempt to continue using today's date
+    // const toDate = new Date().toISOString().split('T')[0];
+    return;
+  }
 
+  const toDate = toEl.value || new Date().toISOString().split('T')[0];
+
+  showFullReportLoading();
+
+  const reportTypeSelect = document.getElementById('reportTypeSelect');
+  const reportType = reportTypeSelect ? reportTypeSelect.value || 'byType' : 'byType';
+
+  if (typeof API !== 'undefined' && API && typeof API.getAllInvestments === 'function') {
+    API.getAllInvestments()
+      .then(function(investments) {
+        console.log('All investments loaded:', investments);
+        displayFullReport(investments, reportType, toDate);
+      })
+      .catch(function(error) {
+        console.error('Error loading investments:', error);
+        showReportError('fullReportContainer', 'Error loading investments: ' + (error && error.message ? error.message : error));
+      });
+  } else {
+    console.warn('API not available');
+    showReportError('fullReportContainer', 'API not available');
+  }
+};
   window.handleReportTypeChange = function() {
     const reportType = document.getElementById('reportTypeSelect').value;
     const toDate = document.getElementById('fullReportToDate').value;
