@@ -1,27 +1,16 @@
 <!-- Payroll Module -->
 <div class="payroll-container">
+  <!-- Header with Title and Controls in same row -->
   <div class="payroll-header">
-    <h2><i class="fas fa-calculator"></i> Payroll Management</h2>
-  </div>
-
-  <!-- Controls Row -->
-  <div class="payroll-controls-row">
-    <div class="payroll-controls-left">
+    <h2><i class="fas fa-calculator"></i> Payroll</h2>
+    <div class="payroll-controls">
       <button class="btn-primary" onclick="processPayroll()">
         <i class="fas fa-play"></i> Run Payroll
       </button>
-      <button class="btn-secondary" onclick="loadPayrollPeriod()">
-        <i class="fas fa-sync"></i> Load Period
-      </button>
+      <label for="payPeriodSelect" style="font-size:12px; font-weight:500; color:#4a5568;">Period:</label>
+      <input type="month" id="payPeriodSelect" onchange="loadPayrollPeriod()" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; background:#f7fafc; color:#2d3748;">
       <button class="btn-outline" onclick="printPayroll()">
         <i class="fas fa-print"></i> Print
-      </button>
-    </div>
-    <div class="payroll-controls-right">
-      <label for="payPeriodSelect">Pay Period:</label>
-      <input type="month" id="payPeriodSelect" onchange="loadPayrollPeriod()">
-      <button class="btn-secondary" onclick="deletePayrollPeriod()" style="background:#fee2e2; color:#dc2626;">
-        <i class="fas fa-trash"></i>
       </button>
     </div>
   </div>
@@ -37,15 +26,15 @@
           <th style="min-width:90px; text-align:right;">Basic Salary</th>
           <th style="min-width:90px; text-align:right;">Allowances</th>
           <th style="min-width:90px; text-align:right;">Gross Salary</th>
-          <th style="min-width:90px; text-align:right;">Emp Pension (5.5%)</th>
-          <th style="min-width:90px; text-align:right;">Emp PF (10%)</th>
+          <th style="min-width:90px; text-align:right;">Employee Pension<br>(5.5%)</th>
+          <th style="min-width:90px; text-align:right;">Employee PF<br>(10%)</th>
           <th style="min-width:80px; text-align:right;">Tax Relief</th>
           <th style="min-width:90px; text-align:right;">Taxable Income</th>
           <th style="min-width:80px; text-align:right;">PAYE</th>
           <th style="min-width:90px; text-align:right;">Total Deduction</th>
           <th style="min-width:90px; text-align:right;">Net Pay</th>
-          <th style="min-width:90px; text-align:right;">Emp Pension (13%)</th>
-          <th style="min-width:90px; text-align:right;">Emp PF (5%)</th>
+          <th style="min-width:90px; text-align:right;">Employer Pension<br>(13%)</th>
+          <th style="min-width:90px; text-align:right;">Employer PF<br>(5%)</th>
           <th style="min-width:80px; text-align:right;">Monthly Loan</th>
         </tr>
       </thead>
