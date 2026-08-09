@@ -87,6 +87,9 @@ async function showAddEmployeeModal(editData) {
   // clear allowances
   document.getElementById('empAllowanceList').innerHTML = '';
   document.getElementById('empAllowanceArea').style.display = 'none';
+  document.getElementById('empPFFieldsWrapper').style.display = 'none';
+  document.getElementById('empTaxReliefFieldWrapper').style.display = 'none';
+  document.getElementById('empLoanFieldWrapper').style.display = 'none';
 
   // reset toggles
   document.getElementById('empHasPF').checked = false;
@@ -326,7 +329,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   select.className = 'emp-allowance-type';
   select.placeholder = 'Type (e.g. Housing)';
   select.value = type;
-  select.style.cssText = 'flex:1; padding:6px;';
+  select.style.cssText = 'flex:1; padding:6px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px;';
 
   const amt = document.createElement('input');
   amt.type = 'number';
@@ -335,7 +338,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   amt.step = '0.01';
   amt.min = '0';
   amt.value = amount;
-  amt.style.cssText = 'width:120px; padding:6px; text-align:right;';
+  amt.style.cssText = 'width:120px; padding:6px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px;';
   amt.oninput = recalcPayrollPreviewFromEmployeeModal;
 
   const removeBtn = document.createElement('button');
@@ -346,7 +349,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
     row.remove();
     recalcPayrollPreviewFromEmployeeModal();
   };
-  removeBtn.style.cssText = 'padding:6px 8px;';
+  removeBtn.style.cssText = 'padding:4px 8px; font-size:12px;';
 
   row.appendChild(select);
   row.appendChild(amt);
@@ -357,22 +360,30 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   recalcPayrollPreviewFromEmployeeModal();
 }
 
-/* ============== Toggles show/hide ============== */
+/* ============== Toggles show/hide - updated for same row layout ============== */
 
 function toggleEmployeePFFields() {
   const checked = document.getElementById('empHasPF').checked;
-  document.getElementById('empPFFields').style.display = checked ? 'block' : 'none';
-  document.getElementById('empERPFFields').style.display = checked ? 'block' : 'none';
+  const wrapper = document.getElementById('empPFFieldsWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'flex' : 'none';
+  }
 }
 
 function toggleEmployeeTaxReliefField() {
   const checked = document.getElementById('empHasTaxRelief').checked;
-  document.getElementById('empTaxReliefField').style.display = checked ? 'block' : 'none';
+  const wrapper = document.getElementById('empTaxReliefFieldWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'block' : 'none';
+  }
 }
 
 function toggleEmployeeAllowanceField() {
   const checked = document.getElementById('empHasAllowances').checked;
-  document.getElementById('empAllowanceArea').style.display = checked ? 'block' : 'none';
+  const area = document.getElementById('empAllowanceArea');
+  if (area) {
+    area.style.display = checked ? 'block' : 'none';
+  }
   if (!checked) {
     document.getElementById('empAllowanceList').innerHTML = '';
     recalcPayrollPreviewFromEmployeeModal();
@@ -381,7 +392,10 @@ function toggleEmployeeAllowanceField() {
 
 function toggleEmployeeLoanFields() {
   const checked = document.getElementById('empHasLoan').checked;
-  document.getElementById('empLoanField').style.display = checked ? 'block' : 'none';
+  const wrapper = document.getElementById('empLoanFieldWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'block' : 'none';
+  }
 }
 
 /* ============== Auto-fill payroll defaults when staff is selected ============== */
