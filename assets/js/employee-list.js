@@ -184,23 +184,142 @@ async function saveNewDesignation() {
   }
 }
 
-/* ============== Add New Allowance Type ============== */
+/* ============== Add New Allowance Type - Inline ============== */
 
-function addNewAllowanceType(selectElement) {
-  const name = prompt('Enter new allowance type name:');
-  if (!name || name.trim() === '') return;
-  const trimmed = name.trim();
-  if (!allowanceTypeOptions.includes(trimmed)) {
-    allowanceTypeOptions.push(trimmed);
+function toggleNewAllowanceField(selectElement) {
+  const row = selectElement.closest('.allowance-row');
+  if (!row) return;
+  
+  let newField = row.querySelector('.new-allowance-field');
+  if (!newField) {
+    newField = document.createElement('div');
+    newField.className = 'new-allowance-field';
+    newField.style.cssText = 'display:flex; gap:4px; align-items:center; margin-top:4px;';
+    newField.innerHTML = `
+      <input type="text" class="new-allowance-input" placeholder="Enter new allowance type" style="flex:1; padding:4px 8px; border:1px solid #4361ee; border-radius:6px; font-size:12px; height:28px; background:#f0f4ff;">
+      <button type="button" class="btn-primary" onclick="saveNewAllowance(this)" style="padding:2px 10px; font-size:11px; height:28px;">Add</button>
+      <button type="button" class="btn-secondary" onclick="cancelNewAllowance(this)" style="padding:2px 8px; font-size:11px; height:28px;">Cancel</button>
+    `;
+    row.appendChild(newField);
+  }
+  newField.style.display = 'flex';
+  const input = newField.querySelector('.new-allowance-input');
+  if (input) input.focus();
+}
+
+function cancelNewAllowance(btn) {
+  const row = btn.closest('.allowance-row');
+  if (!row) return;
+  const field = row.querySelector('.new-allowance-field');
+  if (field) field.remove();
+}
+
+async function saveNewAllowance(btn) {
+  const row = btn.closest('.allowance-row');
+  if (!row) return;
+  
+  const input = row.querySelector('.new-allowance-input');
+  const name = input.value.trim();
+  if (!name) {
+    showToast('Please enter an allowance type name', 'warning');
+    return;
+  }
+  
+  try {
+    if (allowanceTypeOptions.includes(name)) {
+      showToast('Allowance type already exists', 'warning');
+      const field = row.querySelector('.new-allowance-field');
+      if (field) field.remove();
+      return;
+    }
+    
+    allowanceTypeOptions.push(name);
     allowanceTypeOptions.sort();
-    populateAllowanceTypeSelect(selectElement);
-    selectElement.value = trimmed;
+    
+    // Update the select in this row
+    const select = row.querySelector('.emp-allowance-type');
+    if (select) {
+      populateAllowanceTypeSelect(select);
+      select.value = name;
+    }
+    
     showToast('Allowance type added successfully', 'success');
-  } else {
-    showToast('Allowance type already exists', 'warning');
+    const field = row.querySelector('.new-allowance-field');
+    if (field) field.remove();
+    recalcPayrollPreviewFromEmployeeModal();
+  } catch (err) {
+    showToast('Error adding allowance type: ' + err.message, 'error');
   }
 }
 
+/* ============== Add Allowance Row ============== */
+
+function addEmployeeAllowanceRow(type = '', amount = '') {
+  const container = document.getElementById('empAllowanceList');
+  if (!container) return;
+
+  if (allowanceTypeOptions.length === 0) {
+    loadDropdownOptions();
+  }
+
+  const row = document.createElement('div');
+  row.className = 'allowance-row';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
+
+  const select = document.createElement('select');
+  select.className = 'emp-allowance-type';
+  select.style.cssText = 'flex:1; min-width:120px; padding:4px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px; background:#fff;';
+  select.onchange = function() {
+    if (this.value === '__ADD_NEW__') {
+      // Show inline new allowance field
+      toggleNewAllowanceField(this);
+      // Reset the select to previous value or empty
+      setTimeout(() => {
+        if (this.value === '__ADD_NEW__') {
+          this.value = '';
+        }
+      }, 50);
+    }
+    recalcPayrollPreviewFromEmployeeModal();
+  };
+  
+  populateAllowanceTypeSelect(select);
+  if (type && allowanceTypeOptions.includes(type)) {
+    select.value = type;
+  } else if (type) {
+    allowanceTypeOptions.push(type);
+    allowanceTypeOptions.sort();
+    populateAllowanceTypeSelect(select);
+    select.value = type;
+  }
+
+  const amt = document.createElement('input');
+  amt.type = 'number';
+  amt.className = 'emp-allowance-amount';
+  amt.placeholder = '0.00';
+  amt.step = '0.01';
+  amt.min = '0';
+  amt.value = amount;
+  amt.style.cssText = 'width:100px; padding:4px 8px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px;';
+  amt.oninput = recalcPayrollPreviewFromEmployeeModal;
+
+  const removeBtn = document.createElement('button');
+  removeBtn.type = 'button';
+  removeBtn.className = 'btn-outline';
+  removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+  removeBtn.onclick = function() {
+    row.remove();
+    recalcPayrollPreviewFromEmployeeModal();
+  };
+  removeBtn.style.cssText = 'padding:4px 8px; font-size:12px; height:28px;';
+
+  row.appendChild(select);
+  row.appendChild(amt);
+  row.appendChild(removeBtn);
+
+  container.appendChild(row);
+  recalcPayrollPreviewFromEmployeeModal();
+}
 async function getEmployeesFromServer() {
   try {
     showLoadingModal('Loading employees...');
