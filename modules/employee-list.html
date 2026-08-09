@@ -154,22 +154,21 @@
       </div>
 
       <!-- Has Allowances -->
-      <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0; border-bottom:1px solid #f0f4f8;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
-          <input type="checkbox" id="empHasAllowances" onchange="toggleEmployeeAllowanceField(); recalcPayrollPreviewFromEmployeeModal()">
-          Has Allowances
-        </label>
-        <div id="empAllowanceArea" style="display:none; flex:1;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <div style="font-size:11px; font-weight:600; color:#4a5568;">Allowances</div>
-            <button type="button" class="btn-outline" onclick="addEmployeeAllowanceRow()" style="padding:4px 10px; font-size:11px;">
-              <i class="fas fa-plus"></i> Add
-            </button>
-          </div>
-          <div id="empAllowanceList" style="display:flex; flex-direction:column; gap:4px;"></div>
-        </div>
-      </div>
-
+<div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0; border-bottom:1px solid #f0f4f8;">
+  <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
+    <input type="checkbox" id="empHasAllowances" onchange="toggleEmployeeAllowanceField(); recalcPayrollPreviewFromEmployeeModal()">
+    Has Allowances
+  </label>
+  <div id="empAllowanceArea" style="display:none; flex:1;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <div style="font-size:11px; font-weight:600; color:#4a5568;">Allowances</div>
+      <button type="button" class="btn-outline" onclick="addEmployeeAllowanceRow()" style="padding:4px 10px; font-size:11px;">
+        <i class="fas fa-plus"></i> Add
+      </button>
+    </div>
+    <div id="empAllowanceList" style="display:flex; flex-direction:column; gap:4px;"></div>
+  </div>
+</div>
       <!-- Loan -->
       <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0;">
         <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
