@@ -161,7 +161,7 @@
 }
 
 /* ============================================
-   PAYROLL TABLE - COMPACT, NO SCROLLING
+   PAYROLL TABLE - COMPACT WITH WRAPPED TEXT
    ============================================ */
 
 .payroll-table-wrapper {
@@ -184,47 +184,39 @@
   color: #2d3748;
   font-weight: 600;
   font-size: 7.5px;
-  text-transform: uppercase;
+  text-transform: capitalize;
   letter-spacing: 0.2px;
   padding: 4px 3px;
   border-bottom: 2px solid #edf2f7;
   text-align: center !important;
-  white-space: nowrap;
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
   line-height: 1.2;
   position: sticky;
   top: 0;
   z-index: 5;
   vertical-align: middle;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  min-height: 28px;
 }
 
-.payroll-table thead th:first-child {
-  width: 60px;
-}
-.payroll-table thead th:nth-child(2) {
-  width: 80px;
-}
-.payroll-table thead th:nth-child(3) {
-  width: 60px;
-}
-.payroll-table thead th:nth-child(4),
-.payroll-table thead th:nth-child(5),
-.payroll-table thead th:nth-child(6),
-.payroll-table thead th:nth-child(7),
-.payroll-table thead th:nth-child(8),
-.payroll-table thead th:nth-child(9),
-.payroll-table thead th:nth-child(10),
-.payroll-table thead th:nth-child(11),
-.payroll-table thead th:nth-child(12),
-.payroll-table thead th:nth-child(13),
-.payroll-table thead th:nth-child(14),
-.payroll-table thead th:nth-child(15),
-.payroll-table thead th:nth-child(16) {
-  width: 48px;
-  min-width: 48px;
-  max-width: 48px;
-}
+/* Column widths - reduced for compactness */
+.payroll-table thead th:nth-child(1) { width: 50px; }  /* Staff Number */
+.payroll-table thead th:nth-child(2) { width: 60px; }  /* Full Name */
+.payroll-table thead th:nth-child(3) { width: 55px; }  /* Designation */
+.payroll-table thead th:nth-child(4) { width: 42px; }  /* Basic Salary */
+.payroll-table thead th:nth-child(5) { width: 40px; }  /* Allowances */
+.payroll-table thead th:nth-child(6) { width: 42px; }  /* Gross Salary */
+.payroll-table thead th:nth-child(7) { width: 48px; }  /* Employee Pension(5.5%) */
+.payroll-table thead th:nth-child(8) { width: 40px; }  /* Employee PF(10%) */
+.payroll-table thead th:nth-child(9) { width: 38px; }  /* Tax Relief */
+.payroll-table thead th:nth-child(10) { width: 42px; } /* Taxable Income */
+.payroll-table thead th:nth-child(11) { width: 35px; } /* PAYE */
+.payroll-table thead th:nth-child(12) { width: 45px; } /* Total Deduction */
+.payroll-table thead th:nth-child(13) { width: 40px; } /* Net Pay */
+.payroll-table thead th:nth-child(14) { width: 48px; } /* Employer Pension(13%) */
+.payroll-table thead th:nth-child(15) { width: 38px; } /* Employer PF(5%) */
+.payroll-table thead th:nth-child(16) { width: 40px; } /* Monthly Loan */
 
 .payroll-table tbody td {
   padding: 3px 2px;
@@ -236,6 +228,17 @@
   text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.payroll-table tbody td:first-child,
+.payroll-table tbody td:nth-child(2),
+.payroll-table tbody td:nth-child(3) {
+  white-space: normal;
+  word-wrap: break-word;
+  word-break: break-word;
+  text-align: left;
+  padding-left: 4px;
+  font-size: 8.5px;
 }
 
 .payroll-table tbody tr {
@@ -254,7 +257,7 @@
 .payroll-table .col-staff {
   font-weight: 500;
   color: #2b6cb0;
-  font-size: 9px;
+  font-size: 8.5px;
   text-align: left;
   padding-left: 4px;
 }
@@ -264,13 +267,14 @@
   color: #1a202c;
   text-align: left;
   padding-left: 4px;
+  font-size: 8.5px;
 }
 
 .payroll-table .col-number {
   text-align: right;
   font-variant-numeric: tabular-nums;
   font-family: 'SF Mono', 'Menlo', 'Monaco', monospace;
-  font-size: 8.5px;
+  font-size: 8px;
   padding-right: 4px;
 }
 
@@ -465,32 +469,22 @@
     padding: 3px 2px;
   }
   
-  .payroll-table thead th:first-child {
-    width: 50px;
-  }
-  .payroll-table thead th:nth-child(2) {
-    width: 60px;
-  }
-  .payroll-table thead th:nth-child(3) {
-    width: 50px;
-  }
-  .payroll-table thead th:nth-child(4),
-  .payroll-table thead th:nth-child(5),
-  .payroll-table thead th:nth-child(6),
-  .payroll-table thead th:nth-child(7),
-  .payroll-table thead th:nth-child(8),
-  .payroll-table thead th:nth-child(9),
-  .payroll-table thead th:nth-child(10),
-  .payroll-table thead th:nth-child(11),
-  .payroll-table thead th:nth-child(12),
-  .payroll-table thead th:nth-child(13),
-  .payroll-table thead th:nth-child(14),
-  .payroll-table thead th:nth-child(15),
-  .payroll-table thead th:nth-child(16) {
-    width: 40px;
-    min-width: 40px;
-    max-width: 40px;
-  }
+  .payroll-table thead th:nth-child(1) { width: 40px; }
+  .payroll-table thead th:nth-child(2) { width: 50px; }
+  .payroll-table thead th:nth-child(3) { width: 45px; }
+  .payroll-table thead th:nth-child(4) { width: 35px; }
+  .payroll-table thead th:nth-child(5) { width: 32px; }
+  .payroll-table thead th:nth-child(6) { width: 35px; }
+  .payroll-table thead th:nth-child(7) { width: 40px; }
+  .payroll-table thead th:nth-child(8) { width: 32px; }
+  .payroll-table thead th:nth-child(9) { width: 30px; }
+  .payroll-table thead th:nth-child(10) { width: 35px; }
+  .payroll-table thead th:nth-child(11) { width: 28px; }
+  .payroll-table thead th:nth-child(12) { width: 38px; }
+  .payroll-table thead th:nth-child(13) { width: 32px; }
+  .payroll-table thead th:nth-child(14) { width: 40px; }
+  .payroll-table thead th:nth-child(15) { width: 30px; }
+  .payroll-table thead th:nth-child(16) { width: 32px; }
   
   .payroll-table tbody td {
     font-size: 8px;
@@ -498,7 +492,7 @@
   }
   
   .payroll-table .col-number {
-    font-size: 7.5px;
+    font-size: 7px;
   }
 }
 
@@ -541,36 +535,26 @@
   }
   
   .payroll-table thead th {
-    font-size: 6px;
+    font-size: 5.5px;
     padding: 2px 1px;
   }
   
-  .payroll-table thead th:first-child {
-    width: 40px;
-  }
-  .payroll-table thead th:nth-child(2) {
-    width: 50px;
-  }
-  .payroll-table thead th:nth-child(3) {
-    width: 40px;
-  }
-  .payroll-table thead th:nth-child(4),
-  .payroll-table thead th:nth-child(5),
-  .payroll-table thead th:nth-child(6),
-  .payroll-table thead th:nth-child(7),
-  .payroll-table thead th:nth-child(8),
-  .payroll-table thead th:nth-child(9),
-  .payroll-table thead th:nth-child(10),
-  .payroll-table thead th:nth-child(11),
-  .payroll-table thead th:nth-child(12),
-  .payroll-table thead th:nth-child(13),
-  .payroll-table thead th:nth-child(14),
-  .payroll-table thead th:nth-child(15),
-  .payroll-table thead th:nth-child(16) {
-    width: 32px;
-    min-width: 32px;
-    max-width: 32px;
-  }
+  .payroll-table thead th:nth-child(1) { width: 32px; }
+  .payroll-table thead th:nth-child(2) { width: 40px; }
+  .payroll-table thead th:nth-child(3) { width: 35px; }
+  .payroll-table thead th:nth-child(4) { width: 28px; }
+  .payroll-table thead th:nth-child(5) { width: 25px; }
+  .payroll-table thead th:nth-child(6) { width: 28px; }
+  .payroll-table thead th:nth-child(7) { width: 32px; }
+  .payroll-table thead th:nth-child(8) { width: 25px; }
+  .payroll-table thead th:nth-child(9) { width: 24px; }
+  .payroll-table thead th:nth-child(10) { width: 28px; }
+  .payroll-table thead th:nth-child(11) { width: 22px; }
+  .payroll-table thead th:nth-child(12) { width: 30px; }
+  .payroll-table thead th:nth-child(13) { width: 25px; }
+  .payroll-table thead th:nth-child(14) { width: 32px; }
+  .payroll-table thead th:nth-child(15) { width: 24px; }
+  .payroll-table thead th:nth-child(16) { width: 25px; }
   
   .payroll-table tbody td {
     font-size: 7px;
@@ -584,40 +568,34 @@
   .payroll-table .col-staff {
     font-size: 7px;
   }
+  
+  .payroll-table .col-name {
+    font-size: 7px;
+  }
 }
 
 @media (max-width: 480px) {
   .payroll-table thead th {
-    font-size: 5px;
+    font-size: 4.5px;
     padding: 1px 1px;
   }
   
-  .payroll-table thead th:first-child {
-    width: 30px;
-  }
-  .payroll-table thead th:nth-child(2) {
-    width: 35px;
-  }
-  .payroll-table thead th:nth-child(3) {
-    width: 30px;
-  }
-  .payroll-table thead th:nth-child(4),
-  .payroll-table thead th:nth-child(5),
-  .payroll-table thead th:nth-child(6),
-  .payroll-table thead th:nth-child(7),
-  .payroll-table thead th:nth-child(8),
-  .payroll-table thead th:nth-child(9),
-  .payroll-table thead th:nth-child(10),
-  .payroll-table thead th:nth-child(11),
-  .payroll-table thead th:nth-child(12),
-  .payroll-table thead th:nth-child(13),
-  .payroll-table thead th:nth-child(14),
-  .payroll-table thead th:nth-child(15),
-  .payroll-table thead th:nth-child(16) {
-    width: 26px;
-    min-width: 26px;
-    max-width: 26px;
-  }
+  .payroll-table thead th:nth-child(1) { width: 25px; }
+  .payroll-table thead th:nth-child(2) { width: 30px; }
+  .payroll-table thead th:nth-child(3) { width: 28px; }
+  .payroll-table thead th:nth-child(4) { width: 22px; }
+  .payroll-table thead th:nth-child(5) { width: 20px; }
+  .payroll-table thead th:nth-child(6) { width: 22px; }
+  .payroll-table thead th:nth-child(7) { width: 25px; }
+  .payroll-table thead th:nth-child(8) { width: 20px; }
+  .payroll-table thead th:nth-child(9) { width: 18px; }
+  .payroll-table thead th:nth-child(10) { width: 22px; }
+  .payroll-table thead th:nth-child(11) { width: 18px; }
+  .payroll-table thead th:nth-child(12) { width: 24px; }
+  .payroll-table thead th:nth-child(13) { width: 20px; }
+  .payroll-table thead th:nth-child(14) { width: 25px; }
+  .payroll-table thead th:nth-child(15) { width: 18px; }
+  .payroll-table thead th:nth-child(16) { width: 20px; }
   
   .payroll-table tbody td {
     font-size: 6px;
@@ -629,6 +607,10 @@
   }
   
   .payroll-table .col-staff {
+    font-size: 6px;
+  }
+  
+  .payroll-table .col-name {
     font-size: 6px;
   }
 }
