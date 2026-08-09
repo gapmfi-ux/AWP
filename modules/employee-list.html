@@ -64,24 +64,38 @@
         </div>
         <div class="form-group">
           <label>Department</label>
-          <div style="display:flex; gap:4px; align-items:center;">
-            <select id="empDepartment" style="flex:1; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px; background:#fff;" onchange="onDepartmentSelect(this)">
-              <option value="">Select or type...</option>
+          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            <select id="empDepartment" style="flex:1; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px; background:#fff; min-width:100px;" onchange="onDepartmentSelect(this)">
+              <option value="">Select...</option>
             </select>
-            <button type="button" class="btn-outline" onclick="addNewDepartment()" style="padding:2px 6px; font-size:12px;" title="Add new department">
-              <i class="fas fa-plus"></i>
+            <button type="button" class="btn-outline" onclick="toggleNewDepartmentField()" style="padding:2px 8px; font-size:11px; height:28px; display:flex; align-items:center; gap:4px; flex-shrink:0;" title="Add new department">
+              <i class="fas fa-plus"></i> New
             </button>
+          </div>
+          <div id="newDepartmentField" style="display:none; margin-top:4px;">
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" id="newDepartmentInput" placeholder="Enter new department name" style="flex:1; padding:4px 8px; border:1px solid #4361ee; border-radius:6px; font-size:12px; height:28px; background:#f0f4ff;">
+              <button type="button" class="btn-primary" onclick="saveNewDepartment()" style="padding:2px 10px; font-size:11px; height:28px;">Add</button>
+              <button type="button" class="btn-secondary" onclick="cancelNewDepartment()" style="padding:2px 8px; font-size:11px; height:28px;">Cancel</button>
+            </div>
           </div>
         </div>
         <div class="form-group">
           <label>Designation</label>
-          <div style="display:flex; gap:4px; align-items:center;">
-            <select id="empDesignation" style="flex:1; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px; background:#fff;" onchange="onDesignationSelect(this)">
-              <option value="">Select or type...</option>
+          <div style="display:flex; gap:4px; align-items:center; flex-wrap:wrap;">
+            <select id="empDesignation" style="flex:1; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px; background:#fff; min-width:100px;" onchange="onDesignationSelect(this)">
+              <option value="">Select...</option>
             </select>
-            <button type="button" class="btn-outline" onclick="addNewDesignation()" style="padding:2px 6px; font-size:12px;" title="Add new designation">
-              <i class="fas fa-plus"></i>
+            <button type="button" class="btn-outline" onclick="toggleNewDesignationField()" style="padding:2px 8px; font-size:11px; height:28px; display:flex; align-items:center; gap:4px; flex-shrink:0;" title="Add new designation">
+              <i class="fas fa-plus"></i> New
             </button>
+          </div>
+          <div id="newDesignationField" style="display:none; margin-top:4px;">
+            <div style="display:flex; gap:4px; align-items:center;">
+              <input type="text" id="newDesignationInput" placeholder="Enter new designation name" style="flex:1; padding:4px 8px; border:1px solid #4361ee; border-radius:6px; font-size:12px; height:28px; background:#f0f4ff;">
+              <button type="button" class="btn-primary" onclick="saveNewDesignation()" style="padding:2px 10px; font-size:11px; height:28px;">Add</button>
+              <button type="button" class="btn-secondary" onclick="cancelNewDesignation()" style="padding:2px 8px; font-size:11px; height:28px;">Cancel</button>
+            </div>
           </div>
         </div>
       </div>
@@ -210,46 +224,6 @@
       <button class="btn-primary" onclick="saveEmployee()">
         <i class="fas fa-save"></i> Save Employee
       </button>
-    </div>
-  </div>
-</div>
-
-<!-- Add New Department Modal -->
-<div class="payroll-modal" id="addDepartmentModal">
-  <div class="payroll-modal-content" style="max-width:400px;">
-    <div class="payroll-modal-header">
-      <h3><i class="fas fa-building"></i> Add New Department</h3>
-      <button class="payroll-modal-close" onclick="closeDepartmentModal()">&times;</button>
-    </div>
-    <div class="payroll-modal-body">
-      <div class="form-group">
-        <label>Department Name <span class="required">*</span></label>
-        <input type="text" id="newDepartmentName" placeholder="Enter department name">
-      </div>
-    </div>
-    <div class="payroll-modal-footer">
-      <button class="btn-secondary" onclick="closeDepartmentModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveNewDepartment()"><i class="fas fa-save"></i> Add</button>
-    </div>
-  </div>
-</div>
-
-<!-- Add New Designation Modal -->
-<div class="payroll-modal" id="addDesignationModal">
-  <div class="payroll-modal-content" style="max-width:400px;">
-    <div class="payroll-modal-header">
-      <h3><i class="fas fa-briefcase"></i> Add New Designation</h3>
-      <button class="payroll-modal-close" onclick="closeDesignationModal()">&times;</button>
-    </div>
-    <div class="payroll-modal-body">
-      <div class="form-group">
-        <label>Designation Name <span class="required">*</span></label>
-        <input type="text" id="newDesignationName" placeholder="Enter designation name">
-      </div>
-    </div>
-    <div class="payroll-modal-footer">
-      <button class="btn-secondary" onclick="closeDesignationModal()">Cancel</button>
-      <button class="btn-primary" onclick="saveNewDesignation()"><i class="fas fa-save"></i> Add</button>
     </div>
   </div>
 </div>
