@@ -1014,61 +1014,71 @@
   color: #fff;
 }
 /* ============================================
-   ADD DEPARTMENT / DESIGNATION MODALS
+   INLINE NEW DEPARTMENT / DESIGNATION FIELDS
    ============================================ */
 
-#addDepartmentModal .payroll-modal-content,
-#addDesignationModal .payroll-modal-content {
-  max-width: 400px;
+#newDepartmentField,
+#newDesignationField {
+  margin-top: 4px;
+  animation: slideDown 0.2s ease;
 }
 
-#addDepartmentModal .payroll-modal-body,
-#addDesignationModal .payroll-modal-body {
-  padding: 20px 24px;
-}
-
-#addDepartmentModal .form-group,
-#addDesignationModal .form-group {
-  margin-bottom: 0;
-}
-
-#addDepartmentModal .form-group input,
-#addDesignationModal .form-group input {
-  height: 36px;
-  font-size: 14px;
-  padding: 6px 12px;
-}
-
-/* Department/Designation select with add button */
-.department-select-wrapper,
-.designation-select-wrapper {
-  display: flex;
-  gap: 4px;
-  align-items: center;
-}
-
-.department-select-wrapper select,
-.designation-select-wrapper select {
+#newDepartmentField input,
+#newDesignationField input {
   flex: 1;
   padding: 4px 8px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid #4361ee;
   border-radius: 6px;
   font-size: 12px;
   height: 28px;
-  background: #fff;
-  color: #2d3748;
+  background: #f0f4ff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.department-select-wrapper select:focus,
-.designation-select-wrapper select:focus {
+#newDepartmentField input:focus,
+#newDesignationField input:focus {
   border-color: #4361ee;
   outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
 }
 
-.department-select-wrapper .btn-outline,
-.designation-select-wrapper .btn-outline {
-  padding: 2px 6px;
-  font-size: 12px;
+#newDepartmentField .btn-primary,
+#newDesignationField .btn-primary {
+  padding: 2px 10px;
+  font-size: 11px;
+  height: 28px;
+}
+
+#newDepartmentField .btn-secondary,
+#newDesignationField .btn-secondary {
+  padding: 2px 8px;
+  font-size: 11px;
+  height: 28px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Department/Designation select with add button */
+.form-group .btn-outline {
+  padding: 2px 8px;
+  font-size: 11px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.form-group .btn-outline i {
+  font-size: 10px;
 }
