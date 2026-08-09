@@ -37,7 +37,7 @@ function populateDepartmentSelect() {
   const select = document.getElementById('empDepartment');
   if (!select) return;
   const currentValue = select.value;
-  select.innerHTML = '<option value="">Select or type...</option>';
+  select.innerHTML = '<option value="">Select...</option>';
   departmentOptions.forEach(dept => {
     const opt = document.createElement('option');
     opt.value = dept;
@@ -53,7 +53,7 @@ function populateDesignationSelect() {
   const select = document.getElementById('empDesignation');
   if (!select) return;
   const currentValue = select.value;
-  select.innerHTML = '<option value="">Select or type...</option>';
+  select.innerHTML = '<option value="">Select...</option>';
   designationOptions.forEach(desig => {
     const opt = document.createElement('option');
     opt.value = desig;
@@ -90,77 +90,95 @@ function populateAllowanceTypeSelect(selectElement) {
 // Handlers for select changes
 function onDepartmentSelect(select) {
   // If user selected a value, we're good
-  // If they want to add new, the button handles it
 }
 
 function onDesignationSelect(select) {
   // If user selected a value, we're good
-  // If they want to add new, the button handles it
 }
 
-/* ============== Add New Department ============== */
+/* ============== Add New Department - Inline Toggle ============== */
 
-function addNewDepartment() {
-  document.getElementById('newDepartmentName').value = '';
-  document.getElementById('addDepartmentModal').classList.add('show');
+function toggleNewDepartmentField() {
+  const field = document.getElementById('newDepartmentField');
+  if (!field) return;
+  const isVisible = field.style.display !== 'none';
+  field.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    document.getElementById('newDepartmentInput')?.focus();
+  }
 }
 
-function closeDepartmentModal() {
-  document.getElementById('addDepartmentModal').classList.remove('show');
+function cancelNewDepartment() {
+  document.getElementById('newDepartmentField').style.display = 'none';
+  document.getElementById('newDepartmentInput').value = '';
 }
 
 async function saveNewDepartment() {
-  const name = document.getElementById('newDepartmentName').value.trim();
+  const input = document.getElementById('newDepartmentInput');
+  const name = input.value.trim();
   if (!name) {
-    alert('Please enter a department name');
+    showToast('Please enter a department name', 'warning');
     return;
   }
   try {
-    // Add to server (you may need to implement a server function for this)
-    // For now, we'll just add to local options
-    if (!departmentOptions.includes(name)) {
-      departmentOptions.push(name);
-      departmentOptions.sort();
-      populateDepartmentSelect();
-      document.getElementById('empDepartment').value = name;
-      showToast('Department added successfully', 'success');
-    } else {
+    // Check if already exists
+    if (departmentOptions.includes(name)) {
       showToast('Department already exists', 'warning');
+      cancelNewDepartment();
+      return;
     }
-    closeDepartmentModal();
+    
+    // Add to local options
+    departmentOptions.push(name);
+    departmentOptions.sort();
+    populateDepartmentSelect();
+    document.getElementById('empDepartment').value = name;
+    showToast('Department added successfully', 'success');
+    cancelNewDepartment();
   } catch (err) {
     showToast('Error adding department: ' + err.message, 'error');
   }
 }
 
-/* ============== Add New Designation ============== */
+/* ============== Add New Designation - Inline Toggle ============== */
 
-function addNewDesignation() {
-  document.getElementById('newDesignationName').value = '';
-  document.getElementById('addDesignationModal').classList.add('show');
+function toggleNewDesignationField() {
+  const field = document.getElementById('newDesignationField');
+  if (!field) return;
+  const isVisible = field.style.display !== 'none';
+  field.style.display = isVisible ? 'none' : 'block';
+  if (!isVisible) {
+    document.getElementById('newDesignationInput')?.focus();
+  }
 }
 
-function closeDesignationModal() {
-  document.getElementById('addDesignationModal').classList.remove('show');
+function cancelNewDesignation() {
+  document.getElementById('newDesignationField').style.display = 'none';
+  document.getElementById('newDesignationInput').value = '';
 }
 
 async function saveNewDesignation() {
-  const name = document.getElementById('newDesignationName').value.trim();
+  const input = document.getElementById('newDesignationInput');
+  const name = input.value.trim();
   if (!name) {
-    alert('Please enter a designation name');
+    showToast('Please enter a designation name', 'warning');
     return;
   }
   try {
-    if (!designationOptions.includes(name)) {
-      designationOptions.push(name);
-      designationOptions.sort();
-      populateDesignationSelect();
-      document.getElementById('empDesignation').value = name;
-      showToast('Designation added successfully', 'success');
-    } else {
+    // Check if already exists
+    if (designationOptions.includes(name)) {
       showToast('Designation already exists', 'warning');
+      cancelNewDesignation();
+      return;
     }
-    closeDesignationModal();
+    
+    // Add to local options
+    designationOptions.push(name);
+    designationOptions.sort();
+    populateDesignationSelect();
+    document.getElementById('empDesignation').value = name;
+    showToast('Designation added successfully', 'success');
+    cancelNewDesignation();
   } catch (err) {
     showToast('Error adding designation: ' + err.message, 'error');
   }
@@ -270,6 +288,10 @@ async function showAddEmployeeModal(editData) {
   document.getElementById('empDepartment').value = '';
   document.getElementById('empDesignation').value = '';
 
+  // Hide new department/designation fields
+  cancelNewDepartment();
+  cancelNewDesignation();
+
   // clear allowances
   document.getElementById('empAllowanceList').innerHTML = '';
   document.getElementById('empAllowanceArea').style.display = 'none';
@@ -362,6 +384,9 @@ async function showAddEmployeeModal(editData) {
 function closeEmployeeModal() {
   const modal = document.getElementById('employeeModal');
   if (modal) modal.classList.remove('show');
+  // Clean up any open new fields
+  cancelNewDepartment();
+  cancelNewDesignation();
 }
 
 /* ============== Edit flow ============== */
@@ -601,7 +626,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   recalcPayrollPreviewFromEmployeeModal();
 }
 
-/* ============== Toggles show/hide - updated for same row layout ============== */
+/* ============== Toggles show/hide ============== */
 
 function toggleEmployeePFFields() {
   const checked = document.getElementById('empHasPF').checked;
@@ -867,11 +892,11 @@ window.toggleEmployeeAllowanceField = toggleEmployeeAllowanceField;
 window.toggleEmployeeLoanFields = toggleEmployeeLoanFields;
 window.addEmployeeAllowanceRow = addEmployeeAllowanceRow;
 window.recalcPayrollPreviewFromEmployeeModal = recalcPayrollPreviewFromEmployeeModal;
-window.addNewDepartment = addNewDepartment;
-window.closeDepartmentModal = closeDepartmentModal;
+window.toggleNewDepartmentField = toggleNewDepartmentField;
+window.cancelNewDepartment = cancelNewDepartment;
 window.saveNewDepartment = saveNewDepartment;
-window.addNewDesignation = addNewDesignation;
-window.closeDesignationModal = closeDesignationModal;
+window.toggleNewDesignationField = toggleNewDesignationField;
+window.cancelNewDesignation = cancelNewDesignation;
 window.saveNewDesignation = saveNewDesignation;
 window.onDepartmentSelect = onDepartmentSelect;
 window.onDesignationSelect = onDesignationSelect;
