@@ -48,7 +48,7 @@ async function loadPayrollPreview() {
       const basicSalary = parseFloat(emp['Basic Salary'] || emp.basicSalary || 0) || 0;
       const employeePFrate = parseFloat(emp['Employee PF Rate (%)'] || emp.employeePFrate || 0) || 0;
       const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPFrate || 0) || 0;
-      const taxRelief = parseFloat(emp['Tax Relief Amount'] || emp.taxRelief || 0) || 0;
+      const taxRelief = parseFloat(emp['Tax Relief'] || emp.taxRelief || 0) || 0;
       
       // Get allowances for this employee
       let allowances = [];
@@ -77,14 +77,14 @@ async function loadPayrollPreview() {
         'Total Allowances': calc.totalAllowances,
         'Gross Salary': calc.grossSalary,
         'Employee Pension': calc.employeePension,
-        'Pf 10% Amount': calc.pf10Amount,
+        'PF 10% Amount': calc.pf10Amount,
         'Tax Relief': taxRelief,
         'Taxable Income': calc.taxableIncome,
         'PAYE': calc.paye,
         'Total Deduction': calc.totalDeduction,
         'Net Pay': calc.netPay,
-        'Employer Pension': calc.employerPension,
-        'Employer Pf': calc.employerPf,
+        'Employer 13% Amount': calc.employerPension,
+        'Employer PF Amount': calc.employerPf,
         'Monthly Loan': 0,
         'Allowances': allowances
       });
@@ -178,7 +178,6 @@ async function processPayroll() {
       }
     },
     function() {
-      // Cancel callback
       closeConfirmModal();
     }
   );
@@ -193,7 +192,6 @@ async function deletePayrollPeriod() {
     return;
   }
   
-  // Show confirmation modal
   showConfirmModal(
     'Confirm Delete',
     `Are you sure you want to delete all payroll records for <strong>${period}</strong>?<br><br>This action cannot be undone.`,
@@ -240,7 +238,6 @@ async function deletePayrollPeriod() {
    ============================================ */
 
 function showConfirmModal(title, message, onConfirm, onCancel) {
-  // Check if modal already exists
   let modal = document.getElementById('confirmModal');
   
   if (!modal) {
@@ -264,7 +261,6 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
     `;
     document.body.appendChild(modal);
     
-    // Add styles if not already present
     if (!document.getElementById('confirmModalStyles')) {
       const styles = document.createElement('style');
       styles.id = 'confirmModalStyles';
@@ -361,16 +357,13 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
   document.getElementById('confirmModalTitle').textContent = title;
   document.getElementById('confirmModalBody').innerHTML = message;
   
-  // Store callbacks
   modal._onConfirm = onConfirm || function() {};
   modal._onCancel = onCancel || function() {};
   
-  // Set up button handlers
   const okBtn = document.getElementById('confirmOkBtn');
   const cancelBtn = document.getElementById('confirmCancelBtn');
   const closeBtn = modal.querySelector('.confirm-modal-close');
   
-  // Remove old listeners by cloning
   const newOkBtn = okBtn.cloneNode(true);
   const newCancelBtn = cancelBtn.cloneNode(true);
   const newCloseBtn = closeBtn.cloneNode(true);
@@ -391,7 +384,6 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
     if (modal._onCancel) modal._onCancel();
   });
   
-  // Close on backdrop click
   modal.addEventListener('click', function(e) {
     if (e.target === modal) {
       if (modal._onCancel) modal._onCancel();
@@ -428,7 +420,7 @@ function renderPayrollTable(data, isPreview = false) {
   }
   
   tbody.innerHTML = data.map((record, index) => {
-    // Extract values from record
+    // Extract values from record - using matching column names
     const staffNumber = record['Staff Number'] || record.staffNumber || '';
     const fullName = record['Full Name'] || record.fullName || '';
     const designation = record['Designation'] || record.designation || '';
@@ -436,15 +428,14 @@ function renderPayrollTable(data, isPreview = false) {
     const totalAllowances = parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0;
     const grossSalary = parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0;
     const employeePension = parseFloat(record['Employee Pension'] || record.employeePension || 0) || 0;
-    const employeePf = parseFloat(record['Employee Pf'] || record.employeePf || 0) || 0;
-    const pf10Amount = parseFloat(record['Pf 10% Amount'] || record.pf10Amount || 0) || 0;
+    const pf10Amount = parseFloat(record['PF 10% Amount'] || record.pf10Amount || 0) || 0;
     const taxRelief = parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0;
     const taxableIncome = parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0;
     const paye = parseFloat(record['PAYE'] || record.paye || 0) || 0;
     const totalDeduction = parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0;
     const netPay = parseFloat(record['Net Pay'] || record.netPay || 0) || 0;
-    const employerPension = parseFloat(record['Employer Pension'] || record.employerPension || 0) || 0;
-    const employerPf = parseFloat(record['Employer Pf'] || record.employerPf || 0) || 0;
+    const employerPension = parseFloat(record['Employer 13% Amount'] || record.employerPension || 0) || 0;
+    const employerPf = parseFloat(record['Employer PF Amount'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
     
     // Get allowances JSON for display
@@ -536,10 +527,10 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
   const employeePension = roundToTwo(grossSalary * 0.055);
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
+  const pf10Amount = roundToTwo(basicSalary * 0.10);
   const taxableIncome = Math.max(0, roundToTwo(grossSalary - employeePension - employeePf - (reliefAmount || 0)));
   const paye = calculatePAYE(taxableIncome);
   const netPay = roundToTwo(taxableIncome - paye);
-  const pf10Amount = roundToTwo(basicSalary * 0.10);
   const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye + loanMonthly);
   const employerPension = roundToTwo(grossSalary * 0.13);
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
@@ -550,10 +541,10 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
     grossSalary,
     employeePension,
     employeePf,
+    pf10Amount,
     taxableIncome,
     paye,
     netPay,
-    pf10Amount,
     totalDeduction,
     employerPension,
     employerPf,
@@ -580,7 +571,7 @@ function escapeHtml(str) {
   }[s]));
 }
 
-/* ============== Show Toast (if not already defined) ============== */
+/* ============== Show Toast ============== */
 
 function showToast(message, type = 'info') {
   const toast = document.getElementById('global-toast');
