@@ -92,62 +92,72 @@
         </div>
       </div>
 
-      <!-- Feature toggles - each on separate row -->
-      <div style="margin-top:12px; display:flex; flex-direction:column; gap:6px;">
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+      <!-- Feature toggles - each with its fields on the same row -->
+      <!-- PF Eligible -->
+      <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:10px; padding:6px 0; border-bottom:1px solid #f0f4f8;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
           <input type="checkbox" id="empHasPF" onchange="toggleEmployeePFFields(); recalcPayrollPreviewFromEmployeeModal()">
           PF Eligible
         </label>
+        <div id="empPFFieldsWrapper" style="display:none; flex:1; display:flex; gap:12px; align-items:center;">
+          <div class="form-group" style="flex:1; margin:0;">
+            <label style="font-size:10px; font-weight:500; color:#4a5568; margin-bottom:2px; display:block;">Employee PF Rate (%)</label>
+            <input type="number" id="empEmployeePFRate" value="5.5" step="0.1" min="0" style="width:100%; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px;" oninput="recalcPayrollPreviewFromEmployeeModal()">
+          </div>
+          <div class="form-group" style="flex:1; margin:0;">
+            <label style="font-size:10px; font-weight:500; color:#4a5568; margin-bottom:2px; display:block;">Employer PF Rate (%)</label>
+            <input type="number" id="empEmployerPFRate" value="5" step="0.1" min="0" style="width:100%; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px;" oninput="recalcPayrollPreviewFromEmployeeModal()">
+          </div>
+        </div>
+      </div>
 
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+      <!-- Tax Relief -->
+      <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0; border-bottom:1px solid #f0f4f8;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
           <input type="checkbox" id="empHasTaxRelief" onchange="toggleEmployeeTaxReliefField(); recalcPayrollPreviewFromEmployeeModal()">
           Tax Relief
         </label>
+        <div id="empTaxReliefFieldWrapper" style="display:none; flex:1;">
+          <div class="form-group" style="max-width:200px; margin:0;">
+            <label style="font-size:10px; font-weight:500; color:#4a5568; margin-bottom:2px; display:block;">Tax Relief Amount (GHS)</label>
+            <input type="number" id="empTaxRelief" placeholder="0.00" step="0.01" min="0" style="width:100%; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px;" oninput="recalcPayrollPreviewFromEmployeeModal()">
+          </div>
+        </div>
+      </div>
 
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+      <!-- Has Allowances -->
+      <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0; border-bottom:1px solid #f0f4f8;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
           <input type="checkbox" id="empHasAllowances" onchange="toggleEmployeeAllowanceField(); recalcPayrollPreviewFromEmployeeModal()">
           Has Allowances
         </label>
+        <div id="empAllowanceArea" style="display:none; flex:1;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+            <div style="font-size:11px; font-weight:600; color:#4a5568;">Allowances</div>
+            <button type="button" class="btn-outline" onclick="addEmployeeAllowanceRow()" style="padding:4px 10px; font-size:11px;">
+              <i class="fas fa-plus"></i> Add
+            </button>
+          </div>
+          <div id="empAllowanceList" style="display:flex; flex-direction:column; gap:4px;"></div>
+        </div>
+      </div>
 
-        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748;">
+      <!-- Loan -->
+      <div class="toggle-row" style="display:flex; align-items:center; gap:12px; margin-top:6px; padding:6px 0;">
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px; font-weight:500; color:#2d3748; min-width:120px; flex-shrink:0;">
           <input type="checkbox" id="empHasLoan" onchange="toggleEmployeeLoanFields(); recalcPayrollPreviewFromEmployeeModal()">
           Loan
         </label>
-      </div>
-
-      <!-- PF / Tax Relief / Loan fields -->
-      <div class="form-row" style="grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; margin-top:10px;">
-        <div class="form-group" id="empPFFields" style="display:none;">
-          <label>Employee PF Rate (%)</label>
-          <input type="number" id="empEmployeePFRate" value="5.5" step="0.1" min="0" oninput="recalcPayrollPreviewFromEmployeeModal()">
+        <div id="empLoanFieldWrapper" style="display:none; flex:1;">
+          <div class="form-group" style="max-width:200px; margin:0;">
+            <label style="font-size:10px; font-weight:500; color:#4a5568; margin-bottom:2px; display:block;">Loan Monthly (GHS)</label>
+            <input type="number" id="empLoanMonthly" placeholder="0.00" step="0.01" min="0" style="width:100%; padding:4px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:12px; height:28px;" oninput="recalcPayrollPreviewFromEmployeeModal()">
+          </div>
         </div>
-        <div class="form-group" id="empERPFFields" style="display:none;">
-          <label>Employer PF Rate (%)</label>
-          <input type="number" id="empEmployerPFRate" value="5" step="0.1" min="0" oninput="recalcPayrollPreviewFromEmployeeModal()">
-        </div>
-        <div class="form-group" id="empTaxReliefField" style="display:none;">
-          <label>Tax Relief Amount (GHS)</label>
-          <input type="number" id="empTaxRelief" placeholder="0.00" step="0.01" min="0" oninput="recalcPayrollPreviewFromEmployeeModal()">
-        </div>
-        <div class="form-group" id="empLoanField" style="display:none;">
-          <label>Loan Monthly (GHS)</label>
-          <input type="number" id="empLoanMonthly" placeholder="0.00" step="0.01" min="0" oninput="recalcPayrollPreviewFromEmployeeModal()">
-        </div>
-      </div>
-
-      <!-- Allowance list area (shown when Has Allowances checked) -->
-      <div id="empAllowanceArea" style="display:none; margin-top:10px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-          <div style="font-size:12px; font-weight:600; color:#4a5568;">Allowances</div>
-          <button type="button" class="btn-outline" onclick="addEmployeeAllowanceRow()" style="padding:6px 10px; font-size:12px;">
-            <i class="fas fa-plus"></i> Add Allowance
-          </button>
-        </div>
-        <div id="empAllowanceList" style="display:flex; flex-direction:column; gap:6px;"></div>
       </div>
 
       <!-- Calculation Preview - always shown -->
-      <div style="margin-top:12px;">
+      <div style="margin-top:14px;">
         <div style="font-size:11px; font-weight:600; color:#4a5568; margin-bottom:6px;">
           <i class="fas fa-calculator"></i> Payroll Preview (auto-calculated)
         </div>
