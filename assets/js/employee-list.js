@@ -744,41 +744,82 @@ function calculatePAYE(taxableIncome) {
   return roundToTwo(totalTax);
 }
 
-function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
-  const totalAllowances = allowances.reduce((s,a)=>s + (parseFloat(a.amount)||0), 0);
+function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+  // ==========================================
+  // STEP 1: Calculate Gross Salary
+  // ==========================================
+  const totalAllowances = roundToTwo(allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0));
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
+  
+  // ==========================================
+  // STEP 2: Calculate Deductions (Before Tax)
+  // ==========================================
+  
+  // Employee Pension = 5.5% of Gross
   const employeePension = roundToTwo(grossSalary * 0.055);
+  
+  // Employee PF = Employee PF Rate × Basic Salary (if PF eligible)
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-  const taxableIncome = Math.max(0, roundToTwo(grossSalary - employeePension - employeePf - (reliefAmount || 0)));
-  const paye = calculatePAYE(taxableIncome);
-  const netPay = roundToTwo(taxableIncome - paye);
-  const pf10Amount = roundToTwo(basicSalary * 0.10);
-  const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye + loanMonthly);
+  
+  // Tax Relief (user defined)
+  const taxRelief = roundToTwo(reliefAmount || 0);
+  
+  // Total Deductions before tax
+  const totalDeductionsBeforeTax = roundToTwo(employeePension + employeePf + taxRelief);
+  
+  // ==========================================
+  // STEP 3: Calculate Taxable Amount
+  // ==========================================
+  const taxableAmount = Math.max(0, roundToTwo(grossSalary - totalDeductionsBeforeTax));
+  
+  // ==========================================
+  // STEP 4: Calculate PAYE on Taxable Amount
+  // ==========================================
+  const paye = calculatePAYE(taxableAmount);
+  
+  // ==========================================
+  // STEP 5: Calculate Net Pay
+  // ==========================================
+  const netPay = roundToTwo(taxableAmount - paye);
+  
+  // ==========================================
+  // STEP 6: Calculate Take-Home Pay
+  // ==========================================
+  const loanMonthlyAmount = roundToTwo(loanMonthly || 0);
+  const takeHomePay = roundToTwo(netPay - loanMonthlyAmount);
+  
+  // ==========================================
+  // STEP 7: Calculate Employer Costs
+  // ==========================================
+  
+  // Employer Pension = 13% of Gross
   const employerPension = roundToTwo(grossSalary * 0.13);
+  
+  // Employer PF = Employer PF Rate × Basic Salary (if PF eligible)
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
-  const takeHomePay = roundToTwo(netPay - loanMonthly);
 
   return {
     totalAllowances,
     grossSalary,
     employeePension,
     employeePf,
-    taxableIncome,
+    taxRelief,
+    totalDeductionsBeforeTax,
+    taxableAmount,
     paye,
     netPay,
-    pf10Amount,
-    totalDeduction,
+    loanMonthly: loanMonthlyAmount,
+    takeHomePay,
     employerPension,
-    employerPf,
-    takeHomePay
+    employerPf
   };
 }
 
 function recalcPayrollPreviewFromEmployeeModal() {
   const basicSalary = parseFloat(document.getElementById('empBasicSalary').value) || 0;
   const pfChecked = document.getElementById('empHasPF').checked;
-  const employeePFpct = pfChecked ? (parseFloat(document.getElementById('empEmployeePFRate').value) || 0) : 0;
-  const employerPFpct = pfChecked ? (parseFloat(document.getElementById('empEmployerPFRate').value) || 0) : 0;
+  const employeePFpct = pfChecked ? (parseFloat(document.getElementById('empEmployeePFRate').value) || 5.5) : 0;
+  const employerPFpct = pfChecked ? (parseFloat(document.getElementById('empEmployerPFRate').value) || 5) : 0;
   const taxReliefChecked = document.getElementById('empHasTaxRelief').checked;
   const reliefAmount = taxReliefChecked ? (parseFloat(document.getElementById('empTaxRelief').value) || 0) : 0;
   const loanChecked = document.getElementById('empHasLoan').checked;
@@ -794,7 +835,7 @@ function recalcPayrollPreviewFromEmployeeModal() {
     if (type && amt > 0) allowances.push({ type, amount: amt });
   });
 
-  // Always calculate preview
+  // Always calculate preview using CORRECTED structure
   const calc = computePayrollRow({
     basicSalary,
     allowances,
@@ -805,16 +846,16 @@ function recalcPayrollPreviewFromEmployeeModal() {
     pfChecked
   });
 
-  updateEmployeeCalcPreview(calc.grossSalary, calc.netPay, calc.paye, calc.taxableIncome, calc.employeePension, calc.employeePf);
+  updateEmployeeCalcPreview(calc);
 }
 
-function updateEmployeeCalcPreview(gross, net, paye, taxable, pension, pf) {
-  document.getElementById('empPreviewGross').textContent = formatMoney(gross);
-  document.getElementById('empPreviewNet').textContent = formatMoney(net);
-  document.getElementById('empPreviewPaye').textContent = formatMoney(paye);
-  document.getElementById('empPreviewTaxable').textContent = formatMoney(taxable);
-  document.getElementById('empPreviewPension').textContent = formatMoney(pension);
-  document.getElementById('empPreviewPf').textContent = formatMoney(pf);
+function updateEmployeeCalcPreview(calc) {
+  document.getElementById('empPreviewGross').textContent = formatMoney(calc.grossSalary);
+  document.getElementById('empPreviewNet').textContent = formatMoney(calc.netPay);
+  document.getElementById('empPreviewPaye').textContent = formatMoney(calc.paye);
+  document.getElementById('empPreviewTaxable').textContent = formatMoney(calc.taxableAmount);
+  document.getElementById('empPreviewPension').textContent = formatMoney(calc.employeePension);
+  document.getElementById('empPreviewPf').textContent = formatMoney(calc.employeePf);
 }
 
 /* ============== Search ============== */
