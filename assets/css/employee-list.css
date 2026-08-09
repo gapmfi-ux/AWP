@@ -157,10 +157,10 @@
 }
 
 /* ============================================
-   EMPLOYEE MODAL - ENHANCED
+   EMPLOYEE MODAL (using payroll-modal class)
    ============================================ */
 
-.employee-modal {
+.payroll-modal {
   position: fixed;
   top: 0;
   left: 0;
@@ -177,7 +177,7 @@
   animation: modalFadeIn 0.2s ease;
 }
 
-.employee-modal.show {
+.payroll-modal.show {
   display: flex;
 }
 
@@ -192,7 +192,7 @@
   }
 }
 
-.employee-modal-content {
+.payroll-modal-content {
   background: #ffffff;
   border-radius: 12px;
   width: 100%;
@@ -204,7 +204,7 @@
   flex-direction: column;
 }
 
-.employee-modal-header {
+.payroll-modal-header {
   padding: 12px 20px;
   border-bottom: 1px solid #edf2f7;
   display: flex;
@@ -214,7 +214,7 @@
   background: #fafbfc;
 }
 
-.employee-modal-header h3 {
+.payroll-modal-header h3 {
   font-size: 15px;
   font-weight: 600;
   color: #1a202c;
@@ -224,11 +224,11 @@
   gap: 8px;
 }
 
-.employee-modal-header h3 i {
+.payroll-modal-header h3 i {
   color: #4361ee;
 }
 
-.employee-modal-close {
+.payroll-modal-close {
   background: none;
   border: none;
   font-size: 18px;
@@ -240,18 +240,18 @@
   line-height: 1;
 }
 
-.employee-modal-close:hover {
+.payroll-modal-close:hover {
   background: #edf2f7;
   color: #2d3748;
 }
 
-.employee-modal-body {
+.payroll-modal-body {
   padding: 14px 20px 12px 20px;
   overflow-y: auto;
   flex: 1;
 }
 
-.employee-modal-body .form-hint {
+.payroll-modal-body .form-hint {
   font-size: 11px;
   color: #718096;
   margin-bottom: 10px;
@@ -261,7 +261,7 @@
   border-left: 3px solid #4361ee;
 }
 
-.employee-modal-footer {
+.payroll-modal-footer {
   padding: 10px 20px;
   border-top: 1px solid #edf2f7;
   display: flex;
@@ -272,11 +272,11 @@
 }
 
 /* ---- Modal Form Fields ---- */
-.employee-modal .form-group {
+.payroll-modal .form-group {
   margin-bottom: 6px;
 }
 
-.employee-modal .form-group label {
+.payroll-modal .form-group label {
   display: block;
   font-size: 10px;
   font-weight: 500;
@@ -284,13 +284,13 @@
   margin-bottom: 2px;
 }
 
-.employee-modal .form-group label .required {
+.payroll-modal .form-group label .required {
   color: #e53e3e;
   margin-left: 2px;
 }
 
-.employee-modal .form-group input,
-.employee-modal .form-group select {
+.payroll-modal .form-group input,
+.payroll-modal .form-group select {
   width: 100%;
   padding: 4px 8px;
   border: 1px solid #e2e8f0;
@@ -302,38 +302,38 @@
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.employee-modal .form-group input:focus,
-.employee-modal .form-group select:focus {
+.payroll-modal .form-group input:focus,
+.payroll-modal .form-group select:focus {
   border-color: #4361ee;
   outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
 }
 
-.employee-modal .form-group input[readonly] {
+.payroll-modal .form-group input[readonly] {
   background: #f7fafc;
   color: #4a5568;
   cursor: default;
 }
 
-.employee-modal .form-group input[type="number"] {
+.payroll-modal .form-group input[type="number"] {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-.employee-modal .form-row {
+.payroll-modal .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
 
-.employee-modal .form-row-3 {
+.payroll-modal .form-row-3 {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   gap: 8px;
 }
 
 /* ---- Toggle Row Layout - each on separate row ---- */
-.employee-modal .toggle-row {
+.payroll-modal .toggle-row {
   display: flex;
   align-items: flex-end;
   gap: 12px;
@@ -344,16 +344,16 @@
   min-height: 38px;
 }
 
-.employee-modal .toggle-row:last-of-type {
+.payroll-modal .toggle-row:last-of-type {
   border-bottom: none;
 }
 
-.employee-modal .toggle-row .toggle-checkbox {
+.payroll-modal .toggle-row .toggle-checkbox {
   flex: 0 0 140px;
   min-width: 140px;
 }
 
-.employee-modal .toggle-row .toggle-checkbox label {
+.payroll-modal .toggle-row .toggle-checkbox label {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -364,7 +364,7 @@
   padding-top: 6px;
 }
 
-.employee-modal .toggle-row .toggle-checkbox label input[type="checkbox"] {
+.payroll-modal .toggle-row .toggle-checkbox label input[type="checkbox"] {
   width: 14px;
   height: 14px;
   accent-color: #4361ee;
@@ -372,7 +372,7 @@
   flex-shrink: 0;
 }
 
-.employee-modal .toggle-row .toggle-fields {
+.payroll-modal .toggle-row .toggle-fields {
   display: flex;
   flex: 1;
   gap: 8px;
@@ -380,16 +380,16 @@
   flex-wrap: nowrap;
 }
 
-.employee-modal .toggle-row .toggle-fields.hidden {
+.payroll-modal .toggle-row .toggle-fields.hidden {
   display: none;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group {
+.payroll-modal .toggle-row .toggle-fields .field-group {
   flex: 1;
   min-width: 60px;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group label {
+.payroll-modal .toggle-row .toggle-fields .field-group label {
   display: block;
   font-size: 9px;
   font-weight: 500;
@@ -400,7 +400,7 @@
   white-space: nowrap;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group input {
+.payroll-modal .toggle-row .toggle-fields .field-group input {
   width: 100%;
   padding: 3px 6px;
   border: 1px solid #e2e8f0;
@@ -412,29 +412,29 @@
   height: 26px;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group input:focus {
+.payroll-modal .toggle-row .toggle-fields .field-group input:focus {
   border-color: #4361ee;
   outline: none;
   box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group input[type="date"] {
+.payroll-modal .toggle-row .toggle-fields .field-group input[type="date"] {
   padding: 3px 6px;
   min-width: 100px;
 }
 
 /* Specific field widths */
-.employee-modal .toggle-row .toggle-fields .field-group.tax-relief-field {
+.payroll-modal .toggle-row .toggle-fields .field-group.tax-relief-field {
   flex: 0 1 200px;
   max-width: 200px;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group.loan-amount-field {
+.payroll-modal .toggle-row .toggle-fields .field-group.loan-amount-field {
   flex: 0 1 130px;
   max-width: 130px;
 }
 
-.employee-modal .toggle-row .toggle-fields .field-group.loan-date-field {
+.payroll-modal .toggle-row .toggle-fields .field-group.loan-date-field {
   flex: 0 1 120px;
   max-width: 120px;
 }
@@ -459,7 +459,7 @@
 }
 
 /* ---- Calculated Fields Display ---- */
-.employee-modal .calc-summary {
+.payroll-modal .calc-summary {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
   gap: 4px;
@@ -470,11 +470,11 @@
   border: 1px solid #dbe4ff;
 }
 
-.employee-modal .calc-item {
+.payroll-modal .calc-item {
   text-align: center;
 }
 
-.employee-modal .calc-item .calc-label {
+.payroll-modal .calc-item .calc-label {
   font-size: 7px;
   font-weight: 600;
   text-transform: uppercase;
@@ -482,23 +482,23 @@
   letter-spacing: 0.2px;
 }
 
-.employee-modal .calc-item .calc-value {
+.payroll-modal .calc-item .calc-value {
   font-size: 12px;
   font-weight: 700;
   color: #1a202c;
   font-family: 'SF Mono', 'Menlo', monospace;
 }
 
-.employee-modal .calc-item .calc-value.positive {
+.payroll-modal .calc-item .calc-value.positive {
   color: #38a169;
 }
 
-.employee-modal .calc-item .calc-value.negative {
+.payroll-modal .calc-item .calc-value.negative {
   color: #e53e3e;
 }
 
 /* ---- Department/Designation select with add button ---- */
-.employee-modal .form-group .btn-outline {
+.payroll-modal .form-group .btn-outline {
   padding: 2px 8px;
   font-size: 11px;
   height: 28px;
@@ -509,7 +509,7 @@
   white-space: nowrap;
 }
 
-.employee-modal .form-group .btn-outline i {
+.payroll-modal .form-group .btn-outline i {
   font-size: 10px;
 }
 
@@ -626,31 +626,31 @@
     font-size: 10px;
   }
 
-  .employee-modal-content {
+  .payroll-modal-content {
     max-width: 96%;
     margin: 10px;
   }
 
-  .employee-modal-body {
+  .payroll-modal-body {
     padding: 12px 14px 10px 14px;
   }
 
-  .employee-modal .form-row-3 {
+  .payroll-modal .form-row-3 {
     grid-template-columns: 1fr 1fr;
   }
 
-  .employee-modal .form-row {
+  .payroll-modal .form-row {
     grid-template-columns: 1fr;
     gap: 6px;
   }
 
-  .employee-modal .calc-summary {
+  .payroll-modal .calc-summary {
     grid-template-columns: 1fr 1fr 1fr;
     gap: 4px;
     padding: 6px 8px;
   }
 
-  .employee-modal .calc-item .calc-value {
+  .payroll-modal .calc-item .calc-value {
     font-size: 11px;
   }
 
@@ -671,7 +671,7 @@
   }
 
   /* Toggle responsive */
-  .employee-modal .toggle-row {
+  .payroll-modal .toggle-row {
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
@@ -679,37 +679,37 @@
     padding-bottom: 6px;
   }
 
-  .employee-modal .toggle-row .toggle-checkbox {
+  .payroll-modal .toggle-row .toggle-checkbox {
     flex: unset;
     min-width: unset;
   }
 
-  .employee-modal .toggle-row .toggle-checkbox label {
+  .payroll-modal .toggle-row .toggle-checkbox label {
     padding-top: 0;
   }
 
-  .employee-modal .toggle-row .toggle-fields {
+  .payroll-modal .toggle-row .toggle-fields {
     flex-direction: column;
     gap: 6px;
   }
 
-  .employee-modal .toggle-row .toggle-fields .field-group {
+  .payroll-modal .toggle-row .toggle-fields .field-group {
     min-width: unset;
     max-width: unset !important;
     flex: 1 1 auto;
   }
 
-  .employee-modal .toggle-row .toggle-fields .field-group input {
+  .payroll-modal .toggle-row .toggle-fields .field-group input {
     height: 32px;
   }
 
   /* Allowance rows responsive */
-  .employee-modal .allowance-row {
+  .payroll-modal .allowance-row {
     flex-wrap: wrap;
   }
 
-  .employee-modal .allowance-row select,
-  .employee-modal .allowance-row input {
+  .payroll-modal .allowance-row select,
+  .payroll-modal .allowance-row input {
     flex: 1;
     min-width: 80px;
   }
@@ -726,61 +726,61 @@
     font-size: 9px;
   }
 
-  .employee-modal-content {
+  .payroll-modal-content {
     max-width: 100%;
     border-radius: 10px;
     margin: 6px;
   }
 
-  .employee-modal-header {
+  .payroll-modal-header {
     padding: 10px 14px;
   }
 
-  .employee-modal-header h3 {
+  .payroll-modal-header h3 {
     font-size: 13px;
   }
 
-  .employee-modal-body {
+  .payroll-modal-body {
     padding: 10px 12px 8px 12px;
   }
 
-  .employee-modal .form-row-3 {
+  .payroll-modal .form-row-3 {
     grid-template-columns: 1fr;
   }
 
-  .employee-modal-footer {
+  .payroll-modal-footer {
     padding: 8px 12px;
     flex-wrap: wrap;
   }
 
-  .employee-modal-footer .btn-primary,
-  .employee-modal-footer .btn-secondary {
+  .payroll-modal-footer .btn-primary,
+  .payroll-modal-footer .btn-secondary {
     flex: 1;
     justify-content: center;
   }
 
-  .employee-modal .calc-summary {
+  .payroll-modal .calc-summary {
     grid-template-columns: 1fr 1fr;
     gap: 4px;
     padding: 4px 6px;
   }
 
-  .employee-modal .calc-item .calc-value {
+  .payroll-modal .calc-item .calc-value {
     font-size: 10px;
   }
 
-  .employee-modal .toggle-row {
+  .payroll-modal .toggle-row {
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
   }
 
-  .employee-modal .toggle-row .toggle-fields {
+  .payroll-modal .toggle-row .toggle-fields {
     flex-direction: column;
     gap: 4px;
   }
 
-  .employee-modal .toggle-row .toggle-fields .field-group {
+  .payroll-modal .toggle-row .toggle-fields .field-group {
     min-width: unset;
     max-width: unset !important;
   }
