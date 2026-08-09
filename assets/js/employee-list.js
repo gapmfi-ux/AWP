@@ -1,9 +1,186 @@
 /* Employee list client logic - merged Add Employee + Add Employee Pay (server-backed) */
 
+// Cache for dropdown options
+let departmentOptions = [];
+let designationOptions = [];
+let allowanceTypeOptions = [];
+
 /* ============== Initialization & server employee loading ============== */
 
 function initEmployeeList() {
   renderEmployeeTable();
+  loadDropdownOptions();
+}
+
+async function loadDropdownOptions() {
+  try {
+    // Load departments from server
+    const depts = await API.getAllDepartments().catch(() => []);
+    departmentOptions = Array.isArray(depts) ? depts : [];
+    
+    // Load designations from server
+    const desigs = await API.getAllDesignations().catch(() => []);
+    designationOptions = Array.isArray(desigs) ? desigs : [];
+    
+    // Load allowance types from server
+    const types = await API.getAllAllowanceTypes().catch(() => []);
+    allowanceTypeOptions = Array.isArray(types) ? types : [];
+    
+    populateDepartmentSelect();
+    populateDesignationSelect();
+  } catch (err) {
+    console.warn('Error loading dropdown options:', err);
+  }
+}
+
+function populateDepartmentSelect() {
+  const select = document.getElementById('empDepartment');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">Select or type...</option>';
+  departmentOptions.forEach(dept => {
+    const opt = document.createElement('option');
+    opt.value = dept;
+    opt.textContent = dept;
+    select.appendChild(opt);
+  });
+  if (currentValue && departmentOptions.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function populateDesignationSelect() {
+  const select = document.getElementById('empDesignation');
+  if (!select) return;
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">Select or type...</option>';
+  designationOptions.forEach(desig => {
+    const opt = document.createElement('option');
+    opt.value = desig;
+    opt.textContent = desig;
+    select.appendChild(opt);
+  });
+  if (currentValue && designationOptions.includes(currentValue)) {
+    select.value = currentValue;
+  }
+}
+
+function populateAllowanceTypeSelect(selectElement) {
+  if (!selectElement) return;
+  const currentValue = selectElement.value;
+  selectElement.innerHTML = '<option value="">Select type...</option>';
+  allowanceTypeOptions.forEach(type => {
+    const opt = document.createElement('option');
+    opt.value = type;
+    opt.textContent = type;
+    selectElement.appendChild(opt);
+  });
+  // Add an option for "Add New"
+  const addNewOpt = document.createElement('option');
+  addNewOpt.value = '__ADD_NEW__';
+  addNewOpt.textContent = '➕ Add New...';
+  addNewOpt.style.fontWeight = 'bold';
+  addNewOpt.style.color = '#4361ee';
+  selectElement.appendChild(addNewOpt);
+  if (currentValue && allowanceTypeOptions.includes(currentValue)) {
+    selectElement.value = currentValue;
+  }
+}
+
+// Handlers for select changes
+function onDepartmentSelect(select) {
+  // If user selected a value, we're good
+  // If they want to add new, the button handles it
+}
+
+function onDesignationSelect(select) {
+  // If user selected a value, we're good
+  // If they want to add new, the button handles it
+}
+
+/* ============== Add New Department ============== */
+
+function addNewDepartment() {
+  document.getElementById('newDepartmentName').value = '';
+  document.getElementById('addDepartmentModal').classList.add('show');
+}
+
+function closeDepartmentModal() {
+  document.getElementById('addDepartmentModal').classList.remove('show');
+}
+
+async function saveNewDepartment() {
+  const name = document.getElementById('newDepartmentName').value.trim();
+  if (!name) {
+    alert('Please enter a department name');
+    return;
+  }
+  try {
+    // Add to server (you may need to implement a server function for this)
+    // For now, we'll just add to local options
+    if (!departmentOptions.includes(name)) {
+      departmentOptions.push(name);
+      departmentOptions.sort();
+      populateDepartmentSelect();
+      document.getElementById('empDepartment').value = name;
+      showToast('Department added successfully', 'success');
+    } else {
+      showToast('Department already exists', 'warning');
+    }
+    closeDepartmentModal();
+  } catch (err) {
+    showToast('Error adding department: ' + err.message, 'error');
+  }
+}
+
+/* ============== Add New Designation ============== */
+
+function addNewDesignation() {
+  document.getElementById('newDesignationName').value = '';
+  document.getElementById('addDesignationModal').classList.add('show');
+}
+
+function closeDesignationModal() {
+  document.getElementById('addDesignationModal').classList.remove('show');
+}
+
+async function saveNewDesignation() {
+  const name = document.getElementById('newDesignationName').value.trim();
+  if (!name) {
+    alert('Please enter a designation name');
+    return;
+  }
+  try {
+    if (!designationOptions.includes(name)) {
+      designationOptions.push(name);
+      designationOptions.sort();
+      populateDesignationSelect();
+      document.getElementById('empDesignation').value = name;
+      showToast('Designation added successfully', 'success');
+    } else {
+      showToast('Designation already exists', 'warning');
+    }
+    closeDesignationModal();
+  } catch (err) {
+    showToast('Error adding designation: ' + err.message, 'error');
+  }
+}
+
+/* ============== Add New Allowance Type ============== */
+
+function addNewAllowanceType(selectElement) {
+  const name = prompt('Enter new allowance type name:');
+  if (!name || name.trim() === '') return;
+  const trimmed = name.trim();
+  if (!allowanceTypeOptions.includes(trimmed)) {
+    allowanceTypeOptions.push(trimmed);
+    allowanceTypeOptions.sort();
+    populateAllowanceTypeSelect(selectElement);
+    selectElement.value = trimmed;
+    showToast('Allowance type added successfully', 'success');
+  } else {
+    showToast('Allowance type already exists', 'warning');
+  }
 }
 
 async function getEmployeesFromServer() {
@@ -75,14 +252,23 @@ async function showAddEmployeeModal(editData) {
   const modal = document.getElementById('employeeModal');
   if (!modal) return;
 
+  // Load dropdown options if not loaded
+  if (departmentOptions.length === 0) {
+    await loadDropdownOptions();
+  }
+
   const isEdit = !!editData;
   document.getElementById('employeeModalTitle').textContent = isEdit ? 'Edit Employee' : 'Add Employee';
 
   // Clear fields
-  ['empStaffNumber','empName','empDepartment','empDesignation','empEmail','empSSNIT','empGhanaCard','empBasicSalary',
+  ['empStaffNumber','empName','empEmail','empSSNIT','empGhanaCard','empBasicSalary',
    'empEmployeePFRate','empEmployerPFRate','empTaxRelief','empLoanMonthly'].forEach(id=>{
     const el = document.getElementById(id); if (el) el.value = '';
   });
+
+  // Reset selects to default
+  document.getElementById('empDepartment').value = '';
+  document.getElementById('empDesignation').value = '';
 
   // clear allowances
   document.getElementById('empAllowanceList').innerHTML = '';
@@ -107,8 +293,27 @@ async function showAddEmployeeModal(editData) {
     // populate from editData (client-shaped)
     document.getElementById('empStaffNumber').value = editData.staff || '';
     document.getElementById('empName').value = editData.name || '';
-    document.getElementById('empDepartment').value = editData.department || '';
-    document.getElementById('empDesignation').value = editData.designation || '';
+    
+    // Set department if exists in options
+    if (editData.department && departmentOptions.includes(editData.department)) {
+      document.getElementById('empDepartment').value = editData.department;
+    } else if (editData.department) {
+      // Add it to options if it doesn't exist
+      departmentOptions.push(editData.department);
+      departmentOptions.sort();
+      populateDepartmentSelect();
+      document.getElementById('empDepartment').value = editData.department;
+    }
+    
+    if (editData.designation && designationOptions.includes(editData.designation)) {
+      document.getElementById('empDesignation').value = editData.designation;
+    } else if (editData.designation) {
+      designationOptions.push(editData.designation);
+      designationOptions.sort();
+      populateDesignationSelect();
+      document.getElementById('empDesignation').value = editData.designation;
+    }
+    
     document.getElementById('empEmail').value = editData.email || '';
     document.getElementById('empSSNIT').value = editData.ssnit || '';
     document.getElementById('empGhanaCard').value = editData.ghanaCard || '';
@@ -219,7 +424,23 @@ async function saveEmployee() {
   // gather allowances from modal
   const allowances = [];
   document.querySelectorAll('#empAllowanceList .allowance-row').forEach(row => {
-    const type = (row.querySelector('.emp-allowance-type')?.value || '').trim();
+    const typeSelect = row.querySelector('.emp-allowance-type');
+    let type = (typeSelect?.value || '').trim();
+    // Check if "Add New" was selected
+    if (type === '__ADD_NEW__') {
+      const newType = prompt('Enter new allowance type:');
+      if (newType && newType.trim()) {
+        type = newType.trim();
+        if (!allowanceTypeOptions.includes(type)) {
+          allowanceTypeOptions.push(type);
+          allowanceTypeOptions.sort();
+          populateAllowanceTypeSelect(typeSelect);
+        }
+        typeSelect.value = type;
+      } else {
+        return; // Skip this row
+      }
+    }
     const amt = parseFloat(row.querySelector('.emp-allowance-amount')?.value) || 0;
     if (type && amt > 0) allowances.push({ type, amount: amt });
   });
@@ -320,16 +541,36 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   const container = document.getElementById('empAllowanceList');
   if (!container) return;
 
+  // Make sure allowance types are loaded
+  if (allowanceTypeOptions.length === 0) {
+    loadDropdownOptions();
+  }
+
   const row = document.createElement('div');
   row.className = 'allowance-row';
   row.style.cssText = 'display:flex; gap:8px; align-items:center;';
 
-  const select = document.createElement('input');
-  select.type = 'text';
+  const select = document.createElement('select');
   select.className = 'emp-allowance-type';
-  select.placeholder = 'Type (e.g. Housing)';
-  select.value = type;
-  select.style.cssText = 'flex:1; padding:6px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px;';
+  select.style.cssText = 'flex:1; padding:4px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px; background:#fff;';
+  select.onchange = function() {
+    if (this.value === '__ADD_NEW__') {
+      addNewAllowanceType(this);
+    }
+    recalcPayrollPreviewFromEmployeeModal();
+  };
+  
+  // Populate select with options
+  populateAllowanceTypeSelect(select);
+  if (type && allowanceTypeOptions.includes(type)) {
+    select.value = type;
+  } else if (type) {
+    // Add the type if it doesn't exist
+    allowanceTypeOptions.push(type);
+    allowanceTypeOptions.sort();
+    populateAllowanceTypeSelect(select);
+    select.value = type;
+  }
 
   const amt = document.createElement('input');
   amt.type = 'number';
@@ -338,7 +579,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   amt.step = '0.01';
   amt.min = '0';
   amt.value = amount;
-  amt.style.cssText = 'width:120px; padding:6px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px;';
+  amt.style.cssText = 'width:120px; padding:4px 8px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px;';
   amt.oninput = recalcPayrollPreviewFromEmployeeModal;
 
   const removeBtn = document.createElement('button');
@@ -421,6 +662,7 @@ async function autoFillEmployeePayrollDefaults(staffNumber) {
     toggleEmployeeTaxReliefField();
     toggleEmployeeLoanFields();
 
+    // Load allowances
     const allowances = await API.getAllowancesByStaff(staffNumber).catch(()=>[]);
     if (allowances && allowances.length > 0) {
       document.getElementById('empHasAllowances').checked = true;
@@ -520,7 +762,9 @@ function recalcPayrollPreviewFromEmployeeModal() {
   // allowances
   const allowances = [];
   document.querySelectorAll('#empAllowanceList .allowance-row').forEach(row => {
-    const type = (row.querySelector('.emp-allowance-type')?.value || '').trim();
+    const typeSelect = row.querySelector('.emp-allowance-type');
+    let type = (typeSelect?.value || '').trim();
+    if (type === '__ADD_NEW__') type = '';
     const amt = parseFloat(row.querySelector('.emp-allowance-amount')?.value) || 0;
     if (type && amt > 0) allowances.push({ type, amount: amt });
   });
@@ -623,3 +867,11 @@ window.toggleEmployeeAllowanceField = toggleEmployeeAllowanceField;
 window.toggleEmployeeLoanFields = toggleEmployeeLoanFields;
 window.addEmployeeAllowanceRow = addEmployeeAllowanceRow;
 window.recalcPayrollPreviewFromEmployeeModal = recalcPayrollPreviewFromEmployeeModal;
+window.addNewDepartment = addNewDepartment;
+window.closeDepartmentModal = closeDepartmentModal;
+window.saveNewDepartment = saveNewDepartment;
+window.addNewDesignation = addNewDesignation;
+window.closeDesignationModal = closeDesignationModal;
+window.saveNewDesignation = saveNewDesignation;
+window.onDepartmentSelect = onDepartmentSelect;
+window.onDesignationSelect = onDesignationSelect;
