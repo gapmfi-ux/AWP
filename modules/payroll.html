@@ -1,86 +1,63 @@
-<!-- modules/payroll.html -->
+<!-- Payroll Module -->
 <div class="payroll-container">
-  <!-- Header -->
   <div class="payroll-header">
-    <h2><i class="fas fa-money-check-alt"></i> Payroll</h2>
+    <h2><i class="fas fa-calculator"></i> Payroll Management</h2>
   </div>
 
   <!-- Controls Row -->
   <div class="payroll-controls-row">
     <div class="payroll-controls-left">
-      <button class="btn-primary" onclick="showAddPayModal(); loadPayrollRows()">
-        <i class="fas fa-plus"></i> Add Employee Pay
+      <button class="btn-primary" onclick="processPayroll()">
+        <i class="fas fa-play"></i> Run Payroll
+      </button>
+      <button class="btn-secondary" onclick="loadPayrollPeriod()">
+        <i class="fas fa-sync"></i> Load Period
+      </button>
+      <button class="btn-outline" onclick="printPayroll()">
+        <i class="fas fa-print"></i> Print
       </button>
     </div>
     <div class="payroll-controls-right">
-      <button class="btn-secondary" onclick="runPayrollHandler()">
-        <i class="fas fa-play"></i> Run Payroll
+      <label for="payPeriodSelect">Pay Period:</label>
+      <input type="month" id="payPeriodSelect" onchange="loadPayrollPeriod()">
+      <button class="btn-secondary" onclick="deletePayrollPeriod()" style="background:#fee2e2; color:#dc2626;">
+        <i class="fas fa-trash"></i>
       </button>
-      <label for="payPeriod">Pay Period:</label>
-      <input type="month" id="payPeriod" onchange="loadPayrollRows()">
-      <span style="font-size:12px;color:#718096;margin-left:4px;">
-        <i class="fas fa-info-circle"></i> Click row for payslip
-      </span>
     </div>
   </div>
 
   <!-- Table -->
   <div class="payroll-table-wrapper">
-    <table class="payroll-table">
+    <table class="payroll-table" id="payrollTable">
       <thead>
         <tr>
-          <th>Staff #</th>
-          <th>Name</th>
-          <th>Designation</th>
-          <th style="text-align:right;min-width:80px;">Basic Salary</th>
-          <th style="text-align:right;min-width:70px;">Allowances</th>
-          <th style="text-align:right;min-width:70px;">Gross Salary</th>
-          <th style="text-align:right;min-width:70px;">Employee Pension</th>
-          <th style="text-align:right;min-width:60px;">Employee Pf</th>
-          <th style="text-align:right;min-width:60px;">Tax Relief</th>
-          <th style="text-align:right;min-width:70px;">Taxable Income</th>
-          <th style="text-align:right;min-width:50px;">Paye</th>
-          <th style="text-align:right;min-width:70px;">Total Deduction</th>
-          <th style="text-align:right;min-width:60px;">Net Pay</th>
-          <th style="text-align:right;min-width:70px;">Employer 13%</th>
-          <th style="text-align:right;min-width:60px;">Employer Pf</th>
-          <th style="text-align:right;min-width:70px;">Monthly Loan</th>
+          <th style="min-width:70px;">Staff #</th>
+          <th style="min-width:120px;">Name</th>
+          <th style="min-width:100px;">Designation</th>
+          <th style="min-width:90px; text-align:right;">Basic Salary</th>
+          <th style="min-width:90px; text-align:right;">Allowances</th>
+          <th style="min-width:90px; text-align:right;">Gross Salary</th>
+          <th style="min-width:90px; text-align:right;">Emp Pension (5.5%)</th>
+          <th style="min-width:90px; text-align:right;">Emp PF (10%)</th>
+          <th style="min-width:80px; text-align:right;">Tax Relief</th>
+          <th style="min-width:90px; text-align:right;">Taxable Income</th>
+          <th style="min-width:80px; text-align:right;">PAYE</th>
+          <th style="min-width:90px; text-align:right;">Total Deduction</th>
+          <th style="min-width:90px; text-align:right;">Net Pay</th>
+          <th style="min-width:90px; text-align:right;">Emp Pension (13%)</th>
+          <th style="min-width:90px; text-align:right;">Emp PF (5%)</th>
+          <th style="min-width:80px; text-align:right;">Monthly Loan</th>
         </tr>
       </thead>
       <tbody id="payrollTableBody">
         <tr>
           <td colspan="16" class="payroll-table-empty">
-            <i class="fas fa-receipt"></i>
-            <p>No payroll records found</p>
-            <span class="sub-text">Click "Add Employee Pay" to get started</span>
+            <i class="fas fa-money-check-alt"></i>
+            <p>No payroll data</p>
+            <span class="sub-text">Select a pay period or run payroll</span>
           </td>
         </tr>
       </tbody>
     </table>
-  </div>
-</div>
-
-<!-- Add/Edit Payroll Modal (kept for backwards compatibility; Add-pay has been moved into employee modal) -->
-<div class="payroll-modal" id="addPayModal">
-  <div class="payroll-modal-content" style="max-width: 860px;">
-    <!-- Header -->
-    <div class="payroll-modal-header">
-      <h3><i class="fas fa-user-plus"></i> <span id="payModalTitle">Add Employee Pay</span></h3>
-      <button class="payroll-modal-close" onclick="closeAddPayModal()">&times;</button>
-    </div>
-    <!-- Body -->
-    <div class="payroll-modal-body" style="padding: 14px 20px 12px 20px;">
-      <div class="form-hint" style="margin-bottom: 10px; padding: 6px 12px; font-size: 11px;">
-        <i class="fas fa-info-circle"></i> Enter staff number and basic salary. Calculations update automatically.
-      </div>
-      <div id="addPayModalBody">
-        <!-- The add-pay modal content will be filled/populated by showAddPayModal which still supports showing employee-pay details when called from Payroll page -->
-        <p style="color:#718096;">Use the Employee modal to edit payroll snapshot. When opened here, the same modal will appear.</p>
-      </div>
-    </div>
-    <!-- Footer -->
-    <div class="payroll-modal-footer" style="padding: 10px 20px;">
-      <button class="btn-secondary" onclick="closeAddPayModal()" style="padding: 5px 14px; font-size: 12px;">Close</button>
-    </div>
   </div>
 </div>
