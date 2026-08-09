@@ -114,44 +114,6 @@
   background: #e2e8f0;
 }
 
-.btn-danger {
-  background: #e53e3e;
-  color: #fff;
-  padding: 7px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.15s ease;
-}
-
-.btn-danger:hover {
-  background: #c53030;
-}
-
-.btn-success {
-  background: #38a169;
-  color: #fff;
-  padding: 7px 16px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: background 0.15s ease;
-}
-
-.btn-success:hover {
-  background: #2f855a;
-}
-
 .btn-outline {
   background: transparent;
   color: #4a5568;
@@ -172,22 +134,6 @@
   border-color: #cbd5e0;
 }
 
-.btn-edit-icon {
-  background: none;
-  border: none;
-  color: #718096;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-  font-size: 14px;
-}
-
-.btn-edit-icon:hover {
-  background: #edf2f7;
-  color: #4361ee;
-}
-
 /* ============================================
    PAYROLL TABLE
    ============================================ */
@@ -199,7 +145,7 @@
 }
 
 .payroll-table {
-  width: 110%;
+  width: 100%;
   border-collapse: collapse;
   font-size: 13px;
   background: #fff;
@@ -280,22 +226,6 @@
 
 .payroll-table .col-number.positive {
   color: #38a169;
-}
-
-.payroll-table .col-center {
-  text-align: center;
-}
-
-/* Row click hint */
-.payroll-table tbody tr .click-hint {
-  display: none;
-  font-size: 10px;
-  color: #a0aec0;
-  margin-left: 6px;
-}
-
-.payroll-table tbody tr:hover .click-hint {
-  display: inline;
 }
 
 /* Empty state */
