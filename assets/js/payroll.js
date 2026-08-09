@@ -149,34 +149,39 @@ async function processPayroll() {
   const period = periodInput.value;
   if (!period) {
     showToast('Please select a pay period first', 'warning');
-    // Focus the month selector
     periodInput.focus();
     return;
   }
   
-  // Confirm before processing
-  if (!confirm(`Are you sure you want to process payroll for ${period}? This will calculate and save payroll for all employees.`)) {
-    return;
-  }
-  
-  try {
-    showLoadingModal('Processing payroll...');
-    const response = await API.processPayrollRun(period);
-    
-    if (response && response.success) {
-      showToast(`Payroll processed successfully for ${period}`, 'success');
-      // Reload the saved data
-      await loadPayrollPeriod();
-    } else {
-      const errorMsg = response?.error || 'Failed to process payroll';
-      showToast(errorMsg, 'error');
+  // Show confirmation modal
+  showConfirmModal(
+    'Confirm Payroll Processing',
+    `Are you sure you want to process payroll for <strong>${period}</strong>?<br><br>This will save payroll for all employees.`,
+    async function() {
+      try {
+        showLoadingModal('Processing payroll...');
+        const response = await API.processPayrollRun(period);
+        
+        if (response && response.success) {
+          showToast(`Payroll processed successfully for ${period}`, 'success');
+          await loadPayrollPeriod();
+        } else {
+          const errorMsg = response?.error || 'Failed to process payroll';
+          showToast(errorMsg, 'error');
+        }
+      } catch (error) {
+        console.error('Error processing payroll:', error);
+        showToast('Failed to process payroll: ' + error.message, 'error');
+      } finally {
+        hideLoadingModal();
+        closeConfirmModal();
+      }
+    },
+    function() {
+      // Cancel callback
+      closeConfirmModal();
     }
-  } catch (error) {
-    console.error('Error processing payroll:', error);
-    showToast('Failed to process payroll: ' + error.message, 'error');
-  } finally {
-    hideLoadingModal();
-  }
+  );
 }
 
 /* ============== Delete Payroll Period ============== */
@@ -188,40 +193,218 @@ async function deletePayrollPeriod() {
     return;
   }
   
-  if (!confirm(`Are you sure you want to delete all payroll records for ${period}? This action cannot be undone.`)) {
-    return;
+  // Show confirmation modal
+  showConfirmModal(
+    'Confirm Delete',
+    `Are you sure you want to delete all payroll records for <strong>${period}</strong>?<br><br>This action cannot be undone.`,
+    async function() {
+      try {
+        showLoadingModal('Deleting payroll records...');
+        
+        const records = await API.getPayrollRunsByPeriod(period);
+        if (!records || records.length === 0) {
+          showToast('No records found for this period', 'info');
+          closeConfirmModal();
+          return;
+        }
+        
+        const runId = records[0]['Run ID'] || records[0].runId;
+        if (runId) {
+          const response = await API.deletePayrollRun(runId);
+          if (response && response.success) {
+            showToast(`Deleted payroll records for ${period}`, 'success');
+            currentPayrollData = [];
+            await loadPayrollPreview();
+          } else {
+            showToast(response?.error || 'Failed to delete payroll', 'error');
+          }
+        } else {
+          showToast('Could not find Run ID for this period', 'error');
+        }
+      } catch (error) {
+        console.error('Error deleting payroll:', error);
+        showToast('Failed to delete payroll: ' + error.message, 'error');
+      } finally {
+        hideLoadingModal();
+        closeConfirmModal();
+      }
+    },
+    function() {
+      closeConfirmModal();
+    }
+  );
+}
+
+/* ============================================
+   CONFIRM MODAL
+   ============================================ */
+
+function showConfirmModal(title, message, onConfirm, onCancel) {
+  // Check if modal already exists
+  let modal = document.getElementById('confirmModal');
+  
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'confirmModal';
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+          <h3 id="confirmModalTitle">Confirm</h3>
+          <button class="confirm-modal-close" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div class="confirm-modal-body" id="confirmModalBody">
+          Are you sure?
+        </div>
+        <div class="confirm-modal-footer">
+          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
+          <button class="btn-primary" id="confirmOkBtn">Confirm</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Add styles if not already present
+    if (!document.getElementById('confirmModalStyles')) {
+      const styles = document.createElement('style');
+      styles.id = 'confirmModalStyles';
+      styles.textContent = `
+        .confirm-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(26, 32, 44, 0.55);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          padding: 20px;
+          animation: modalFadeIn 0.2s ease;
+        }
+        .confirm-modal.show {
+          display: flex;
+        }
+        .confirm-modal-content {
+          background: #ffffff;
+          border-radius: 12px;
+          width: 100%;
+          max-width: 480px;
+          max-height: 90vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          display: flex;
+          flex-direction: column;
+        }
+        .confirm-modal-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid #edf2f7;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-shrink: 0;
+          background: #fafbfc;
+        }
+        .confirm-modal-header h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0;
+        }
+        .confirm-modal-close {
+          background: none;
+          border: none;
+          font-size: 22px;
+          color: #a0aec0;
+          cursor: pointer;
+          padding: 0 4px;
+          line-height: 1;
+        }
+        .confirm-modal-close:hover {
+          color: #2d3748;
+        }
+        .confirm-modal-body {
+          padding: 24px 20px;
+          font-size: 14px;
+          color: #2d3748;
+          line-height: 1.6;
+        }
+        .confirm-modal-body strong {
+          color: #4361ee;
+        }
+        .confirm-modal-footer {
+          padding: 12px 20px;
+          border-top: 1px solid #edf2f7;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          flex-shrink: 0;
+          background: #fafbfc;
+        }
+        .confirm-modal-footer .btn-primary,
+        .confirm-modal-footer .btn-secondary {
+          padding: 8px 24px;
+          font-size: 14px;
+        }
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `;
+      document.head.appendChild(styles);
+    }
   }
   
-  try {
-    showLoadingModal('Deleting payroll records...');
-    
-    // Get all records for this period
-    const records = await API.getPayrollRunsByPeriod(period);
-    if (!records || records.length === 0) {
-      showToast('No records found for this period', 'info');
-      return;
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalBody').innerHTML = message;
+  
+  // Store callbacks
+  modal._onConfirm = onConfirm || function() {};
+  modal._onCancel = onCancel || function() {};
+  
+  // Set up button handlers
+  const okBtn = document.getElementById('confirmOkBtn');
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  const closeBtn = modal.querySelector('.confirm-modal-close');
+  
+  // Remove old listeners by cloning
+  const newOkBtn = okBtn.cloneNode(true);
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newCloseBtn = closeBtn.cloneNode(true);
+  
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+  
+  newOkBtn.addEventListener('click', function() {
+    if (modal._onConfirm) modal._onConfirm();
+  });
+  
+  newCancelBtn.addEventListener('click', function() {
+    if (modal._onCancel) modal._onCancel();
+  });
+  
+  newCloseBtn.addEventListener('click', function() {
+    if (modal._onCancel) modal._onCancel();
+  });
+  
+  // Close on backdrop click
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      if (modal._onCancel) modal._onCancel();
     }
-    
-    // Get the run ID from the first record
-    const runId = records[0]['Run ID'] || records[0].runId;
-    if (runId) {
-      const response = await API.deletePayrollRun(runId);
-      if (response && response.success) {
-        showToast(`Deleted payroll records for ${period}`, 'success');
-        currentPayrollData = [];
-        // Reload preview
-        await loadPayrollPreview();
-      } else {
-        showToast(response?.error || 'Failed to delete payroll', 'error');
-      }
-    } else {
-      showToast('Could not find Run ID for this period', 'error');
-    }
-  } catch (error) {
-    console.error('Error deleting payroll:', error);
-    showToast('Failed to delete payroll: ' + error.message, 'error');
-  } finally {
-    hideLoadingModal();
+  });
+  
+  modal.classList.add('show');
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirmModal');
+  if (modal) {
+    modal.classList.remove('show');
   }
 }
 
@@ -243,9 +426,6 @@ function renderPayrollTable(data, isPreview = false) {
     `;
     return;
   }
-  
-  // Check if this is preview data (has Allowances array) or saved data
-  const isPreviewData = data.some(record => record.Allowances && Array.isArray(record.Allowances));
   
   tbody.innerHTML = data.map((record, index) => {
     // Extract values from record
@@ -279,14 +459,10 @@ function renderPayrollTable(data, isPreview = false) {
       allowancesDisplay = '';
     }
     
-    // Add preview badge if this is calculated preview
-    const previewBadge = isPreview || isPreviewData ? 
-      `<span style="font-size:8px; background:#dbe4ff; color:#4361ee; padding:1px 6px; border-radius:10px; margin-left:4px;">Preview</span>` : '';
-    
     return `
       <tr>
         <td class="col-staff">${escapeHtml(staffNumber)}</td>
-        <td class="col-name">${escapeHtml(fullName)}${previewBadge}</td>
+        <td class="col-name">${escapeHtml(fullName)}</td>
         <td>${escapeHtml(designation)}</td>
         <td class="col-number">${formatMoney(basicSalary)}</td>
         <td class="col-number" title="${escapeHtml(allowancesDisplay)}">${formatMoney(totalAllowances)}</td>
@@ -431,3 +607,5 @@ window.loadPayrollPeriod = loadPayrollPeriod;
 window.deletePayrollPeriod = deletePayrollPeriod;
 window.printPayroll = printPayroll;
 window.renderPayrollTable = renderPayrollTable;
+window.showConfirmModal = showConfirmModal;
+window.closeConfirmModal = closeConfirmModal;
