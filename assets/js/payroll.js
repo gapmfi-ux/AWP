@@ -425,6 +425,8 @@ function closeConfirmModal() {
 
 /* ============== Render Payroll Table - COMPACT ============== */
 
+/* ============== Render Payroll Table - COMPACT WITH ORIGINAL NAMES ============== */
+
 function renderPayrollTable(data, isPreview = false) {
   const tbody = document.getElementById('payrollTableBody');
   if (!tbody) return;
@@ -449,15 +451,15 @@ function renderPayrollTable(data, isPreview = false) {
     const basicSalary = parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0;
     const totalAllowances = parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0;
     const grossSalary = parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0;
-    const employeePension = parseFloat(record['Employee Pension (5.5%)'] || record.employeePension || 0) || 0;
-    const employeePf = parseFloat(record['Employee PF'] || record.employeePf || 0) || 0;
+    const employeePension = parseFloat(record['Employee Pension(5.5%)'] || record.employeePension || 0) || 0;
+    const employeePf = parseFloat(record['Employee PF(10%)'] || record.employeePf || 0) || 0;
     const taxRelief = parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0;
     const taxableIncome = parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0;
     const paye = parseFloat(record['PAYE'] || record.paye || 0) || 0;
     const totalDeduction = parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0;
     const netPay = parseFloat(record['Net Pay'] || record.netPay || 0) || 0;
-    const employerPension = parseFloat(record['Employer Pension (13%)'] || record.employerPension || 0) || 0;
-    const employerPf = parseFloat(record['Employer PF'] || record.employerPf || 0) || 0;
+    const employerPension = parseFloat(record['Employer Pension(13%)'] || record.employerPension || 0) || 0;
+    const employerPf = parseFloat(record['Employer PF(5%)'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
     
     return `
