@@ -9,15 +9,11 @@ let currentPeriod = '';
 /* ============== Initialization ============== */
 
 function initPayroll() {
-  // Set default period to empty (Select Month)
   currentPeriod = '';
-  
   const periodInput = document.getElementById('payPeriodSelect');
   if (periodInput) {
     periodInput.value = '';
   }
-  
-  // Load all employees and show calculated payroll details
   loadPayrollPreview();
 }
 
@@ -27,7 +23,6 @@ async function loadPayrollPreview() {
   try {
     showLoadingModal('Loading payroll preview...');
     
-    // Get all employees
     const employees = await API.getEmployees().catch(() => []);
     
     if (!employees || employees.length === 0) {
@@ -38,7 +33,6 @@ async function loadPayrollPreview() {
       return;
     }
     
-    // Calculate payroll for each employee
     const payrollData = [];
     
     for (const emp of employees) {
@@ -48,9 +42,8 @@ async function loadPayrollPreview() {
       const basicSalary = parseFloat(emp['Basic Salary'] || emp.basicSalary || 0) || 0;
       const employeePFrate = parseFloat(emp['Employee PF Rate (%)'] || emp.employeePFrate || 0) || 0;
       const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPFrate || 0) || 0;
-      const taxRelief = parseFloat(emp['Tax Relief'] || emp.taxRelief || 0) || 0;
+      const taxRelief = parseFloat(emp['Tax Relief Amount'] || emp.taxRelief || 0) || 0;
       
-      // Get allowances for this employee
       let allowances = [];
       try {
         allowances = await API.getAllowancesByStaff(staffNumber).catch(() => []);
@@ -58,7 +51,6 @@ async function loadPayrollPreview() {
         allowances = [];
       }
       
-      // Calculate payroll
       const calc = computePayrollRow({
         basicSalary: basicSalary,
         allowances: allowances,
@@ -76,15 +68,15 @@ async function loadPayrollPreview() {
         'Basic Salary': basicSalary,
         'Total Allowances': calc.totalAllowances,
         'Gross Salary': calc.grossSalary,
-        'Employee Pension': calc.employeePension,
-        'PF 10% Amount': calc.pf10Amount,
+        'Employee Pension (5.5%)': calc.employeePension,
+        'Employee PF': calc.employeePf,
         'Tax Relief': taxRelief,
         'Taxable Income': calc.taxableIncome,
         'PAYE': calc.paye,
         'Total Deduction': calc.totalDeduction,
         'Net Pay': calc.netPay,
-        'Employer 13% Amount': calc.employerPension,
-        'Employer PF Amount': calc.employerPf,
+        'Employer Pension (13%)': calc.employerPension,
+        'Employer PF': calc.employerPf,
         'Monthly Loan': 0,
         'Allowances': allowances
       });
@@ -110,7 +102,6 @@ async function loadPayrollPeriod() {
   
   const period = periodInput.value;
   
-  // If no period selected, show calculated preview
   if (!period) {
     currentPeriod = '';
     await loadPayrollPreview();
@@ -128,7 +119,6 @@ async function loadPayrollPeriod() {
       renderPayrollTable(response, false);
       showToast(`Loaded saved payroll for ${period}`, 'success');
     } else {
-      // No saved payroll - show calculated preview
       showToast(`No saved payroll found for ${period}. Showing calculated preview.`, 'info');
       await loadPayrollPreview();
     }
@@ -140,7 +130,7 @@ async function loadPayrollPeriod() {
   }
 }
 
-/* ============== Process / Run Payroll ============== */
+/* ============== Process / Run Payroll - SAVE CURRENT TABLE DATA ============== */
 
 async function processPayroll() {
   const periodInput = document.getElementById('payPeriodSelect');
@@ -153,25 +143,58 @@ async function processPayroll() {
     return;
   }
   
-  // Show confirmation modal
+  // Check if we have data to save
+  if (!currentPayrollData || currentPayrollData.length === 0) {
+    showToast('No payroll data to save. Load employees first.', 'warning');
+    return;
+  }
+  
   showConfirmModal(
     'Confirm Payroll Processing',
-    `Are you sure you want to process payroll for <strong>${period}</strong>?<br><br>This will save payroll for all employees.`,
+    `Are you sure you want to save payroll for <strong>${period}</strong>?<br><br>This will save the current payroll calculations to the sheet.`,
     async function() {
       try {
-        showLoadingModal('Processing payroll...');
-        const response = await API.processPayrollRun(period);
+        showLoadingModal('Saving payroll...');
         
-        if (response && response.success) {
-          showToast(`Payroll processed successfully for ${period}`, 'success');
+        // Save each record from current table
+        let savedCount = 0;
+        for (const record of currentPayrollData) {
+          const payrollData = {
+            staffNumber: record['Staff Number'] || '',
+            fullName: record['Full Name'] || '',
+            designation: record['Designation'] || '',
+            payPeriod: period,
+            basicSalary: parseFloat(record['Basic Salary'] || 0) || 0,
+            allowances: record['Allowances'] || [],
+            totalAllowances: parseFloat(record['Total Allowances'] || 0) || 0,
+            grossSalary: parseFloat(record['Gross Salary'] || 0) || 0,
+            employeePension: parseFloat(record['Employee Pension (5.5%)'] || 0) || 0,
+            employeePf: parseFloat(record['Employee PF'] || 0) || 0,
+            taxRelief: parseFloat(record['Tax Relief'] || 0) || 0,
+            taxableIncome: parseFloat(record['Taxable Income'] || 0) || 0,
+            paye: parseFloat(record['PAYE'] || 0) || 0,
+            totalDeduction: parseFloat(record['Total Deduction'] || 0) || 0,
+            netPay: parseFloat(record['Net Pay'] || 0) || 0,
+            employerPension: parseFloat(record['Employer Pension (13%)'] || 0) || 0,
+            employerPf: parseFloat(record['Employer PF'] || 0) || 0,
+            loanMonthly: parseFloat(record['Monthly Loan'] || 0) || 0
+          };
+          
+          const response = await API.savePayrollRun(payrollData);
+          if (response && response.success !== false) {
+            savedCount++;
+          }
+        }
+        
+        if (savedCount > 0) {
+          showToast(`Payroll saved successfully for ${period} (${savedCount} records)`, 'success');
           await loadPayrollPeriod();
         } else {
-          const errorMsg = response?.error || 'Failed to process payroll';
-          showToast(errorMsg, 'error');
+          showToast('Failed to save payroll records', 'error');
         }
       } catch (error) {
-        console.error('Error processing payroll:', error);
-        showToast('Failed to process payroll: ' + error.message, 'error');
+        console.error('Error saving payroll:', error);
+        showToast('Failed to save payroll: ' + error.message, 'error');
       } finally {
         hideLoadingModal();
         closeConfirmModal();
@@ -400,7 +423,7 @@ function closeConfirmModal() {
   }
 }
 
-/* ============== Render Payroll Table ============== */
+/* ============== Render Payroll Table - COMPACT ============== */
 
 function renderPayrollTable(data, isPreview = false) {
   const tbody = document.getElementById('payrollTableBody');
@@ -420,35 +443,22 @@ function renderPayrollTable(data, isPreview = false) {
   }
   
   tbody.innerHTML = data.map((record, index) => {
-    // Extract values from record - using matching column names
     const staffNumber = record['Staff Number'] || record.staffNumber || '';
     const fullName = record['Full Name'] || record.fullName || '';
     const designation = record['Designation'] || record.designation || '';
     const basicSalary = parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0;
     const totalAllowances = parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0;
     const grossSalary = parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0;
-    const employeePension = parseFloat(record['Employee Pension'] || record.employeePension || 0) || 0;
-    const pf10Amount = parseFloat(record['PF 10% Amount'] || record.pf10Amount || 0) || 0;
+    const employeePension = parseFloat(record['Employee Pension (5.5%)'] || record.employeePension || 0) || 0;
+    const employeePf = parseFloat(record['Employee PF'] || record.employeePf || 0) || 0;
     const taxRelief = parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0;
     const taxableIncome = parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0;
     const paye = parseFloat(record['PAYE'] || record.paye || 0) || 0;
     const totalDeduction = parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0;
     const netPay = parseFloat(record['Net Pay'] || record.netPay || 0) || 0;
-    const employerPension = parseFloat(record['Employer 13% Amount'] || record.employerPension || 0) || 0;
-    const employerPf = parseFloat(record['Employer PF Amount'] || record.employerPf || 0) || 0;
+    const employerPension = parseFloat(record['Employer Pension (13%)'] || record.employerPension || 0) || 0;
+    const employerPf = parseFloat(record['Employer PF'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
-    
-    // Get allowances JSON for display
-    let allowancesDisplay = '';
-    try {
-      const allowancesRaw = record['Allowances'] || record.allowances || '[]';
-      const allowances = typeof allowancesRaw === 'string' ? JSON.parse(allowancesRaw) : allowancesRaw;
-      if (Array.isArray(allowances) && allowances.length > 0) {
-        allowancesDisplay = allowances.map(a => `${a.type}: ${formatMoney(a.amount)}`).join(', ');
-      }
-    } catch (e) {
-      allowancesDisplay = '';
-    }
     
     return `
       <tr>
@@ -456,10 +466,10 @@ function renderPayrollTable(data, isPreview = false) {
         <td class="col-name">${escapeHtml(fullName)}</td>
         <td>${escapeHtml(designation)}</td>
         <td class="col-number">${formatMoney(basicSalary)}</td>
-        <td class="col-number" title="${escapeHtml(allowancesDisplay)}">${formatMoney(totalAllowances)}</td>
+        <td class="col-number">${formatMoney(totalAllowances)}</td>
         <td class="col-number positive">${formatMoney(grossSalary)}</td>
         <td class="col-number">${formatMoney(employeePension)}</td>
-        <td class="col-number">${formatMoney(pf10Amount)}</td>
+        <td class="col-number">${formatMoney(employeePf)}</td>
         <td class="col-number">${formatMoney(taxRelief)}</td>
         <td class="col-number">${formatMoney(taxableIncome)}</td>
         <td class="col-number negative">${formatMoney(paye)}</td>
@@ -473,10 +483,10 @@ function renderPayrollTable(data, isPreview = false) {
   }).join('');
 }
 
-/* ============== Print Function (placeholder) ============== */
+/* ============== Print Function ============== */
 
 function printPayroll() {
-  showToast('Print functionality coming soon', 'info');
+  window.print();
 }
 
 /* ============== Payroll Calculation Helpers ============== */
@@ -522,16 +532,15 @@ function calculatePAYE(taxableIncome) {
   return roundToTwo(totalTax);
 }
 
-function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
   const totalAllowances = allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0);
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
   const employeePension = roundToTwo(grossSalary * 0.055);
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-  const pf10Amount = roundToTwo(basicSalary * 0.10);
   const taxableIncome = Math.max(0, roundToTwo(grossSalary - employeePension - employeePf - (reliefAmount || 0)));
   const paye = calculatePAYE(taxableIncome);
   const netPay = roundToTwo(taxableIncome - paye);
-  const totalDeduction = roundToTwo(employeePension + employeePf + pf10Amount + paye + loanMonthly);
+  const totalDeduction = roundToTwo(employeePension + employeePf + paye + loanMonthly);
   const employerPension = roundToTwo(grossSalary * 0.13);
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
   const takeHomePay = roundToTwo(netPay - loanMonthly);
@@ -541,7 +550,6 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
     grossSalary,
     employeePension,
     employeePf,
-    pf10Amount,
     taxableIncome,
     paye,
     netPay,
