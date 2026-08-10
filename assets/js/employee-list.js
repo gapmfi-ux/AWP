@@ -17,15 +17,15 @@ async function loadDropdownOptions() {
     // Load departments from server
     const depts = await API.getAllDepartments().catch(() => []);
     departmentOptions = Array.isArray(depts) ? depts : [];
-    
+
     // Load designations from server
     const desigs = await API.getAllDesignations().catch(() => []);
     designationOptions = Array.isArray(desigs) ? desigs : [];
-    
+
     // Load allowance types from server
     const types = await API.getAllAllowanceTypes().catch(() => []);
     allowanceTypeOptions = Array.isArray(types) ? types : [];
-    
+
     populateDepartmentSelect();
     populateDesignationSelect();
   } catch (err) {
@@ -109,8 +109,10 @@ function toggleNewDepartmentField() {
 }
 
 function cancelNewDepartment() {
-  document.getElementById('newDepartmentField').style.display = 'none';
-  document.getElementById('newDepartmentInput').value = '';
+  const f = document.getElementById('newDepartmentField');
+  if (f) f.style.display = 'none';
+  const i = document.getElementById('newDepartmentInput');
+  if (i) i.value = '';
 }
 
 async function saveNewDepartment() {
@@ -127,7 +129,7 @@ async function saveNewDepartment() {
       cancelNewDepartment();
       return;
     }
-    
+
     // Add to local options
     departmentOptions.push(name);
     departmentOptions.sort();
@@ -153,8 +155,10 @@ function toggleNewDesignationField() {
 }
 
 function cancelNewDesignation() {
-  document.getElementById('newDesignationField').style.display = 'none';
-  document.getElementById('newDesignationInput').value = '';
+  const f = document.getElementById('newDesignationField');
+  if (f) f.style.display = 'none';
+  const i = document.getElementById('newDesignationInput');
+  if (i) i.value = '';
 }
 
 async function saveNewDesignation() {
@@ -171,7 +175,7 @@ async function saveNewDesignation() {
       cancelNewDesignation();
       return;
     }
-    
+
     // Add to local options
     designationOptions.push(name);
     designationOptions.sort();
@@ -189,7 +193,7 @@ async function saveNewDesignation() {
 function toggleNewAllowanceField(selectElement) {
   const row = selectElement.closest('.allowance-row');
   if (!row) return;
-  
+
   let newField = row.querySelector('.new-allowance-field');
   if (!newField) {
     newField = document.createElement('div');
@@ -217,14 +221,14 @@ function cancelNewAllowance(btn) {
 async function saveNewAllowance(btn) {
   const row = btn.closest('.allowance-row');
   if (!row) return;
-  
+
   const input = row.querySelector('.new-allowance-input');
-  const name = input.value.trim();
+  const name = (input.value || '').trim();
   if (!name) {
     showToast('Please enter an allowance type name', 'warning');
     return;
   }
-  
+
   try {
     if (allowanceTypeOptions.includes(name)) {
       showToast('Allowance type already exists', 'warning');
@@ -232,17 +236,17 @@ async function saveNewAllowance(btn) {
       if (field) field.remove();
       return;
     }
-    
+
     allowanceTypeOptions.push(name);
     allowanceTypeOptions.sort();
-    
+
     // Update the select in this row
     const select = row.querySelector('.emp-allowance-type');
     if (select) {
       populateAllowanceTypeSelect(select);
       select.value = name;
     }
-    
+
     showToast('Allowance type added successfully', 'success');
     const field = row.querySelector('.new-allowance-field');
     if (field) field.remove();
@@ -282,7 +286,7 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
     }
     recalcPayrollPreviewFromEmployeeModal();
   };
-  
+
   populateAllowanceTypeSelect(select);
   if (type && allowanceTypeOptions.includes(type)) {
     select.value = type;
@@ -320,6 +324,9 @@ function addEmployeeAllowanceRow(type = '', amount = '') {
   container.appendChild(row);
   recalcPayrollPreviewFromEmployeeModal();
 }
+
+/* ============== Get employees from server (normalized) ============== */
+
 async function getEmployeesFromServer() {
   try {
     showLoadingModal('Loading employees...');
@@ -404,25 +411,36 @@ async function showAddEmployeeModal(editData) {
   });
 
   // Reset selects to default
-  document.getElementById('empDepartment').value = '';
-  document.getElementById('empDesignation').value = '';
+  const deptSel = document.getElementById('empDepartment');
+  if (deptSel) deptSel.value = '';
+  const desigSel = document.getElementById('empDesignation');
+  if (desigSel) desigSel.value = '';
 
   // Hide new department/designation fields
   cancelNewDepartment();
   cancelNewDesignation();
 
   // clear allowances
-  document.getElementById('empAllowanceList').innerHTML = '';
-  document.getElementById('empAllowanceArea').style.display = 'none';
-  document.getElementById('empPFFieldsWrapper').style.display = 'none';
-  document.getElementById('empTaxReliefFieldWrapper').style.display = 'none';
-  document.getElementById('empLoanFieldWrapper').style.display = 'none';
+  const allowanceList = document.getElementById('empAllowanceList');
+  if (allowanceList) allowanceList.innerHTML = '';
+  const allowanceArea = document.getElementById('empAllowanceArea');
+  if (allowanceArea) allowanceArea.style.display = 'none';
+  const pfWrapper = document.getElementById('empPFFieldsWrapper');
+  if (pfWrapper) pfWrapper.style.display = 'none';
+  const taxWrapper = document.getElementById('empTaxReliefFieldWrapper');
+  if (taxWrapper) taxWrapper.style.display = 'none';
+  const loanWrapper = document.getElementById('empLoanFieldWrapper');
+  if (loanWrapper) loanWrapper.style.display = 'none';
 
   // reset toggles
-  document.getElementById('empHasPF').checked = false;
-  document.getElementById('empHasTaxRelief').checked = false;
-  document.getElementById('empHasAllowances').checked = false;
-  document.getElementById('empHasLoan').checked = false;
+  const hasPF = document.getElementById('empHasPF');
+  if (hasPF) hasPF.checked = false;
+  const hasTax = document.getElementById('empHasTaxRelief');
+  if (hasTax) hasTax.checked = false;
+  const hasAllow = document.getElementById('empHasAllowances');
+  if (hasAllow) hasAllow.checked = false;
+  const hasLoan = document.getElementById('empHasLoan');
+  if (hasLoan) hasLoan.checked = false;
 
   toggleEmployeePFFields();
   toggleEmployeeTaxReliefField();
@@ -434,7 +452,7 @@ async function showAddEmployeeModal(editData) {
     // populate from editData (client-shaped)
     document.getElementById('empStaffNumber').value = editData.staff || '';
     document.getElementById('empName').value = editData.name || '';
-    
+
     // Set department if exists in options
     if (editData.department && departmentOptions.includes(editData.department)) {
       document.getElementById('empDepartment').value = editData.department;
@@ -445,7 +463,7 @@ async function showAddEmployeeModal(editData) {
       populateDepartmentSelect();
       document.getElementById('empDepartment').value = editData.department;
     }
-    
+
     if (editData.designation && designationOptions.includes(editData.designation)) {
       document.getElementById('empDesignation').value = editData.designation;
     } else if (editData.designation) {
@@ -454,7 +472,7 @@ async function showAddEmployeeModal(editData) {
       populateDesignationSelect();
       document.getElementById('empDesignation').value = editData.designation;
     }
-    
+
     document.getElementById('empEmail').value = editData.email || '';
     document.getElementById('empSSNIT').value = editData.ssnit || '';
     document.getElementById('empGhanaCard').value = editData.ghanaCard || '';
@@ -539,50 +557,45 @@ async function editEmployee(staff) {
   }
 }
 
-/* ============== Save employee + automatic payroll ============== */
+/* ============== Save employee + allowances (NO payroll run creation) ============== */
 
 async function saveEmployee() {
-  const staff = document.getElementById('empStaffNumber').value.trim();
-  const name = document.getElementById('empName').value.trim();
+  const staff = (document.getElementById('empStaffNumber')?.value || '').trim();
+  const name = (document.getElementById('empName')?.value || '').trim();
 
   if (!staff || !name) {
     alert('Staff number and name are required');
     return;
   }
 
-  const department = document.getElementById('empDepartment').value.trim();
-  const designation = document.getElementById('empDesignation').value.trim();
-  const email = document.getElementById('empEmail').value.trim();
-  const ssnit = document.getElementById('empSSNIT').value.trim();
-  const ghanaCard = document.getElementById('empGhanaCard').value.trim();
+  const department = (document.getElementById('empDepartment')?.value || '').trim();
+  const designation = (document.getElementById('empDesignation')?.value || '').trim();
+  const email = (document.getElementById('empEmail')?.value || '').trim();
+  const ssnit = (document.getElementById('empSSNIT')?.value || '').trim();
+  const ghanaCard = (document.getElementById('empGhanaCard')?.value || '').trim();
 
-  const basicSalary = parseFloat(document.getElementById('empBasicSalary').value) || 0;
-  const hasPF = document.getElementById('empHasPF').checked;
-  const employeePFrate = hasPF ? (parseFloat(document.getElementById('empEmployeePFRate').value) || 0) : 0;
-  const employerPFrate = hasPF ? (parseFloat(document.getElementById('empEmployerPFRate').value) || 0) : 0;
-  const hasTaxRelief = document.getElementById('empHasTaxRelief').checked;
-  const taxRelief = hasTaxRelief ? (parseFloat(document.getElementById('empTaxRelief').value) || 0) : 0;
-  const hasLoan = document.getElementById('empHasLoan').checked;
-  const loanMonthly = hasLoan ? (parseFloat(document.getElementById('empLoanMonthly').value) || 0) : 0;
+  const basicSalary = parseFloat(document.getElementById('empBasicSalary')?.value) || 0;
+  const hasPF = document.getElementById('empHasPF')?.checked;
+  const employeePFrate = hasPF ? (parseFloat(document.getElementById('empEmployeePFRate')?.value) || 0) : 0;
+  const employerPFrate = hasPF ? (parseFloat(document.getElementById('empEmployerPFRate')?.value) || 0) : 0;
+  const hasTaxRelief = document.getElementById('empHasTaxRelief')?.checked;
+  const taxRelief = hasTaxRelief ? (parseFloat(document.getElementById('empTaxRelief')?.value) || 0) : 0;
+  const hasLoan = document.getElementById('empHasLoan')?.checked;
+  const loanMonthly = hasLoan ? (parseFloat(document.getElementById('empLoanMonthly')?.value) || 0) : 0;
 
   // gather allowances from modal
   const allowances = [];
   document.querySelectorAll('#empAllowanceList .allowance-row').forEach(row => {
     const typeSelect = row.querySelector('.emp-allowance-type');
     let type = (typeSelect?.value || '').trim();
-    // Check if "Add New" was selected
+    // If the inline "add new" field still visible, pick text if present
     if (type === '__ADD_NEW__') {
-      const newType = prompt('Enter new allowance type:');
-      if (newType && newType.trim()) {
-        type = newType.trim();
-        if (!allowanceTypeOptions.includes(type)) {
-          allowanceTypeOptions.push(type);
-          allowanceTypeOptions.sort();
-          populateAllowanceTypeSelect(typeSelect);
-        }
-        typeSelect.value = type;
+      // ignore until user explicitly adds via inline field
+      const newField = row.querySelector('.new-allowance-field .new-allowance-input');
+      if (newField && newField.value.trim()) {
+        type = newField.value.trim();
       } else {
-        return; // Skip this row
+        return; // skip row
       }
     }
     const amt = parseFloat(row.querySelector('.emp-allowance-amount')?.value) || 0;
@@ -621,52 +634,23 @@ async function saveEmployee() {
       throw new Error((empResp && empResp.error) ? empResp.error : 'Failed to save employee');
     }
 
-    // Always create payroll record if basic salary > 0
-    if (basicSalary > 0) {
-      const calc = computePayrollRow({
-        basicSalary: basicSalary,
-        allowances: allowances,
-        employeePFpct: employeePFrate,
-        employerPFpct: employerPFrate,
-        reliefAmount: taxRelief,
-        loanMonthly: loanMonthly,
-        pfChecked: hasPF
-      });
-
-      const payrollData = {
-        staffNumber: staff,
-        fullName: name,
-        designation: designation,
-        payPeriod: (document.getElementById('payPeriod') ? document.getElementById('payPeriod').value : (new Date()).toISOString().slice(0,7)),
-        basicSalary: basicSalary,
-        allowances: allowances,
-        totalAllowances: calc.totalAllowances,
-        grossSalary: calc.grossSalary,
-        employeePension: calc.employeePension,
-        employeePf: calc.employeePf,
-        pf10Amount: calc.pf10Amount,
-        taxRelief: taxRelief,
-        taxableIncome: calc.taxableIncome,
-        paye: calc.paye,
-        totalDeduction: calc.totalDeduction,
-        netPay: calc.netPay,
-        employerPension: calc.employerPension,
-        employerPf: calc.employerPf,
-        loanMonthly: loanMonthly,
-        loanFrom: '',
-        loanTo: ''
-      };
-
-      const payResp = await API.savePayrollRun(payrollData);
-      if (!(payResp && (payResp.success !== false))) {
-        console.warn('Payroll save returned error', payResp);
-        showToast('Employee saved but failed to create payroll record', 'warning');
-      } else {
-        showToast(editStaff ? 'Employee updated with payroll' : 'Employee added with payroll', 'success');
+    // Save allowances to allowance sheet for this staff.
+    // Clear existing allowances first (if backend supports) - not all backends support bulk overwrite,
+    // so we'll save each allowance entry. If backend has overwrite semantics, pass options.
+    try {
+      // Ideally the backend will handle duplicates; we just post each allowance row.
+      for (const a of allowances) {
+        // effectiveDate: today in ISO date format
+        const effectiveDate = new Date().toISOString().slice(0, 10);
+        await API.saveAllowance(staff, a.type, a.amount, effectiveDate).catch(err => {
+          console.warn('Failed to save allowance for', staff, a, err);
+        });
       }
-    } else {
-      showToast(editStaff ? 'Employee updated' : 'Employee added', 'success');
+    } catch (e) {
+      console.warn('save allowances error', e);
     }
+
+    showToast(editStaff ? 'Employee updated' : 'Employee added', 'success');
 
     await renderEmployeeTable();
     closeEmployeeModal();
@@ -677,72 +661,6 @@ async function saveEmployee() {
   } finally {
     hideLoadingModal();
   }
-}
-
-/* ============== Allowance rows inside modal ============== */
-
-function addEmployeeAllowanceRow(type = '', amount = '') {
-  const container = document.getElementById('empAllowanceList');
-  if (!container) return;
-
-  // Make sure allowance types are loaded
-  if (allowanceTypeOptions.length === 0) {
-    loadDropdownOptions();
-  }
-
-  const row = document.createElement('div');
-  row.className = 'allowance-row';
-  row.style.cssText = 'display:flex; gap:8px; align-items:center;';
-
-  const select = document.createElement('select');
-  select.className = 'emp-allowance-type';
-  select.style.cssText = 'flex:1; padding:4px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px; background:#fff;';
-  select.onchange = function() {
-    if (this.value === '__ADD_NEW__') {
-      addNewAllowanceType(this);
-    }
-    recalcPayrollPreviewFromEmployeeModal();
-  };
-  
-  // Populate select with options
-  populateAllowanceTypeSelect(select);
-  if (type && allowanceTypeOptions.includes(type)) {
-    select.value = type;
-  } else if (type) {
-    // Add the type if it doesn't exist
-    allowanceTypeOptions.push(type);
-    allowanceTypeOptions.sort();
-    populateAllowanceTypeSelect(select);
-    select.value = type;
-  }
-
-  const amt = document.createElement('input');
-  amt.type = 'number';
-  amt.className = 'emp-allowance-amount';
-  amt.placeholder = '0.00';
-  amt.step = '0.01';
-  amt.min = '0';
-  amt.value = amount;
-  amt.style.cssText = 'width:120px; padding:4px 8px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px;';
-  amt.oninput = recalcPayrollPreviewFromEmployeeModal;
-
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn-outline';
-  removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-  removeBtn.onclick = function() {
-    row.remove();
-    recalcPayrollPreviewFromEmployeeModal();
-  };
-  removeBtn.style.cssText = 'padding:4px 8px; font-size:12px;';
-
-  row.appendChild(select);
-  row.appendChild(amt);
-  row.appendChild(removeBtn);
-
-  container.appendChild(row);
-
-  recalcPayrollPreviewFromEmployeeModal();
 }
 
 /* ============== Toggles show/hide ============== */
@@ -869,52 +787,47 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
   // ==========================================
   const totalAllowances = roundToTwo(allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0));
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
-  
+
   // ==========================================
   // STEP 2: Calculate Deductions (Before Tax)
   // ==========================================
-  
   // Employee Pension = 5.5% of Gross
   const employeePension = roundToTwo(grossSalary * 0.055);
-  
+
   // Employee PF = Employee PF Rate × Basic Salary (if PF eligible)
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-  
+
   // Tax Relief (user defined)
   const taxRelief = roundToTwo(reliefAmount || 0);
-  
+
   // Total Deductions before tax
   const totalDeductionsBeforeTax = roundToTwo(employeePension + employeePf + taxRelief);
-  
+
   // ==========================================
   // STEP 3: Calculate Taxable Amount
   // ==========================================
   const taxableAmount = Math.max(0, roundToTwo(grossSalary - totalDeductionsBeforeTax));
-  
+
   // ==========================================
   // STEP 4: Calculate PAYE on Taxable Amount
   // ==========================================
   const paye = calculatePAYE(taxableAmount);
-  
+
   // ==========================================
   // STEP 5: Calculate Net Pay
   // ==========================================
   const netPay = roundToTwo(taxableAmount - paye);
-  
+
   // ==========================================
   // STEP 6: Calculate Take-Home Pay
   // ==========================================
   const loanMonthlyAmount = roundToTwo(loanMonthly || 0);
   const takeHomePay = roundToTwo(netPay - loanMonthlyAmount);
-  
+
   // ==========================================
   // STEP 7: Calculate Employer Costs
   // ==========================================
-  
-  // Employer Pension = 13% of Gross
   const employerPension = roundToTwo(grossSalary * 0.13);
-  
-  // Employer PF = Employer PF Rate × Basic Salary (if PF eligible)
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
 
   return {
@@ -935,14 +848,14 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
 }
 
 function recalcPayrollPreviewFromEmployeeModal() {
-  const basicSalary = parseFloat(document.getElementById('empBasicSalary').value) || 0;
-  const pfChecked = document.getElementById('empHasPF').checked;
-  const employeePFpct = pfChecked ? (parseFloat(document.getElementById('empEmployeePFRate').value) || 5.5) : 0;
-  const employerPFpct = pfChecked ? (parseFloat(document.getElementById('empEmployerPFRate').value) || 5) : 0;
-  const taxReliefChecked = document.getElementById('empHasTaxRelief').checked;
-  const reliefAmount = taxReliefChecked ? (parseFloat(document.getElementById('empTaxRelief').value) || 0) : 0;
-  const loanChecked = document.getElementById('empHasLoan').checked;
-  const loanMonthly = loanChecked ? (parseFloat(document.getElementById('empLoanMonthly').value) || 0) : 0;
+  const basicSalary = parseFloat(document.getElementById('empBasicSalary')?.value) || 0;
+  const pfChecked = document.getElementById('empHasPF')?.checked;
+  const employeePFpct = pfChecked ? (parseFloat(document.getElementById('empEmployeePFRate')?.value) || 5.5) : 0;
+  const employerPFpct = pfChecked ? (parseFloat(document.getElementById('empEmployerPFRate')?.value) || 5) : 0;
+  const taxReliefChecked = document.getElementById('empHasTaxRelief')?.checked;
+  const reliefAmount = taxReliefChecked ? (parseFloat(document.getElementById('empTaxRelief')?.value) || 0) : 0;
+  const loanChecked = document.getElementById('empHasLoan')?.checked;
+  const loanMonthly = loanChecked ? (parseFloat(document.getElementById('empLoanMonthly')?.value) || 0) : 0;
 
   // allowances
   const allowances = [];
@@ -972,7 +885,7 @@ function updateEmployeeCalcPreview(calc) {
   document.getElementById('empPreviewGross').textContent = formatMoney(calc.grossSalary);
   document.getElementById('empPreviewNet').textContent = formatMoney(calc.netPay);
   document.getElementById('empPreviewPaye').textContent = formatMoney(calc.paye);
-  document.getElementById('empPreviewTaxable').textContent = formatMoney(calc.taxableAmount);
+  document.getElementById('empPreviewTaxable').textContent = formatMoney(calc.taxableAmount || calc.taxableAmount);
   document.getElementById('empPreviewPension').textContent = formatMoney(calc.employeePension);
   document.getElementById('empPreviewPf').textContent = formatMoney(calc.employeePf);
 }
