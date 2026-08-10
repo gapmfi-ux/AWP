@@ -423,8 +423,6 @@ function closeConfirmModal() {
   }
 }
 
-/* ============== Render Payroll Table - COMPACT ============== */
-
 /* ============== Render Payroll Table - COMPACT WITH ORIGINAL NAMES ============== */
 
 function renderPayrollTable(data, isPreview = false) {
@@ -462,24 +460,32 @@ function renderPayrollTable(data, isPreview = false) {
     const employerPf = parseFloat(record['Employer PF(5%)'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
     
+    // Helper to format number with dash for zero
+    const formatCell = (value) => {
+      if (value === 0 || value === '0' || isNaN(value) || value === '') {
+        return '<span class="zero">—</span>';
+      }
+      return formatMoney(value);
+    };
+    
     return `
       <tr>
         <td class="col-staff">${escapeHtml(staffNumber)}</td>
         <td class="col-name">${escapeHtml(fullName)}</td>
         <td>${escapeHtml(designation)}</td>
-        <td class="col-number">${formatMoney(basicSalary)}</td>
-        <td class="col-number">${formatMoney(totalAllowances)}</td>
-        <td class="col-number positive">${formatMoney(grossSalary)}</td>
-        <td class="col-number">${formatMoney(employeePension)}</td>
-        <td class="col-number">${formatMoney(employeePf)}</td>
-        <td class="col-number">${formatMoney(taxRelief)}</td>
-        <td class="col-number">${formatMoney(taxableIncome)}</td>
-        <td class="col-number negative">${formatMoney(paye)}</td>
-        <td class="col-number negative">${formatMoney(totalDeduction)}</td>
-        <td class="col-number positive">${formatMoney(netPay)}</td>
-        <td class="col-number">${formatMoney(employerPension)}</td>
-        <td class="col-number">${formatMoney(employerPf)}</td>
-        <td class="col-number">${formatMoney(loanMonthly)}</td>
+        <td class="col-number">${formatCell(basicSalary)}</td>
+        <td class="col-number">${formatCell(totalAllowances)}</td>
+        <td class="col-number positive">${formatCell(grossSalary)}</td>
+        <td class="col-number">${formatCell(employeePension)}</td>
+        <td class="col-number">${formatCell(employeePf)}</td>
+        <td class="col-number">${formatCell(taxRelief)}</td>
+        <td class="col-number">${formatCell(taxableIncome)}</td>
+        <td class="col-number negative">${formatCell(paye)}</td>
+        <td class="col-number negative">${formatCell(totalDeduction)}</td>
+        <td class="col-number positive">${formatCell(netPay)}</td>
+        <td class="col-number">${formatCell(employerPension)}</td>
+        <td class="col-number">${formatCell(employerPf)}</td>
+        <td class="col-number">${formatCell(loanMonthly)}</td>
       </tr>
     `;
   }).join('');
