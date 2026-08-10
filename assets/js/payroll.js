@@ -134,6 +134,174 @@ async function loadPayrollPeriod() {
   }
 }
 
+/* ============================================
+   CONFIRM MODAL
+   ============================================ */
+
+function showConfirmModal(title, message, onConfirm, onCancel) {
+  let modal = document.getElementById('confirmModal');
+
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'confirmModal';
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+          <h3 id="confirmModalTitle">Confirm</h3>
+          <button class="confirm-modal-close" onclick="closeConfirmModal()">&times;</button>
+        </div>
+        <div class="confirm-modal-body" id="confirmModalBody">
+          Are you sure?
+        </div>
+        <div class="confirm-modal-footer">
+          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
+          <button class="btn-primary" id="confirmOkBtn">Confirm</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    if (!document.getElementById('confirmModalStyles')) {
+      const styles = document.createElement('style');
+      styles.id = 'confirmModalStyles';
+      styles.textContent = `
+        .confirm-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(26, 32, 44, 0.55);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          padding: 20px;
+          animation: modalFadeIn 0.2s ease;
+        }
+        .confirm-modal.show {
+          display: flex;
+        }
+        .confirm-modal-content {
+          background: #ffffff;
+          border-radius: 12px;
+          width: 100%;
+          max-width: 480px;
+          max-height: 90vh;
+          overflow: hidden;
+          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+          display: flex;
+          flex-direction: column;
+        }
+        .confirm-modal-header {
+          padding: 16px 20px;
+          border-bottom: 1px solid #edf2f7;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          flex-shrink: 0;
+          background: #fafbfc;
+        }
+        .confirm-modal-header h3 {
+          font-size: 16px;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0;
+        }
+        .confirm-modal-close {
+          background: none;
+          border: none;
+          font-size: 22px;
+          color: #a0aec0;
+          cursor: pointer;
+          padding: 0 4px;
+          line-height: 1;
+        }
+        .confirm-modal-close:hover {
+          color: #2d3748;
+        }
+        .confirm-modal-body {
+          padding: 24px 20px;
+          font-size: 14px;
+          color: #2d3748;
+          line-height: 1.6;
+        }
+        .confirm-modal-body strong {
+          color: #4361ee;
+        }
+        .confirm-modal-footer {
+          padding: 12px 20px;
+          border-top: 1px solid #edf2f7;
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          flex-shrink: 0;
+          background: #fafbfc;
+        }
+        .confirm-modal-footer .btn-primary,
+        .confirm-modal-footer .btn-secondary {
+          padding: 8px 24px;
+          font-size: 14px;
+        }
+        @keyframes modalFadeIn {
+          from { opacity: 0; transform: scale(0.96) translateY(10px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+      `;
+      document.head.appendChild(styles);
+    }
+  }
+
+  document.getElementById('confirmModalTitle').textContent = title;
+  document.getElementById('confirmModalBody').innerHTML = message;
+
+  modal._onConfirm = onConfirm || function() {};
+  modal._onCancel = onCancel || function() {};
+
+  const okBtn = document.getElementById('confirmOkBtn');
+  const cancelBtn = document.getElementById('confirmCancelBtn');
+  const closeBtn = modal.querySelector('.confirm-modal-close');
+
+  // Replace nodes to avoid duplicate listeners
+  const newOkBtn = okBtn.cloneNode(true);
+  const newCancelBtn = cancelBtn.cloneNode(true);
+  const newCloseBtn = closeBtn.cloneNode(true);
+
+  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+
+  newOkBtn.addEventListener('click', function() {
+    if (modal._onConfirm) modal._onConfirm();
+  });
+
+  newCancelBtn.addEventListener('click', function() {
+    if (modal._onCancel) modal._onCancel();
+  });
+
+  newCloseBtn.addEventListener('click', function() {
+    if (modal._onCancel) modal._onCancel();
+  });
+
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      if (modal._onCancel) modal._onCancel();
+    }
+  });
+
+  modal.classList.add('show');
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirmModal');
+  if (modal) {
+    modal.classList.remove('show');
+  }
+}
+
 /* ============== Process / Run Payroll - SAVE CURRENT TABLE DATA ============== */
 
 async function processPayroll() {
@@ -259,12 +427,6 @@ async function deletePayrollPeriod() {
     }
   );
 }
-
-/* ============================================
-   CONFIRM MODAL
-   ============================================ */
-
-// ... (unchanged confirm modal code omitted here only to keep this file focused; original confirm modal code remains unchanged) ...
 
 /* ============== Render Payroll Table - COMPACT WITH ORIGINAL NAMES ============== */
 
