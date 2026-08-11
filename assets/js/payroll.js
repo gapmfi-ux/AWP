@@ -1,7 +1,4 @@
-/**
- * Payroll Module - Client Side Logic
- * Handles payroll processing, loading, and display
- */
+
 
 let currentPayrollData = [];
 let currentPeriod = '';
