@@ -29,7 +29,7 @@ const printUtils = {
       .replace(/'/g, '&#39;');
   },
 
-    // Get clean print styles - Aggressively remove browser headers/footers
+  // Get clean print styles - Aggressively remove browser headers/footers
   getPrintStyles: function() {
     return `
       <style>
@@ -138,6 +138,7 @@ const printUtils = {
         .grouped-report {
           margin-bottom: 10px;
           page-break-inside: avoid;
+          break-inside: avoid;
         }
         
         .group-title {
@@ -475,6 +476,57 @@ const printUtils = {
     `;
   },
 
+  /* ============== PAYROLL PRINT FUNCTION ============== */
+  
+  printPayrollTable: function() {
+    const table = document.getElementById('payrollTable');
+    if (!table) {
+      this.showMessage('Payroll table not found.', 'error');
+      return;
+    }
+
+    // Get the period from the header
+    const headerTitle = document.querySelector('.payroll-header h2');
+    let title = 'PAYROLL REPORT';
+    let periodInfo = '';
+
+    if (headerTitle) {
+      const text = headerTitle.textContent.trim();
+      if (text.includes('PAYROLL FOR')) {
+        title = text;
+        // Extract period from header
+        const match = text.match(/PAYROLL FOR (.+)/);
+        if (match) {
+          periodInfo = `Period: ${match[1]}`;
+        }
+      }
+    }
+
+    // If no period in header, try to get from period input
+    if (!periodInfo) {
+      const periodInput = document.getElementById('payPeriodSelect');
+      if (periodInput && periodInput.value) {
+        const [year, month] = periodInput.value.split('-');
+        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
+                            'July', 'August', 'September', 'October', 'November', 'December'];
+        const monthName = monthNames[parseInt(month) - 1] || month;
+        periodInfo = `Period: ${monthName} ${year}`;
+      }
+    }
+
+    // Clone the table and remove action columns
+    const tableClone = this.removeActionColumns(table);
+    
+    // Remove the "zero" class spans from numbers (they show dashes)
+    tableClone.querySelectorAll('.zero').forEach(el => {
+      el.textContent = '—';
+    });
+
+    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
+    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
+    this.openPrintWindow(printDocument, title);
+  },
+
   // Print investment report
   printInvestmentReport: function(tabName) {
     console.log('printInvestmentReport called for tab:', tabName);
@@ -535,342 +587,3 @@ const printUtils = {
       const fromDate = document.getElementById('fromDatePrepaid')?.value || '';
       const toDate = document.getElementById('toDatePrepaid')?.value || '';
       if (fromDate && toDate) {
-        periodInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-      this.printSubscriptionTable('prepaidTableBody', title, periodInfo, 'prepaidTableFooter');
-    } else if (tabName === 'arrears') {
-      title = 'IN ARREARS SUBSCRIPTIONS REPORT';
-      const fromDate = document.getElementById('fromDateArrears')?.value || '';
-      const toDate = document.getElementById('toDateArrears')?.value || '';
-      if (fromDate && toDate) {
-        periodInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-      this.printSubscriptionTable('arrearsTableBody', title, periodInfo, 'arrearsTableFooter');
-    } else if (tabName === 'expired') {
-      title = 'EXPIRED SUBSCRIPTIONS REPORT';
-      periodInfo = `As at: ${new Date().toLocaleDateString('en-GB')}`;
-      this.printSubscriptionTable('expiredTableBody', title, periodInfo);
-    }
-  },
-
-  // Print subscription table
-  printSubscriptionTable: function(tableBodyId, title, periodInfo, footerId) {
-    const tbody = document.getElementById(tableBodyId);
-    if (!tbody) {
-      console.error('Table body not found:', tableBodyId);
-      this.showMessage('Report table not found. Please ensure report is loaded.', 'error');
-      return;
-    }
-
-    // Create table structure
-    const table = document.createElement('table');
-    
-    // Get headers from the actual table if it exists
-    const actualTable = tbody.closest('table');
-    if (actualTable) {
-      const theadClone = actualTable.querySelector('thead').cloneNode(true);
-      table.appendChild(theadClone);
-    }
-    
-    // Clone tbody and remove action columns
-    const tbodyClone = tbody.cloneNode(true);
-    
-    // Remove Pay and Renew buttons
-    tbodyClone.querySelectorAll('.pay-btn, .renew-btn, button').forEach(btn => {
-      btn.remove();
-    });
-    
-    table.appendChild(tbodyClone);
-    
-    // Add footer if exists
-    if (footerId) {
-      const footer = document.getElementById(footerId);
-      if (footer) {
-        const tfootClone = footer.cloneNode(true);
-        table.appendChild(tfootClone);
-      }
-    }
-    
-    // Apply action column removal to the entire table
-    const cleanedTable = this.removeActionColumns(table);
-    const tableHtml = `<div class="print-table-wrapper">${cleanedTable.outerHTML}</div>`;
-    
-    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Print subscription container (grouped reports)
-  printSubscriptionContainer: function(containerId, title, periodInfo) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found:', containerId);
-      this.showMessage('Report container not found. Please ensure report is loaded.', 'error');
-      return;
-    }
-
-    let containerHTML = container.innerHTML;
-    if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No subscriptions')) {
-      this.showMessage('Report is empty. Please generate the report first.', 'error');
-      return;
-    }
-
-    // Remove action buttons and interactive elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = containerHTML;
-    tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, .pay-btn, .renew-btn, [onclick]').forEach(el => {
-      el.remove();
-    });
-    tempDiv.querySelectorAll('*').forEach(el => {
-      el.removeAttribute('onclick');
-      el.removeAttribute('onchange');
-    });
-    
-    // Also clean any action columns from tables within the container
-    tempDiv.querySelectorAll('table').forEach(table => {
-      const cleanedTable = this.removeActionColumns(table);
-      table.parentNode.replaceChild(cleanedTable, table);
-    });
-    
-    containerHTML = tempDiv.innerHTML;
-    
-    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // ---------- PAYROLL PRINTING: add printPayrollTable + helper ----------
-  // Print payroll table
-  printPayrollTable: function(period) {
-    const table = document.getElementById('payrollTable');
-    if (!table) {
-      this.showMessage('Payroll table not found. Please load payroll first.', 'error');
-      return;
-    }
-
-    // Clone and clean the table (remove any action columns/buttons)
-    const tableClone = this.removeActionColumns(table);
-
-    // Ensure all numbers are formatted consistently as currency in the printed clone
-    tableClone.querySelectorAll('td').forEach(td => {
-      // Attempt to parse numeric content and format, otherwise keep text
-      const text = td.textContent.trim();
-      const parsed = parseFloat(text.replace(/,/g, ''));
-      if (!isNaN(parsed) && text !== '' && text !== '—') {
-        td.textContent = this.formatCurrency(parsed);
-        td.classList.add('text-right');
-      } else {
-        // preserve dash and text
-        td.textContent = text;
-      }
-    });
-
-    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
-
-    // Title and period info
-    const title = period ? `PAYROLL FOR ${this._formatPeriodLabel(period).toUpperCase()}` : 'PAYROLL PREVIEW';
-    const periodInfo = period ? `Period: ${this._formatPeriodLabel(period)}` : '';
-
-    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Helper: format 'YYYY-MM' to 'June 2026'
-  _formatPeriodLabel: function(period) {
-    if (!period) return '';
-    const p = (period.length >= 7) ? period.slice(0, 7) : period;
-    const [y, m] = p.split('-');
-    if (!y || !m) return period;
-    const date = new Date(`${y}-${m}-01`);
-    if (isNaN(date)) return period;
-    // Return e.g. "June 2026"
-    return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
-  },
-
-  // Print investment table
-  printInvestmentTable: function(tableId, title, periodInfo) {
-    const tableWrapper = document.getElementById(tableId);
-    if (!tableWrapper) {
-      console.error('Table not found:', tableId);
-      this.showMessage('Report table not found. Please ensure report is loaded.', 'error');
-      return;
-    }
-
-    const originalTable = tableWrapper.querySelector('table');
-    if (!originalTable) {
-      console.error('Table element not found in wrapper');
-      this.showMessage('Table element not found.', 'error');
-      return;
-    }
-
-    const tableClone = this.removeActionColumns(originalTable);
-    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
-    
-    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Print investment container (grouped reports)
-  printInvestmentContainer: function(containerId, title, periodInfo) {
-    const container = document.getElementById(containerId);
-    if (!container) {
-      console.error('Container not found:', containerId);
-      this.showMessage('Report container not found. Please ensure report is loaded.', 'error');
-      return;
-    }
-
-    let containerHTML = container.innerHTML;
-    if (!containerHTML || containerHTML.trim() === '' || containerHTML.includes('Loading') || containerHTML.includes('No investments')) {
-      this.showMessage('Report is empty. Please generate the report first.', 'error');
-      return;
-    }
-
-    // Remove action buttons and interactive elements
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = containerHTML;
-    tempDiv.querySelectorAll('.action-btn, button, .dropdown-item, [onclick]').forEach(el => {
-      el.remove();
-    });
-    tempDiv.querySelectorAll('*').forEach(el => {
-      el.removeAttribute('onclick');
-      el.removeAttribute('onchange');
-    });
-    
-    // Also clean any action columns from tables within the container
-    tempDiv.querySelectorAll('table').forEach(table => {
-      const cleanedTable = this.removeActionColumns(table);
-      table.parentNode.replaceChild(cleanedTable, table);
-    });
-    
-    containerHTML = tempDiv.innerHTML;
-    
-    const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
-    this.openPrintWindow(printDocument, title);
-  },
-
-  // Print inventory report
-  printInventoryReport: function(tabId) {
-    let title = '';
-    let periodInfo = '';
-    let tableId = '';
-
-    if (tabId === 'purchaseReport') {
-      title = 'INVENTORY PURCHASE REPORT';
-      tableId = 'purchaseReportTable';
-      const fromDate = document.getElementById('purchaseFromDate')?.value || '';
-      const toDate = document.getElementById('purchaseToDate')?.value || '';
-      if (fromDate && toDate) {
-        periodInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-    } else if (tabId === 'usageReport') {
-      title = 'INVENTORY USAGE REPORT';
-      tableId = 'usageReportTable';
-      const fromDate = document.getElementById('usageFromDate')?.value || '';
-      const toDate = document.getElementById('usageToDate')?.value || '';
-      if (fromDate && toDate) {
-        periodInfo = `Period: ${fromDate} to ${toDate}`;
-      }
-    } else if (tabId === 'inventoryList') {
-      title = 'INVENTORY STOCK LIST';
-      tableId = 'inventoryListTable';
-      const asAtDate = document.getElementById('inventoryToDate')?.value || '';
-      if (asAtDate) {
-        periodInfo = `As at: ${asAtDate}`;
-      }
-    }
-
-    this.printInvestmentTable(tableId, title, periodInfo);
-  },
-
-  // Print asset register
-  printAssetRegister: function(tabName) {
-    if (tabName === 'detailedRegister') {
-      const title = 'DETAILED FIXED ASSET REGISTER';
-      const asAtDate = document.getElementById('detailedToDate')?.value || '';
-      const groupBy = document.getElementById('groupBySelect')?.value || '';
-      let periodInfo = asAtDate ? `As at: ${asAtDate}` : '';
-      if (groupBy && groupBy !== 'full') {
-        const groupLabels = {
-          'type': 'Grouped by Asset Type',
-          'fittings': 'Fittings Only',
-          'software': 'Software Only', 
-          'computers': 'Computers & Accessories Only',
-          'furniture': 'Furniture Only',
-          'office': 'Office Equipment Only',
-          'motor': 'Motor Vehicle Only'
-        };
-        periodInfo += ` | ${groupLabels[groupBy] || ''}`;
-      }
-      this.printInvestmentTable('detailedRegisterTable', title, periodInfo);
-    } else if (tabName === 'summaryRegister') {
-      const title = 'SUMMARY FIXED ASSET REGISTER';
-      const toDate = document.getElementById('summaryToDate')?.value || '';
-      const periodInfo = toDate ? `As at: ${toDate}` : '';
-      
-      const summaryTable = document.getElementById('summaryDetailsTable');
-      if (!summaryTable) {
-        this.showMessage('Summary table not found. Please generate the report first.', 'error');
-        return;
-      }
-      
-      const tableClone = this.removeActionColumns(summaryTable);
-      const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
-      
-      const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
-      this.openPrintWindow(printDocument, title);
-    }
-  },
-
-  // Open print window with proper handling
-  openPrintWindow: function(printContent, title) {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      this.showMessage('Please disable popup blocker to print.', 'error');
-      return;
-    }
-
-    printWindow.document.write(printContent);
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-      printWindow.print();
-    }, 500);
-  },
-
-  // Show message
-  showMessage: function(message, type) {
-    const types = {
-      success: { bg: '#c6f6d5', color: '#22543d', border: '#48bb78' },
-      error: { bg: '#fed7d7', color: '#742a2a', border: '#f56565' },
-      info: { bg: '#bee3f8', color: '#2c5282', border: '#4299e1' },
-      warning: { bg: '#feebc8', color: '#7b341e', border: '#ed8936' }
-    };
-
-    const style = types[type] || types.info;
-    
-    const alertDiv = document.createElement('div');
-    alertDiv.style.cssText = `
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      background: ${style.bg};
-      color: ${style.color};
-      padding: 12px 20px;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      z-index: 10000;
-      font-weight: 600;
-      max-width: 400px;
-      border-left: 4px solid ${style.border};
-      font-size: 13px;
-    `;
-    alertDiv.textContent = message;
-    document.body.appendChild(alertDiv);
-
-    setTimeout(() => {
-      alertDiv.remove();
-    }, 3000);
-  }
-};
-
-// Make printUtils available globally
-window.printUtils = printUtils;
