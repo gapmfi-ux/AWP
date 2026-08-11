@@ -138,7 +138,6 @@ const printUtils = {
         .grouped-report {
           margin-bottom: 10px;
           page-break-inside: avoid;
-          break-inside: avoid;
         }
         
         .group-title {
@@ -636,6 +635,54 @@ const printUtils = {
     
     const printDocument = this.generatePrintDocument(title, containerHTML, periodInfo);
     this.openPrintWindow(printDocument, title);
+  },
+
+  // ---------- PAYROLL PRINTING: add printPayrollTable + helper ----------
+  // Print payroll table
+  printPayrollTable: function(period) {
+    const table = document.getElementById('payrollTable');
+    if (!table) {
+      this.showMessage('Payroll table not found. Please load payroll first.', 'error');
+      return;
+    }
+
+    // Clone and clean the table (remove any action columns/buttons)
+    const tableClone = this.removeActionColumns(table);
+
+    // Ensure all numbers are formatted consistently as currency in the printed clone
+    tableClone.querySelectorAll('td').forEach(td => {
+      // Attempt to parse numeric content and format, otherwise keep text
+      const text = td.textContent.trim();
+      const parsed = parseFloat(text.replace(/,/g, ''));
+      if (!isNaN(parsed) && text !== '' && text !== '—') {
+        td.textContent = this.formatCurrency(parsed);
+        td.classList.add('text-right');
+      } else {
+        // preserve dash and text
+        td.textContent = text;
+      }
+    });
+
+    const tableHtml = `<div class="print-table-wrapper">${tableClone.outerHTML}</div>`;
+
+    // Title and period info
+    const title = period ? `PAYROLL FOR ${this._formatPeriodLabel(period).toUpperCase()}` : 'PAYROLL PREVIEW';
+    const periodInfo = period ? `Period: ${this._formatPeriodLabel(period)}` : '';
+
+    const printDocument = this.generatePrintDocument(title, tableHtml, periodInfo);
+    this.openPrintWindow(printDocument, title);
+  },
+
+  // Helper: format 'YYYY-MM' to 'June 2026'
+  _formatPeriodLabel: function(period) {
+    if (!period) return '';
+    const p = (period.length >= 7) ? period.slice(0, 7) : period;
+    const [y, m] = p.split('-');
+    if (!y || !m) return period;
+    const date = new Date(`${y}-${m}-01`);
+    if (isNaN(date)) return period;
+    // Return e.g. "June 2026"
+    return date.toLocaleString('en-US', { month: 'long', year: 'numeric' });
   },
 
   // Print investment table
