@@ -117,3 +117,18 @@ API.getAllDepartments = async function(options = {}) {
 API.getAllDesignations = async function(options = {}) {
   return this.request('getAllDesignations', {}, options);
 };
+
+// ---------- PAYROLL ALLOWANCE RUNS ----------
+API.savePayrollAllowanceRun = async function(runId, staffNumber, allowances = [], options = {}) {
+  // allowances will be sent as JSON string
+  const payload = { runId, staffNumber, allowances: JSON.stringify(allowances) };
+  return this.request('savePayrollAllowanceRun', payload, options);
+};
+
+API.getPayrollAllowanceRunsByRunId = async function(runId, options = {}) {
+  return this.request('getPayrollAllowanceRunsByRunId', { runId }, options);
+};
+
+API.deletePayrollAllowanceRun = async function(runId, options = {}) {
+  return this.request('deletePayrollAllowanceRun', { runId }, options);
+};
