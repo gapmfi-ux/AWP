@@ -14,7 +14,46 @@ function initPayroll() {
   if (periodInput) {
     periodInput.value = '';
   }
+
+  // Ensure Print/Delete buttons hidden on init
+  setPayrollActionButtonsVisibility(false);
+
+  // Reset title to default
+  setPayrollTitle(null);
+
   loadPayrollPreview();
+}
+
+/* ============== Helpers ============== */
+
+function formatPeriodLabel(period) {
+  // period expected as 'YYYY-MM' or 'YYYY-MM-DD' - return "JUNE 2026"
+  if (!period) return '';
+  // If 'YYYY-MM-DD', slice to YYYY-MM
+  const p = (period.length >= 7) ? period.slice(0, 7) : period;
+  const [y, m] = p.split('-');
+  if (!y || !m) return period;
+  const date = new Date(`${y}-${m}-01`);
+  if (isNaN(date)) return period;
+  const monthName = date.toLocaleString('en-US', { month: 'long' }).toUpperCase();
+  return `${monthName} ${y}`;
+}
+
+function setPayrollTitle(period) {
+  const titleEl = document.getElementById('payrollTitle');
+  if (!titleEl) return;
+  if (period) {
+    titleEl.innerHTML = `<i class="fas fa-calculator"></i> PAYROLL FOR ${formatPeriodLabel(period)}`;
+  } else {
+    titleEl.innerHTML = `<i class="fas fa-calculator"></i> Payroll`;
+  }
+}
+
+function setPayrollActionButtonsVisibility(show) {
+  const printBtn = document.getElementById('printPayrollBtn');
+  const delBtn = document.getElementById('deletePayrollBtn');
+  if (printBtn) printBtn.style.display = show ? 'inline-flex' : 'none';
+  if (delBtn) delBtn.style.display = show ? 'inline-flex' : 'none';
 }
 
 /* ============== Load Payroll Preview (calculated figures) ============== */
@@ -22,6 +61,10 @@ function initPayroll() {
 async function loadPayrollPreview() {
   try {
     showLoadingModal('Loading payroll preview...');
+
+    // Hide action buttons and reset title
+    setPayrollActionButtonsVisibility(false);
+    setPayrollTitle(null);
 
     // Normalize API.getEmployees response similar to employee-list getEmployeesFromServer
     const resp = await API.getEmployees().catch(() => []);
@@ -31,7 +74,6 @@ async function loadPayrollPreview() {
       currentPayrollData = [];
       renderPayrollTable([]);
       showToast('No employees found. Add employees first.', 'warning');
-      hideLoadingModal();
       return;
     }
 
@@ -43,13 +85,12 @@ async function loadPayrollPreview() {
       const designation = emp['Designation'] || emp.designation || '';
       const basicSalary = parseFloat(emp['Basic Salary'] || emp.basicSalary || 0) || 0;
       const employeePFrate = parseFloat(emp['Employee PF Rate (%)'] || emp.employeePFrate || 0) || 0;
-      const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPFrate || 0) || 0;
+      const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPfrate || emp.employerPFrate || emp.employerPFrate || 0) || 0;
       const taxRelief = parseFloat(emp['Tax Relief Amount'] || emp.taxRelief || 0) || 0;
 
       let allowances = [];
       try {
         allowances = await API.getAllowancesByStaff(staffNumber).catch(() => []);
-        // normalize allowances: some backends may return object with records
         allowances = Array.isArray(allowances) ? allowances : (allowances && allowances.records) ? allowances.records : (allowances || []);
       } catch (e) {
         allowances = [];
@@ -88,7 +129,7 @@ async function loadPayrollPreview() {
 
     currentPayrollData = payrollData;
     renderPayrollTable(payrollData, true);
-    showToast('Showing calculated payroll preview', 'info');
+    showToast('Calculated payroll preview loaded successfully', 'info');
 
   } catch (error) {
     console.error('Error loading payroll preview:', error);
@@ -121,9 +162,15 @@ async function loadPayrollPeriod() {
     if (response && Array.isArray(response) && response.length > 0) {
       currentPayrollData = response;
       renderPayrollTable(response, false);
-      showToast(`Loaded saved payroll for ${period}`, 'success');
+      // show heading & buttons
+      setPayrollTitle(period);
+      setPayrollActionButtonsVisibility(true);
+      showToast(`Payroll for ${formatPeriodLabel(period)} loaded successfully`, 'success');
     } else {
-      showToast(`No saved payroll found for ${period}. Showing calculated preview.`, 'info');
+      // no saved payroll for this period - show preview, hide print/delete
+      setPayrollActionButtonsVisibility(false);
+      setPayrollTitle(null);
+      showToast(`No saved payroll for ${formatPeriodLabel(period)}. Showing calculated preview.`, 'info');
       await loadPayrollPreview();
     }
   } catch (error) {
@@ -220,17 +267,11 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
           padding: 0 4px;
           line-height: 1;
         }
-        .confirm-modal-close:hover {
-          color: #2d3748;
-        }
         .confirm-modal-body {
           padding: 24px 20px;
           font-size: 14px;
           color: #2d3748;
           line-height: 1.6;
-        }
-        .confirm-modal-body strong {
-          color: #4361ee;
         }
         .confirm-modal-footer {
           padding: 12px 20px;
@@ -240,15 +281,6 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
           gap: 10px;
           flex-shrink: 0;
           background: #fafbfc;
-        }
-        .confirm-modal-footer .btn-primary,
-        .confirm-modal-footer .btn-secondary {
-          padding: 8px 24px;
-          font-size: 14px;
-        }
-        @keyframes modalFadeIn {
-          from { opacity: 0; transform: scale(0.96) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
         }
       `;
       document.head.appendChild(styles);
@@ -323,7 +355,7 @@ async function processPayroll() {
 
   showConfirmModal(
     'Confirm Payroll Processing',
-    `Are you sure you want to save payroll for <strong>${period}</strong>?<br><br>This will save the current payroll calculations to the sheet.`,
+    `Are you sure you want to save payroll for <strong>${formatPeriodLabel(period)}</strong>?<br><br>This will save the current payroll calculations to the sheet.`,
     async function() {
       try {
         showLoadingModal('Saving payroll...');
@@ -355,18 +387,21 @@ async function processPayroll() {
           const response = await API.savePayrollRun(payrollData);
           if (response && response.success !== false) {
             savedCount++;
+          } else {
+            console.warn('Failed to save payroll row for', payrollData.staffNumber, response);
           }
         }
 
         if (savedCount > 0) {
-          showToast(`Payroll saved successfully for ${period} (${savedCount} records)`, 'success');
+          showToast(`Payroll Run for ${formatPeriodLabel(period)} saved successfully (${savedCount} records)`, 'success');
+          // Reload the saved payroll - this will show Print/Delete and heading
           await loadPayrollPeriod();
         } else {
           showToast('Failed to save payroll records', 'error');
         }
       } catch (error) {
         console.error('Error saving payroll:', error);
-        showToast('Failed to save payroll: ' + error.message, 'error');
+        showToast('Failed to save payroll: ' + (error.message || error), 'error');
       } finally {
         hideLoadingModal();
         closeConfirmModal();
@@ -389,7 +424,7 @@ async function deletePayrollPeriod() {
 
   showConfirmModal(
     'Confirm Delete',
-    `Are you sure you want to delete all payroll records for <strong>${period}</strong>?<br><br>This action cannot be undone.`,
+    `Are you sure you want to delete all payroll records for <strong>${formatPeriodLabel(period)}</strong>?<br><br>This action cannot be undone.`,
     async function() {
       try {
         showLoadingModal('Deleting payroll records...');
@@ -405,8 +440,11 @@ async function deletePayrollPeriod() {
         if (runId) {
           const response = await API.deletePayrollRun(runId);
           if (response && response.success) {
-            showToast(`Deleted payroll records for ${period}`, 'success');
+            showToast(`Deleted payroll records for ${formatPeriodLabel(period)} successfully`, 'success');
             currentPayrollData = [];
+            // Hide buttons and reset title
+            setPayrollActionButtonsVisibility(false);
+            setPayrollTitle(null);
             await loadPayrollPreview();
           } else {
             showToast(response?.error || 'Failed to delete payroll', 'error');
@@ -416,7 +454,7 @@ async function deletePayrollPeriod() {
         }
       } catch (error) {
         console.error('Error deleting payroll:', error);
-        showToast('Failed to delete payroll: ' + error.message, 'error');
+        showToast('Failed to delete payroll: ' + (error.message || error), 'error');
       } finally {
         hideLoadingModal();
         closeConfirmModal();
@@ -499,7 +537,14 @@ function renderPayrollTable(data, isPreview = false) {
 /* ============== Print Function ============== */
 
 function printPayroll() {
-  window.print();
+  // Prefer the selected period (when printing a saved payroll). If not set, send empty for preview.
+  const period = document.getElementById('payPeriodSelect')?.value || currentPeriod || '';
+  if (window.printUtils && typeof window.printUtils.printPayrollTable === 'function') {
+    window.printUtils.printPayrollTable(period);
+  } else {
+    // Fallback
+    window.print();
+  }
 }
 
 /* ============== Payroll Calculation Helpers ============== */
