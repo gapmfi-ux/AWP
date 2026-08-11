@@ -1,0 +1,52 @@
+<!-- Payroll Module -->
+<div class="payroll-container">
+  <!-- Header with Title and Controls in same row -->
+  <div class="payroll-header">
+    <h2><i class="fas fa-calculator"></i> Payroll</h2>
+    <div class="payroll-controls">
+      <button class="btn-primary" onclick="processPayroll()">
+        <i class="fas fa-play"></i> Run Payroll
+      </button>
+      <label for="payPeriodSelect" style="font-size:12px; font-weight:500; color:#4a5568;">Period:</label>
+      <input type="month" id="payPeriodSelect" onchange="loadPayrollPeriod()" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; background:#f7fafc; color:#2d3748;">
+      <button class="btn-outline" onclick="printPayroll()">
+        <i class="fas fa-print"></i> Print
+      </button>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="payroll-table-wrapper">
+    <table class="payroll-table" id="payrollTable">
+      <thead>
+        <tr>
+          <th style="min-width:70px;">Staff Number</th>
+          <th style="min-width:120px;">Full Name</th>
+          <th style="min-width:100px;">Designation</th>
+          <th style="min-width:90px; text-align:right;">Basic Salary</th>
+          <th style="min-width:90px; text-align:right;">Allowances</th>
+          <th style="min-width:90px; text-align:right;">Gross Salary</th>
+          <th style="min-width:90px; text-align:right;">Employee Pension(5.5%)</th>
+          <th style="min-width:90px; text-align:right;">Employee PF(10%)</th>
+          <th style="min-width:80px; text-align:right;">Tax Relief</th>
+          <th style="min-width:90px; text-align:right;">Taxable Income</th>
+          <th style="min-width:80px; text-align:right;">PAYE</th>
+          <th style="min-width:90px; text-align:right;">Total Deduction</th>
+          <th style="min-width:90px; text-align:right;">Net Pay</th>
+          <th style="min-width:90px; text-align:right;">Employer Pension(13%)</th>
+          <th style="min-width:90px; text-align:right;">Employer PF(5%)</th>
+          <th style="min-width:80px; text-align:right;">Monthly Loan</th>
+        </tr>
+      </thead>
+      <tbody id="payrollTableBody">
+        <tr>
+          <td colspan="16" class="payroll-table-empty">
+            <i class="fas fa-money-check-alt"></i>
+            <p>No payroll data</p>
+            <span class="sub-text">Select a pay period or run payroll</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
