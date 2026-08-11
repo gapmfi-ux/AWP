@@ -4,14 +4,28 @@
   <div class="payroll-header">
     <h2><i class="fas fa-calculator"></i> Payroll</h2>
     <div class="payroll-controls">
-      <button class="btn-primary" onclick="processPayroll()">
-        <i class="fas fa-play"></i> Run Payroll
-      </button>
+      <!-- When no saved run for period: show process & run -->
+      <div id="actions-process-run" style="display:flex; gap:8px; align-items:center;">
+        <button class="btn-primary" id="btnProcessPayroll" onclick="processPayrollPreview()">
+          <i class="fas fa-cogs"></i> Process Payroll
+        </button>
+        <button class="btn-primary" id="btnRunPayroll" onclick="processPayroll()">
+          <i class="fas fa-play"></i> Run Payroll
+        </button>
+      </div>
+
+      <!-- When saved run exists for period: show print & delete -->
+      <div id="actions-print-delete" style="display:none; gap:8px; align-items:center;">
+        <button class="btn-outline" id="btnPrintPayroll" onclick="printPayroll()">
+          <i class="fas fa-print"></i> Print
+        </button>
+        <button class="btn-danger" id="btnDeletePayroll" title="Delete Payroll for period" onclick="deletePayrollPeriod()">
+          <i class="fas fa-times"></i> Delete
+        </button>
+      </div>
+
       <label for="payPeriodSelect" style="font-size:12px; font-weight:500; color:#4a5568;">Period:</label>
-      <input type="month" id="payPeriodSelect" onchange="loadPayrollPeriod()" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; background:#f7fafc; color:#2d3748;">
-      <button class="btn-outline" onclick="printPayroll()">
-        <i class="fas fa-print"></i> Print
-      </button>
+      <input type="month" id="payPeriodSelect" onchange="onPeriodChange()" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; background:#f7fafc; color:#2d3748;">
     </div>
   </div>
 
@@ -43,7 +57,7 @@
           <td colspan="16" class="payroll-table-empty">
             <i class="fas fa-money-check-alt"></i>
             <p>No payroll data</p>
-            <span class="sub-text">Select a pay period or run payroll</span>
+            <span class="sub-text">Select a pay period or click "Process Payroll"</span>
           </td>
         </tr>
       </tbody>
