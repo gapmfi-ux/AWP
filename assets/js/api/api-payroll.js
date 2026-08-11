@@ -1,8 +1,6 @@
 /**
  * API - Payroll, Allowance & Employee wrapper (direct attach style)
  * Follows same approach as api-inventory.js
- *
- * Place this file at assets/js/api/api-payroll.js and load it after api-core.js in index.html.
  */
 
 if (!window.API) {
@@ -67,7 +65,8 @@ API.getAllAllowanceTypes = async function(options = {}) {
 API.saveAllowance = async function(staffNumber, allowanceType, allowanceAmount, effectiveDate, options = {}) {
   const payload = { staffNumber, allowanceType, allowanceAmount, effectiveDate };
   if (options && options.overwriteIfExists) payload.options = { overwriteIfExists: true };
-  return this.request('saveAllowance', payload, options);
+  // server expects saveAllowance with formData or direct, we send formData for consistency
+  return this.request('saveAllowance', { formData: JSON.stringify(payload) }, options);
 };
 
 API.deleteAllowance = async function(staffNumber, allowanceType, effectiveDate = null, options = {}) {
@@ -76,7 +75,7 @@ API.deleteAllowance = async function(staffNumber, allowanceType, effectiveDate =
 
 API.updateAllowance = async function(staffNumber, oldAllowanceType, newAllowanceType, newAllowanceAmount, newEffectiveDate, options = {}) {
   const payload = { staffNumber, oldAllowanceType, newAllowanceType, newAllowanceAmount, newEffectiveDate };
-  return this.request('updateAllowance', payload, options);
+  return this.request('updateAllowance', { formData: JSON.stringify(payload) }, options);
 };
 
 API.initializeAllowanceSheet = async function(options = {}) {
@@ -93,13 +92,13 @@ API.getEmployeeByStaffNumber = async function(staffNumber, options = {}) {
 };
 
 API.addEmployee = async function(employeeData = {}, options = {}) {
-  // Send as direct params, not nested formData
-  return this.request('addEmployee', employeeData, options);
+  // Send as direct params, not nested formData (server handles both)
+  return this.request('addEmployee', { formData: JSON.stringify(employeeData) }, options);
 };
 
 API.updateEmployee = async function(employeeData = {}, options = {}) {
   // Send as direct params, not nested formData
-  return this.request('updateEmployee', employeeData, options);
+  return this.request('updateEmployee', { formData: JSON.stringify(employeeData) }, options);
 };
 
 API.deleteEmployee = async function(staffNumber, options = {}) {
@@ -108,4 +107,13 @@ API.deleteEmployee = async function(staffNumber, options = {}) {
 
 API.initializeEmployeeSheet = async function(options = {}) {
   return this.request('initializeEmployeeSheet', {}, options);
+};
+
+// ---------- MISSING HELPERS ADDED ----------
+API.getAllDepartments = async function(options = {}) {
+  return this.request('getAllDepartments', {}, options);
+};
+
+API.getAllDesignations = async function(options = {}) {
+  return this.request('getAllDesignations', {}, options);
 };
