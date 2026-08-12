@@ -1,67 +1,172 @@
 /**
- * Payroll Module - Client Side Logic
- * Handles payroll processing, loading, and display
+ * payroll.js - Complete updated payroll client logic
+ *
+ * - No automatic loading of payroll preview on module init.
+ * - Period input defaults to current month.
+ * - "Process Payroll" builds a preview (active employees only).
+ * - "Run Payroll" saves current preview (or computes then saves).
+ * - Button visibility toggles: [Process + Run] when no saved run, [Print + Delete] when a saved run exists.
+ * - Uses API.* methods (api-payroll.js) to communicate with server-side AppsScript.
  */
 
 let currentPayrollData = [];
 let currentPeriod = '';
+let currentRunId = null; // populated when a saved run is loaded
 
-/* ============== Initialization ============== */
+/* ===========================
+   Initialization
+   =========================== */
 
 function initPayroll() {
+  currentPayrollData = [];
   currentPeriod = '';
+  currentRunId = null;
+
   const periodInput = document.getElementById('payPeriodSelect');
   if (periodInput) {
-    periodInput.value = '';
+    periodInput.value = getCurrentMonthValue(); // default to current month
   }
-  loadPayrollPreview();
+
+  // Initially assume no saved run until we check
+  toggleActionButtons(false);
+
+  // Check for existing run for default period (do not auto-generate preview)
+  const defaultPeriod = document.getElementById('payPeriodSelect')?.value;
+  if (defaultPeriod) {
+    checkPayrollExistsAndToggle(defaultPeriod);
+  }
 }
 
-/* ============== Load Payroll Preview (calculated figures) ============== */
+/* ===========================
+   Helpers
+   =========================== */
 
-async function loadPayrollPreview() {
+function getCurrentMonthValue() {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const yyyy = d.getFullYear();
+  return `${yyyy}-${mm}`;
+}
+
+function onPeriodChange() {
+  const period = document.getElementById('payPeriodSelect')?.value;
+  currentPeriod = period || '';
+  if (currentPeriod) {
+    checkPayrollExistsAndToggle(currentPeriod);
+  } else {
+    toggleActionButtons(false);
+    currentPayrollData = [];
+    currentRunId = null;
+    renderPayrollTable([]);
+  }
+}
+
+/**
+ * Toggle which action buttons are visible:
+ *  - showProcessRun true  => show [Process Payroll] + [Run Payroll]
+ *  - showProcessRun false => show [Print] + [Delete]
+ */
+function toggleActionButtons(showProcessRun) {
+  const pr = document.getElementById('actions-process-run');
+  const pd = document.getElementById('actions-print-delete');
+  if (showProcessRun) {
+    if (pr) pr.style.display = 'flex';
+    if (pd) pd.style.display = 'none';
+  } else {
+    if (pr) pr.style.display = 'none';
+    if (pd) pd.style.display = 'flex';
+  }
+}
+
+/* ===========================
+   Check for existing saved run for a period
+   =========================== */
+
+async function checkPayrollExistsAndToggle(period) {
   try {
-    showLoadingModal('Loading payroll preview...');
+    showLoadingModal && showLoadingModal('Checking payroll run...');
+    const records = await API.getPayrollRunsByPeriod(period).catch(() => []);
+    if (records && Array.isArray(records) && records.length > 0) {
+      // saved run exists
+      currentPayrollData = records;
+      currentRunId = records[0]['Run ID'] || records[0].runId || null;
+      renderPayrollTable(records, false);
+      toggleActionButtons(false); // show Print/Delete
+      showToast(`Loaded saved payroll for ${period}`, 'info');
+    } else {
+      // no saved run
+      currentPayrollData = [];
+      currentRunId = null;
+      renderPayrollTable([], true);
+      toggleActionButtons(true); // show Process + Run
+    }
+  } catch (err) {
+    console.error('checkPayrollExistsAndToggle error', err);
+    showToast('Failed to check saved payroll', 'error');
+    toggleActionButtons(true);
+  } finally {
+    hideLoadingModal && hideLoadingModal();
+  }
+}
 
-    // Normalize API.getEmployees response similar to employee-list getEmployeesFromServer
+/* ===========================
+   Process Payroll (Preview) - active employees only
+   =========================== */
+
+async function processPayrollPreview() {
+  const period = document.getElementById('payPeriodSelect')?.value;
+  if (!period) {
+    showToast('Please select a pay period (month) first', 'warning');
+    return;
+  }
+  currentPeriod = period;
+
+  try {
+    showLoadingModal && showLoadingModal('Processing payroll preview...');
     const resp = await API.getEmployees().catch(() => []);
     const serverRecords = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : (resp || []);
 
     if (!serverRecords || serverRecords.length === 0) {
       currentPayrollData = [];
       renderPayrollTable([]);
-      showToast('No employees found. Add employees first.', 'warning');
-      hideLoadingModal();
+      showToast('No employees found', 'warning');
       return;
     }
 
     const payrollData = [];
 
     for (const emp of serverRecords) {
+      // Only include active employees (if Status column exists)
+      const status = (emp['Status'] || emp.status || '').toString().trim().toLowerCase();
+      if (status && status !== 'active') continue;
+
       const staffNumber = emp['Staff Number'] || emp.staff || '';
+      if (!staffNumber) continue;
+
       const fullName = emp['Full Name'] || emp.name || '';
       const designation = emp['Designation'] || emp.designation || '';
       const basicSalary = parseFloat(emp['Basic Salary'] || emp.basicSalary || 0) || 0;
       const employeePFrate = parseFloat(emp['Employee PF Rate (%)'] || emp.employeePFrate || 0) || 0;
-      const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPFrate || 0) || 0;
-      const taxRelief = parseFloat(emp['Tax Relief Amount'] || emp.taxRelief || 0) || 0;
+      const employerPFrate = parseFloat(emp['Employer PF Rate (%)'] || emp.employerPfrate || emp.employerPFrate || 0) || 0;
+      const taxRelief = parseFloat(emp['Tax Relief'] || emp.taxRelief || 0) || 0;
+      const loanMonthly = parseFloat(emp['Monthly Loan'] || emp.loanMonthly || 0) || 0;
 
+      // allowances from backend (may be []); normalize
       let allowances = [];
       try {
         allowances = await API.getAllowancesByStaff(staffNumber).catch(() => []);
-        // normalize allowances: some backends may return object with records
         allowances = Array.isArray(allowances) ? allowances : (allowances && allowances.records) ? allowances.records : (allowances || []);
       } catch (e) {
         allowances = [];
       }
 
       const calc = computePayrollRow({
-        basicSalary: basicSalary,
-        allowances: allowances,
+        basicSalary,
+        allowances,
         employeePFpct: employeePFrate || 5.5,
         employerPFpct: employerPFrate || 5,
         reliefAmount: taxRelief,
-        loanMonthly: 0,
+        loanMonthly,
         pfChecked: employeePFrate > 0
       });
 
@@ -77,259 +182,57 @@ async function loadPayrollPreview() {
         'Tax Relief': taxRelief,
         'Taxable Income': calc.taxableAmount || calc.taxableIncome || 0,
         'PAYE': calc.paye,
-        'Total Deduction': calc.totalDeduction || (calc.employeePension + calc.employeePf + calc.paye) || 0,
+        'Total Deduction': calc.totalDeductionsBeforeTax || calc.totalDeduction || 0,
         'Net Pay': calc.netPay,
         'Employer Pension (13%)': calc.employerPension,
         'Employer PF': calc.employerPf,
-        'Monthly Loan': 0,
+        'Monthly Loan': calc.loanMonthly || 0,
         'Allowances': allowances
       });
     }
 
     currentPayrollData = payrollData;
+    currentRunId = null; // preview only
     renderPayrollTable(payrollData, true);
-    showToast('Showing calculated payroll preview', 'info');
-
-  } catch (error) {
-    console.error('Error loading payroll preview:', error);
-    showToast('Failed to load payroll preview', 'error');
+    toggleActionButtons(true); // show Process + Run
+    showToast('Payroll preview ready. Click Run Payroll to save.', 'success');
+  } catch (err) {
+    console.error('processPayrollPreview error', err);
+    showToast('Failed to build payroll preview', 'error');
   } finally {
-    hideLoadingModal();
+    hideLoadingModal && hideLoadingModal();
   }
 }
 
-/* ============== Load Payroll Period (on period change) ============== */
-
-async function loadPayrollPeriod() {
-  const periodInput = document.getElementById('payPeriodSelect');
-  if (!periodInput) return;
-
-  const period = periodInput.value;
-
-  if (!period) {
-    currentPeriod = '';
-    await loadPayrollPreview();
-    return;
-  }
-
-  currentPeriod = period;
-
-  try {
-    showLoadingModal('Loading payroll data...');
-    const response = await API.getPayrollRunsByPeriod(period);
-
-    if (response && Array.isArray(response) && response.length > 0) {
-      currentPayrollData = response;
-      renderPayrollTable(response, false);
-      showToast(`Loaded saved payroll for ${period}`, 'success');
-    } else {
-      showToast(`No saved payroll found for ${period}. Showing calculated preview.`, 'info');
-      await loadPayrollPreview();
-    }
-  } catch (error) {
-    console.error('Error loading payroll:', error);
-    showToast('Failed to load payroll data', 'error');
-  } finally {
-    hideLoadingModal();
-  }
-}
-
-/* ============================================
-   CONFIRM MODAL
-   ============================================ */
-
-function showConfirmModal(title, message, onConfirm, onCancel) {
-  let modal = document.getElementById('confirmModal');
-
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'confirmModal';
-    modal.className = 'confirm-modal';
-    modal.innerHTML = `
-      <div class="confirm-modal-content">
-        <div class="confirm-modal-header">
-          <h3 id="confirmModalTitle">Confirm</h3>
-          <button class="confirm-modal-close" onclick="closeConfirmModal()">&times;</button>
-        </div>
-        <div class="confirm-modal-body" id="confirmModalBody">
-          Are you sure?
-        </div>
-        <div class="confirm-modal-footer">
-          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
-          <button class="btn-primary" id="confirmOkBtn">Confirm</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    if (!document.getElementById('confirmModalStyles')) {
-      const styles = document.createElement('style');
-      styles.id = 'confirmModalStyles';
-      styles.textContent = `
-        .confirm-modal {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(26, 32, 44, 0.55);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-          display: none;
-          align-items: center;
-          justify-content: center;
-          z-index: 10001;
-          padding: 20px;
-          animation: modalFadeIn 0.2s ease;
-        }
-        .confirm-modal.show {
-          display: flex;
-        }
-        .confirm-modal-content {
-          background: #ffffff;
-          border-radius: 12px;
-          width: 100%;
-          max-width: 480px;
-          max-height: 90vh;
-          overflow: hidden;
-          box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
-          display: flex;
-          flex-direction: column;
-        }
-        .confirm-modal-header {
-          padding: 16px 20px;
-          border-bottom: 1px solid #edf2f7;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          flex-shrink: 0;
-          background: #fafbfc;
-        }
-        .confirm-modal-header h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: #1a202c;
-          margin: 0;
-        }
-        .confirm-modal-close {
-          background: none;
-          border: none;
-          font-size: 22px;
-          color: #a0aec0;
-          cursor: pointer;
-          padding: 0 4px;
-          line-height: 1;
-        }
-        .confirm-modal-close:hover {
-          color: #2d3748;
-        }
-        .confirm-modal-body {
-          padding: 24px 20px;
-          font-size: 14px;
-          color: #2d3748;
-          line-height: 1.6;
-        }
-        .confirm-modal-body strong {
-          color: #4361ee;
-        }
-        .confirm-modal-footer {
-          padding: 12px 20px;
-          border-top: 1px solid #edf2f7;
-          display: flex;
-          justify-content: flex-end;
-          gap: 10px;
-          flex-shrink: 0;
-          background: #fafbfc;
-        }
-        .confirm-modal-footer .btn-primary,
-        .confirm-modal-footer .btn-secondary {
-          padding: 8px 24px;
-          font-size: 14px;
-        }
-        @keyframes modalFadeIn {
-          from { opacity: 0; transform: scale(0.96) translateY(10px); }
-          to { opacity: 1; transform: scale(1) translateY(0); }
-        }
-      `;
-      document.head.appendChild(styles);
-    }
-  }
-
-  document.getElementById('confirmModalTitle').textContent = title;
-  document.getElementById('confirmModalBody').innerHTML = message;
-
-  modal._onConfirm = onConfirm || function() {};
-  modal._onCancel = onCancel || function() {};
-
-  const okBtn = document.getElementById('confirmOkBtn');
-  const cancelBtn = document.getElementById('confirmCancelBtn');
-  const closeBtn = modal.querySelector('.confirm-modal-close');
-
-  // Replace nodes to avoid duplicate listeners
-  const newOkBtn = okBtn.cloneNode(true);
-  const newCancelBtn = cancelBtn.cloneNode(true);
-  const newCloseBtn = closeBtn.cloneNode(true);
-
-  okBtn.parentNode.replaceChild(newOkBtn, okBtn);
-  cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-  closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
-
-  newOkBtn.addEventListener('click', function() {
-    if (modal._onConfirm) modal._onConfirm();
-  });
-
-  newCancelBtn.addEventListener('click', function() {
-    if (modal._onCancel) modal._onCancel();
-  });
-
-  newCloseBtn.addEventListener('click', function() {
-    if (modal._onCancel) modal._onCancel();
-  });
-
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      if (modal._onCancel) modal._onCancel();
-    }
-  });
-
-  modal.classList.add('show');
-}
-
-function closeConfirmModal() {
-  const modal = document.getElementById('confirmModal');
-  if (modal) {
-    modal.classList.remove('show');
-  }
-}
-
-/* ============== Process / Run Payroll - SAVE CURRENT TABLE DATA ============== */
+/* ===========================
+   Run Payroll (save current preview)
+   =========================== */
 
 async function processPayroll() {
-  const periodInput = document.getElementById('payPeriodSelect');
-  if (!periodInput) return;
-
-  const period = periodInput.value;
+  const period = document.getElementById('payPeriodSelect')?.value;
   if (!period) {
-    showToast('Please select a pay period first', 'warning');
-    periodInput.focus();
+    showToast('Please select a pay period (month) first', 'warning');
     return;
   }
 
-  // Ensure we have currentPayrollData (calculated preview or loaded saved)
+  // If no preview exists, compute one first
   if (!currentPayrollData || currentPayrollData.length === 0) {
-    showToast('No payroll data to save. Load employees first.', 'warning');
-    return;
+    showToast('No preview present — computing payroll then saving...', 'info');
+    await processPayrollPreview();
+    if (!currentPayrollData || currentPayrollData.length === 0) {
+      showToast('No payroll records to save', 'warning');
+      return;
+    }
   }
 
   showConfirmModal(
     'Confirm Payroll Processing',
     `Are you sure you want to save payroll for <strong>${period}</strong>?<br><br>This will save the current payroll calculations to the sheet.`,
-    async function() {
+    async function onConfirm() {
       try {
-        showLoadingModal('Saving payroll...');
-
-        // Save each record from current table
+        showLoadingModal && showLoadingModal('Saving payroll...');
         let savedCount = 0;
+
         for (const record of currentPayrollData) {
           const payrollData = {
             staffNumber: record['Staff Number'] || record.staffNumber || '',
@@ -355,45 +258,51 @@ async function processPayroll() {
           const response = await API.savePayrollRun(payrollData);
           if (response && response.success !== false) {
             savedCount++;
+            if (!currentRunId && response.runId) currentRunId = response.runId;
+          } else {
+            console.warn('Failed saving payroll for', payrollData.staffNumber, response);
           }
         }
 
         if (savedCount > 0) {
-          showToast(`Payroll saved successfully for ${period} (${savedCount} records)`, 'success');
-          await loadPayrollPeriod();
+          showToast(`Payroll saved for ${period} (${savedCount} records)`, 'success');
+          // After saving, reload saved run rows to reflect stored data
+          await checkPayrollExistsAndToggle(period);
+          toggleActionButtons(false); // show Print/Delete
         } else {
           showToast('Failed to save payroll records', 'error');
         }
-      } catch (error) {
-        console.error('Error saving payroll:', error);
-        showToast('Failed to save payroll: ' + error.message, 'error');
+      } catch (err) {
+        console.error('processPayroll save error', err);
+        showToast('Failed to save payroll: ' + (err.message || err), 'error');
       } finally {
-        hideLoadingModal();
+        hideLoadingModal && hideLoadingModal();
         closeConfirmModal();
       }
     },
-    function() {
+    function onCancel() {
       closeConfirmModal();
     }
   );
 }
 
-/* ============== Delete Payroll Period ============== */
+/* ===========================
+   Delete Payroll Period
+   =========================== */
 
 async function deletePayrollPeriod() {
   const period = document.getElementById('payPeriodSelect')?.value;
   if (!period) {
-    showToast('No period selected', 'warning');
+    showToast('No pay period selected', 'warning');
     return;
   }
 
   showConfirmModal(
     'Confirm Delete',
     `Are you sure you want to delete all payroll records for <strong>${period}</strong>?<br><br>This action cannot be undone.`,
-    async function() {
+    async function onConfirm() {
       try {
-        showLoadingModal('Deleting payroll records...');
-
+        showLoadingModal && showLoadingModal('Deleting payroll records...');
         const records = await API.getPayrollRunsByPeriod(period);
         if (!records || records.length === 0) {
           showToast('No records found for this period', 'info');
@@ -407,28 +316,32 @@ async function deletePayrollPeriod() {
           if (response && response.success) {
             showToast(`Deleted payroll records for ${period}`, 'success');
             currentPayrollData = [];
-            await loadPayrollPreview();
+            currentRunId = null;
+            toggleActionButtons(true);
+            renderPayrollTable([], true);
           } else {
             showToast(response?.error || 'Failed to delete payroll', 'error');
           }
         } else {
           showToast('Could not find Run ID for this period', 'error');
         }
-      } catch (error) {
-        console.error('Error deleting payroll:', error);
-        showToast('Failed to delete payroll: ' + error.message, 'error');
+      } catch (err) {
+        console.error('deletePayrollPeriod error', err);
+        showToast('Failed to delete payroll: ' + (err.message || err), 'error');
       } finally {
-        hideLoadingModal();
+        hideLoadingModal && hideLoadingModal();
         closeConfirmModal();
       }
     },
-    function() {
+    function onCancel() {
       closeConfirmModal();
     }
   );
 }
 
-/* ============== Render Payroll Table - COMPACT WITH ORIGINAL NAMES ============== */
+/* ===========================
+   Render Payroll Table
+   =========================== */
 
 function renderPayrollTable(data, isPreview = false) {
   const tbody = document.getElementById('payrollTableBody');
@@ -440,14 +353,14 @@ function renderPayrollTable(data, isPreview = false) {
         <td colspan="16" class="payroll-table-empty">
           <i class="fas fa-money-check-alt"></i>
           <p>No payroll data</p>
-          <span class="sub-text">${isPreview ? 'Add employees to see calculated payroll' : 'Run payroll to generate data for this period'}</span>
+          <span class="sub-text">${isPreview ? 'Click Process Payroll to generate preview' : 'Select a pay period or run payroll'}</span>
         </td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = data.map((record, index) => {
+  tbody.innerHTML = data.map(record => {
     const staffNumber = record['Staff Number'] || record.staffNumber || '';
     const fullName = record['Full Name'] || record.fullName || '';
     const designation = record['Designation'] || record.designation || '';
@@ -465,11 +378,8 @@ function renderPayrollTable(data, isPreview = false) {
     const employerPf = parseFloat(record['Employer PF(5%)'] || record['Employer PF'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
 
-    // Helper to format number with dash for zero
     const formatCell = (value) => {
-      if (value === 0 || value === '0' || isNaN(value) || value === '') {
-        return '<span class="zero">—</span>';
-      }
+      if (value === 0 || value === '0' || isNaN(value) || value === '') return '<span class="zero">—</span>';
       return formatMoney(value);
     };
 
@@ -496,13 +406,18 @@ function renderPayrollTable(data, isPreview = false) {
   }).join('');
 }
 
-/* ============== Print Function ============== */
+/* ===========================
+   Print
+   =========================== */
 
 function printPayroll() {
   window.print();
 }
 
-/* ============== Payroll Calculation Helpers ============== */
+/* ===========================
+   Client payroll compute helpers
+   (kept here so preview matches server compute)
+   =========================== */
 
 function roundToTwo(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -527,17 +442,13 @@ function calculatePAYE(taxableIncome) {
 
   for (let i = 0; i < brackets.length; i++) {
     const bracket = brackets[i];
-    const bracketAmount = bracket.amount;
-    const bracketRate = bracket.rate;
-
     if (remainingIncome <= 0) break;
-
     if (i === brackets.length - 1) {
-      totalTax += remainingIncome * bracketRate;
+      totalTax += remainingIncome * bracket.rate;
       break;
     } else {
-      const taxableInThisBracket = Math.min(remainingIncome, bracketAmount);
-      totalTax += taxableInThisBracket * bracketRate;
+      const taxableInThisBracket = Math.min(remainingIncome, bracket.amount);
+      totalTax += taxableInThisBracket * bracket.rate;
       remainingIncome -= taxableInThisBracket;
     }
   }
@@ -545,35 +456,145 @@ function calculatePAYE(taxableIncome) {
   return roundToTwo(totalTax);
 }
 
-function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
-  const totalAllowances = allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0);
+/**
+ * computePayrollRow - client-side mirror of server compute
+ * opts: { basicSalary, allowances (array), employeePFpct, employerPFpct, reliefAmount, loanMonthly, pfChecked }
+ */
+function computePayrollRow(opts = {}) {
+  const basicSalary = parseFloat(opts.basicSalary || 0) || 0;
+  const allowances = Array.isArray(opts.allowances) ? opts.allowances : [];
+  const employeePFpct = parseFloat(opts.employeePFpct || 5.5) || 0;
+  const employerPFpct = parseFloat(opts.employerPFpct || 5) || 0;
+  const reliefAmount = parseFloat(opts.reliefAmount || 0) || 0;
+  const loanMonthly = parseFloat(opts.loanMonthly || 0) || 0;
+  const pfChecked = !!opts.pfChecked;
+
+  const totalAllowances = roundToTwo(allowances.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0));
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
+
   const employeePension = roundToTwo(grossSalary * 0.055);
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-  const taxableIncome = Math.max(0, roundToTwo(grossSalary - employeePension - employeePf - (reliefAmount || 0)));
-  const paye = calculatePAYE(taxableIncome);
-  const netPay = roundToTwo(taxableIncome - paye);
-  const totalDeduction = roundToTwo(employeePension + employeePf + paye + loanMonthly);
+  const taxRelief = roundToTwo(reliefAmount || 0);
+  const totalDeductionsBeforeTax = roundToTwo(employeePension + employeePf + taxRelief);
+  const taxableAmount = Math.max(0, roundToTwo(grossSalary - totalDeductionsBeforeTax));
+  const paye = calculatePAYE(taxableAmount);
+  const netPay = roundToTwo(taxableAmount - paye);
+  const loanMonthlyAmount = roundToTwo(loanMonthly || 0);
+  const takeHomePay = roundToTwo(netPay - loanMonthlyAmount);
   const employerPension = roundToTwo(grossSalary * 0.13);
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
-  const takeHomePay = roundToTwo(netPay - loanMonthly);
 
   return {
     totalAllowances,
     grossSalary,
     employeePension,
     employeePf,
-    taxableIncome,
+    taxRelief,
+    totalDeductionsBeforeTax,
+    taxableAmount,
     paye,
     netPay,
-    totalDeduction,
+    loanMonthly: loanMonthlyAmount,
+    takeHomePay,
     employerPension,
-    employerPf,
-    takeHomePay
+    employerPf
   };
 }
 
-/* ============== Utility Functions ============== */
+/* ===========================
+   UI Helpers - Confirm modal (self-contained)
+   =========================== */
+
+/**
+ * showConfirmModal(title, message, onConfirm, onCancel)
+ * Creates a modal once and reuses it.
+ */
+function showConfirmModal(title, message, onConfirm, onCancel) {
+  let modal = document.getElementById('confirmModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'confirmModal';
+    modal.className = 'confirm-modal';
+    modal.innerHTML = `
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+          <h3 id="confirmModalTitle">Confirm</h3>
+          <button class="confirm-modal-close" id="confirmModalClose">&times;</button>
+        </div>
+        <div class="confirm-modal-body" id="confirmModalBody">Are you sure?</div>
+        <div class="confirm-modal-footer">
+          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
+          <button class="btn-primary" id="confirmOkBtn">Confirm</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // styles (only once)
+    if (!document.getElementById('confirmModalStyles')) {
+      const styles = document.createElement('style');
+      styles.id = 'confirmModalStyles';
+      styles.textContent = `
+        .confirm-modal {
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(26,32,44,0.55);
+          display: none;
+          align-items: center;
+          justify-content: center;
+          z-index: 10001;
+          padding: 20px;
+        }
+        .confirm-modal.show { display: flex; }
+        .confirm-modal-content { background:#fff; border-radius:12px; width:100%; max-width:480px; box-shadow:0 20px 60px rgba(0,0,0,0.15); overflow:hidden; display:flex; flex-direction:column; }
+        .confirm-modal-header { padding:12px 16px; border-bottom:1px solid #edf2f7; display:flex; justify-content:space-between; align-items:center; background:#fafbfc; }
+        .confirm-modal-header h3 { margin:0; font-size:16px; font-weight:600; color:#1a202c; }
+        .confirm-modal-close { background:none; border:none; font-size:22px; color:#a0aec0; cursor:pointer; }
+        .confirm-modal-body { padding:20px; font-size:14px; color:#2d3748; }
+        .confirm-modal-footer { padding:12px 16px; border-top:1px solid #edf2f7; display:flex; justify-content:flex-end; gap:10px; background:#fafbfc; }
+      `;
+      document.head.appendChild(styles);
+    }
+
+    // event delegation
+    modal.querySelector('#confirmOkBtn').addEventListener('click', function () {
+      closeConfirmModal();
+      if (typeof modal._onConfirm === 'function') modal._onConfirm();
+    });
+    modal.querySelector('#confirmCancelBtn').addEventListener('click', function () {
+      closeConfirmModal();
+      if (typeof modal._onCancel === 'function') modal._onCancel();
+    });
+    modal.querySelector('#confirmModalClose').addEventListener('click', function () {
+      closeConfirmModal();
+      if (typeof modal._onCancel === 'function') modal._onCancel();
+    });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) {
+        closeConfirmModal();
+        if (typeof modal._onCancel === 'function') modal._onCancel();
+      }
+    });
+  }
+
+  modal.querySelector('#confirmModalTitle').textContent = title || 'Confirm';
+  modal.querySelector('#confirmModalBody').innerHTML = message || 'Are you sure?';
+  modal._onConfirm = onConfirm || function(){};
+  modal._onCancel = onCancel || function(){};
+  modal.classList.add('show');
+}
+
+function closeConfirmModal() {
+  const modal = document.getElementById('confirmModal');
+  if (modal) modal.classList.remove('show');
+}
+
+/* ===========================
+   Small UI utilities
+   =========================== */
 
 function formatMoney(n) {
   if (typeof n !== 'number' || isNaN(n)) return '0.00';
@@ -583,16 +604,9 @@ function formatMoney(n) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"'`]/g, s => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '`': '&#96;'
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;'
   }[s]));
 }
-
-/* ============== Show Toast ============== */
 
 function showToast(message, type = 'info') {
   const toast = document.getElementById('global-toast');
@@ -600,24 +614,21 @@ function showToast(message, type = 'info') {
     console.log(`[${type}] ${message}`);
     return;
   }
-
   toast.textContent = message;
   toast.className = type;
   toast.style.display = 'block';
-
   clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => {
-    toast.style.display = 'none';
-  }, 3000);
+  toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
-/* ============== Exports ============== */
+/* ===========================
+   Exports
+   =========================== */
 
 window.initPayroll = initPayroll;
+window.processPayrollPreview = processPayrollPreview;
 window.processPayroll = processPayroll;
-window.loadPayrollPeriod = loadPayrollPeriod;
+window.loadPayrollPeriod = onPeriodChange;
 window.deletePayrollPeriod = deletePayrollPeriod;
 window.printPayroll = printPayroll;
 window.renderPayrollTable = renderPayrollTable;
-window.showConfirmModal = showConfirmModal;
-window.closeConfirmModal = closeConfirmModal;
