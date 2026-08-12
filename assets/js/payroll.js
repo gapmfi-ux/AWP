@@ -463,6 +463,7 @@ function formatPayrollCell(value) {
 }
 
 
+// ---- REPLACEMENT: renderPayrollTable (fixed keys + more robust formatting) ----
 function renderPayrollTable(data, isPreview = false) {
   const tbody = document.getElementById('payrollTableBody');
   if (!tbody) return;
@@ -480,37 +481,37 @@ function renderPayrollTable(data, isPreview = false) {
     return;
   }
 
-  // For each record, normalize field names and render row.
-  const rowsHtml = data.map(record => {
-    // Basic identity fields (try multiple possible keys)
-    const staffNumber = getRecordValue(record, ['Staff Number', 'staff', 'staffNumber']) || '';
-    const fullName = getRecordValue(record, ['Full Name', 'name', 'fullName']) || '';
-    const designation = getRecordValue(record, ['Designation', 'designation']) || '';
+  // Helper to safely read numeric fields (many shapes supported)
+  function num(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  }
 
-    // Numeric fields - try many aliases
-    const basicSalary = getNumeric(record, ['Basic Salary', 'basicSalary', 'basic_salary']) || 0;
-    const totalAllowances = getNumeric(record, ['Total Allowances', 'Total Allowance', 'Allowances', 'allowances', 'totalAllowances']) || 0;
-    const grossSalary = getNumeric(record, ['Gross Salary', 'grossSalary']) || 0;
+  // Use keys that are produced by processPayrollPreviewForPeriod / computePayrollRow
+  tbody.innerHTML = data.map(record => {
+    const staffNumber = record['Staff Number'] || record.staffNumber || '';
+    const fullName = record['Full Name'] || record.fullName || '';
+    const designation = record['Designation'] || record.designation || '';
 
-    const employeePension = getNumeric(record, ['Employee Pension (5.5%)', 'Employee Pension(5.5%)', 'Employee Pension', 'employeePension']) ;
-    const employeePf = getNumeric(record, ['Employee PF', 'Employee PF(10%)', 'employeePf', 'employee_pf']) ;
-    const taxRelief = getNumeric(record, ['Tax Relief', 'taxRelief']) || 0;
-    const taxableIncome = getNumeric(record, ['Taxable Income', 'taxableIncome']) || 0;
-    const paye = getNumeric(record, ['PAYE', 'paye']) || 0;
-    const totalDeduction = getNumeric(record, ['Total Deduction', 'totalDeduction']) || 0;
-    const netPay = getNumeric(record, ['Net Pay', 'netPay']) || 0;
-    const employerPension = getNumeric(record, ['Employer Pension (13%)', 'Employer Pension(13%)', 'employerPension']) ;
-    const employerPf = getNumeric(record, ['Employer PF', 'Employer PF(5%)', 'employerPf']) ;
-    const monthlyLoan = getNumeric(record, ['Monthly Loan', 'loanMonthly', 'MonthlyLoan']) || 0;
+    const basicSalary = num(record['Basic Salary'] || record.basicSalary);
+    const totalAllowances = num(record['Total Allowances'] || record.totalAllowances || (record.Allowances ? record.Allowances.reduce((s,a)=>s+num(a.amount||a),0) : 0));
+    const grossSalary = num(record['Gross Salary'] || record.grossSalary);
+    const employeePension = num(record['Employee Pension (5.5%)'] || record.employeePension || record['Employee Pension(5.5%)']);
+    const employeePf = num(record['Employee PF'] || record.employeePf || record['Employee PF(10%)']);
+    const taxRelief = num(record['Tax Relief'] || record.taxRelief);
+    const taxableIncome = num(record['Taxable Income'] || record.taxableIncome);
+    const paye = num(record['PAYE'] || record.paye);
+    const totalDeduction = num(record['Total Deduction'] || record.totalDeduction || record.totalDeductionsBeforeTax);
+    const netPay = num(record['Net Pay'] || record.netPay);
+    const employerPension = num(record['Employer Pension (13%)'] || record.employerPension);
+    const employerPf = num(record['Employer PF'] || record.employerPf);
+    const loanMonthly = num(record['Monthly Loan'] || record.loanMonthly);
 
-    // If some pension/PF fields are null because server saved different names, attempt common fallbacks:
-    const employeePensionFinal = employeePension !== null ? employeePension : (getNumeric(record, ['employeePension', 'employee_pension']) || 0);
-    const employeePfFinal = employeePf !== null ? employeePf : (getNumeric(record, ['employeePf', 'employee_pf']) || 0);
-    const employerPensionFinal = employerPension !== null ? employerPension : (getNumeric(record, ['employerPension', 'employer_pension']) || 0);
-    const employerPfFinal = employerPf !== null ? employerPf : (getNumeric(record, ['employerPf', 'employer_pf']) || 0);
-
-    // Build HTML cells using formatPayrollCell (which formats numbers and handles nulls)
-    const formatCell = (v) => formatPayrollCell(v);
+    const formatCell = (value) => {
+      if (value === 0 || value === '0' || isNaN(value) || value === '') return '<span class="zero">—</span>';
+      return formatMoney(value);
+    };
 
     return `
       <tr>
@@ -520,22 +521,131 @@ function renderPayrollTable(data, isPreview = false) {
         <td class="col-number">${formatCell(basicSalary)}</td>
         <td class="col-number">${formatCell(totalAllowances)}</td>
         <td class="col-number positive">${formatCell(grossSalary)}</td>
-        <td class="col-number">${formatCell(employeePensionFinal)}</td>
-        <td class="col-number">${formatCell(employeePfFinal)}</td>
+        <td class="col-number">${formatCell(employeePension)}</td>
+        <td class="col-number">${formatCell(employeePf)}</td>
         <td class="col-number">${formatCell(taxRelief)}</td>
         <td class="col-number">${formatCell(taxableIncome)}</td>
         <td class="col-number negative">${formatCell(paye)}</td>
         <td class="col-number negative">${formatCell(totalDeduction)}</td>
         <td class="col-number positive">${formatCell(netPay)}</td>
-        <td class="col-number">${formatCell(employerPensionFinal)}</td>
-        <td class="col-number">${formatCell(employerPfFinal)}</td>
-        <td class="col-number">${formatCell(monthlyLoan)}</td>
+        <td class="col-number">${formatCell(employerPension)}</td>
+        <td class="col-number">${formatCell(employerPf)}</td>
+        <td class="col-number">${formatCell(loanMonthly)}</td>
       </tr>
     `;
   }).join('');
-
-  tbody.innerHTML = rowsHtml;
 }
+
+// ---- NEW: printPayrollReport - uses printUtils (same style as investmentreport.js / print.js) ----
+function buildPayrollPrintTable(data) {
+  // Build a table element from currentPayrollData or fallback to existing DOM table
+  const table = document.createElement('table');
+  table.className = 'print-table';
+
+  // Headers
+  const headers = [
+    'Staff Number','Full Name','Designation','Basic Salary','Total Allowances','Gross Salary',
+    'Employee Pension','Employee PF','Tax Relief','Taxable Income','PAYE','Total Deduction','Net Pay',
+    'Employer Pension','Employer PF','Monthly Loan'
+  ];
+
+  const thead = document.createElement('thead');
+  const htr = document.createElement('tr');
+  headers.forEach(h => {
+    const th = document.createElement('th');
+    th.textContent = h;
+    htr.appendChild(th);
+  });
+  thead.appendChild(htr);
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  (data || []).forEach(record => {
+    const tr = document.createElement('tr');
+
+    const get = (k) => {
+      // Keys used by preview/save code
+      return record[k] ?? record[k.toLowerCase().replace(/ /g,'')] ?? '';
+    };
+
+    const values = [
+      get('Staff Number') || '',
+      get('Full Name') || '',
+      get('Designation') || '',
+      formatMoney(num(record['Basic Salary'] || record.basicSalary || 0)),
+      formatMoney(num(record['Total Allowances'] || record.totalAllowances || 0)),
+      formatMoney(num(record['Gross Salary'] || record.grossSalary || 0)),
+      formatMoney(num(record['Employee Pension (5.5%)'] || record.employeePension || 0)),
+      formatMoney(num(record['Employee PF'] || record.employeePf || 0)),
+      formatMoney(num(record['Tax Relief'] || record.taxRelief || 0)),
+      formatMoney(num(record['Taxable Income'] || record.taxableIncome || 0)),
+      formatMoney(num(record['PAYE'] || record.paye || 0)),
+      formatMoney(num(record['Total Deduction'] || record.totalDeduction || 0)),
+      formatMoney(num(record['Net Pay'] || record.netPay || 0)),
+      formatMoney(num(record['Employer Pension (13%)'] || record.employerPension || 0)),
+      formatMoney(num(record['Employer PF'] || record.employerPf || 0)),
+      formatMoney(num(record['Monthly Loan'] || record.loanMonthly || 0))
+    ];
+
+    values.forEach(v => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      td.className = 'text-right';
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  return table;
+}
+
+function printPayrollReport() {
+  // Prefer printUtils if available
+  try {
+    // If we have currentPayrollData use it, otherwise use DOM table
+    let cleanedTable;
+    if (window.currentPayrollData && Array.isArray(window.currentPayrollData) && window.currentPayrollData.length > 0) {
+      const table = buildPayrollPrintTable(window.currentPayrollData);
+      cleanedTable = (typeof printUtils !== 'undefined' && printUtils.removeActionColumns) ? printUtils.removeActionColumns(table) : table;
+    } else {
+      const tbody = document.getElementById('payrollTableBody');
+      const tableEl = tbody ? tbody.closest('table') : null;
+      if (!tableEl) {
+        alert('No payroll table found to print.');
+        return;
+      }
+      cleanedTable = (typeof printUtils !== 'undefined' && printUtils.removeActionColumns) ? printUtils.removeActionColumns(tableEl.cloneNode(true)) : tableEl.cloneNode(true);
+    }
+
+    const title = 'Payroll Report';
+    const periodInfo = currentPeriod ? `Period: ${currentPeriod}` : (`Generated: ${new Date().toLocaleString()}`);
+
+    const contentHtml = `<div class="print-table-wrapper">${cleanedTable.outerHTML}</div>`;
+
+    if (typeof printUtils !== 'undefined' && typeof printUtils.generatePrintDocument === 'function' && typeof printUtils.openPrintWindow === 'function') {
+      const doc = printUtils.generatePrintDocument(title, contentHtml, periodInfo);
+      printUtils.openPrintWindow(doc, title);
+    } else {
+      // Fallback simple print
+      const w = window.open('', '_blank');
+      w.document.write(`
+        <html><head><title>${title}</title></head><body>
+        <h2>${title}</h2><p>${periodInfo}</p>
+        ${contentHtml}
+        </body></html>`);
+      w.document.close();
+      w.print();
+    }
+  } catch (e) {
+    console.error('Error printing payroll report:', e);
+    alert('Failed to print payroll report: ' + (e.message || e));
+  }
+}
+
+
 /* ===========================
    Compute helpers (client-side mirror)
    =========================== */
@@ -701,3 +811,4 @@ window.processPayroll = processPayroll;
 window.deletePayrollPeriod = deletePayrollPeriod;
 window.printPayroll = function(){ window.print(); };
 window.renderPayrollTable = renderPayrollTable;
+window.printPayroll = printPayrollReport;
