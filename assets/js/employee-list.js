@@ -792,7 +792,7 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
   // STEP 2: Calculate Deductions (Before Tax)
   // ==========================================
   // Employee Pension = 5.5% of Gross
-  const employeePension = roundToTwo(grossSalary * 0.055);
+  const employeePension = roundToTwo(basicSalary * 0.055);
 
   // Employee PF = Employee PF Rate × Basic Salary (if PF eligible)
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
@@ -827,7 +827,7 @@ function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5
   // ==========================================
   // STEP 7: Calculate Employer Costs
   // ==========================================
-  const employerPension = roundToTwo(grossSalary * 0.13);
+  const employerPension = roundToTwo(basicSalary * 0.13);
   const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
 
   return {
