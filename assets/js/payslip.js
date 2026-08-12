@@ -1,342 +1,289 @@
-
+// assets/js/payslip.js
 (function() {
-  'use strict';
+  // state
+  let _actionPortalOpen = false;
+  let _currentPeriod = null;
 
-  // Helpers (reuse app utilities when available)
-  function qs(id) { return document.getElementById(id); }
-  function showToast(message, type) {
-    if (typeof window.showToast === 'function') return showToast(message, type);
-    // fallback: simple toast
-    const g = qs('global-toast');
-    if (g) {
-      g.textContent = message;
-      g.className = type || 'info';
-      g.style.display = 'block';
-      clearTimeout(g._t);
-      g._t = setTimeout(() => g.style.display = 'none', 3000);
-    } else {
-      console.log(type || 'info', message);
+  function initPayslipModule() {
+    // set default period to current month (YYYY-MM)
+    const monthInput = document.getElementById('payslipPeriod');
+    if (monthInput) {
+      if (!monthInput.value) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        monthInput.value = `${now.getFullYear()}-${mm}`;
+      }
+      _currentPeriod = monthInput.value;
+      monthInput.addEventListener('change', function() {
+        _currentPeriod = monthInput.value;
+        loadPayslipList(_currentPeriod);
+      });
+    }
+
+    const sendAllBtn = document.getElementById('sendAllPayslipsBtn');
+    if (sendAllBtn) {
+      sendAllBtn.addEventListener('click', function() {
+        if (!confirm('Send payslips for ' + (_currentPeriod || 'selected period') + ' to all employees?')) return;
+        sendAllPayslips(_currentPeriod);
+      });
+    }
+
+    // global click to close portal
+    document.addEventListener('click', function(e) {
+      if (_actionPortalOpen) closeActionDropdown();
+    });
+
+    loadPayslipList(_currentPeriod);
+  }
+
+  async function loadPayslipList(period) {
+    const tbody = document.getElementById('payslipListBody');
+    if (!tbody) return;
+    tbody.innerHTML = `<tr><td colspan="3" style="padding:14px; text-align:center; color:#666;">Loading...</td></tr>`;
+
+    try {
+      let employees = [];
+      if (typeof API !== 'undefined' && API && typeof API.getEmployees === 'function') {
+        const resp = await API.getEmployees({ useCache: true }).catch(() => []);
+        // normalize resp shape
+        employees = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : (resp.data ? resp.data : []);
+      } else {
+        // fallback demo
+        employees = [
+          { staff: 'EMP001', name: 'Alice Doe' },
+          { staff: 'EMP002', name: 'Bob Smith' },
+          { staff: 'EMP003', name: 'Carol Jones' }
+        ];
+      }
+
+      if (!employees || employees.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" style="padding:14px; text-align:center; color:#666;">No employees found</td></tr>`;
+        return;
+      }
+
+      const rows = employees.map(emp => {
+        const staffNumber = emp['Staff Number'] || emp.staff || emp.staffNumber || '';
+        const fullName = emp['Full Name'] || emp.name || emp.fullName || '';
+        return `<tr data-staff="${escapeHtml(staffNumber)}">
+          <td>${escapeHtml(staffNumber)}</td>
+          <td>${escapeHtml(fullName)}</td>
+          <td style="text-align:right;">
+            <button class="action-btn" onclick="openPayslipActionDropdown(event, '${escapeJs(staffNumber)}')">
+              <i class="fas fa-ellipsis-v"></i>
+            </button>
+          </td>
+        </tr>`;
+      }).join('');
+
+      tbody.innerHTML = rows;
+    } catch (err) {
+      console.error('Error loading payslip list', err);
+      tbody.innerHTML = `<tr><td colspan="3" style="padding:14px; text-align:center; color:#c00;">Failed to load employees</td></tr>`;
     }
   }
 
-  function formatMoney(n) {
-    const num = Number(n || 0);
-    if (isNaN(num)) return String(n);
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // expose the action dropdown function globally so inline onclick can call it
+  window.openPayslipActionDropdown = function(event, staffNumber) {
+    event.stopPropagation();
+    closeActionDropdown();
+
+    const btn = event.currentTarget;
+    const rect = btn.getBoundingClientRect();
+    const portal = document.getElementById('payslipActionPortal');
+    if (!portal) return;
+
+    portal.innerHTML = `
+      <div style="background:white; border-radius:6px; box-shadow:0 8px 20px rgba(0,0,0,0.12); overflow:hidden; min-width:120px;">
+        <button class="dropdown-item" style="display:block;width:100%;padding:8px 12px;border:none;background:none;text-align:left;cursor:pointer;" onclick="viewPayslip('${escapeJs(staffNumber)}')">View</button>
+        <button class="dropdown-item" style="display:block;width:100%;padding:8px 12px;border:none;background:none;text-align:left;cursor:pointer;" onclick="sendPayslip('${escapeJs(staffNumber)}')">Send</button>
+      </div>
+    `;
+
+    portal.style.display = 'block';
+    portal.style.top = (rect.bottom + window.scrollY + 6) + 'px';
+    portal.style.left = (rect.left + window.scrollX - 10) + 'px';
+    _actionPortalOpen = true;
+  };
+
+  function closeActionDropdown() {
+    const portal = document.getElementById('payslipActionPortal');
+    if (portal) {
+      portal.innerHTML = '';
+      portal.style.display = 'none';
+    }
+    _actionPortalOpen = false;
+  }
+
+  // view payslip in modal
+  window.viewPayslip = async function(staffNumber) {
+    closeActionDropdown();
+
+    const period = _currentPeriod;
+    const modal = document.getElementById('payslipModal');
+    const modalArea = document.getElementById('modalPayrollTableArea');
+    const modalEmpId = document.getElementById('modalEmpId');
+    const modalName = document.getElementById('modalName');
+    const modalPayPeriod = document.getElementById('modalPayPeriod');
+
+    if (modalEmpId) modalEmpId.textContent = staffNumber || '-';
+    if (modalName) {
+      // try to fetch employee name
+      let name = '';
+      if (typeof API !== 'undefined' && API && typeof API.getEmployeeByStaffNumber === 'function') {
+        try {
+          const rec = await API.getEmployeeByStaffNumber(staffNumber);
+          name = rec && (rec['Full Name'] || rec.name) ? (rec['Full Name'] || rec.name) : '';
+        } catch (e) { name = ''; }
+      }
+      modalName.textContent = name || staffNumber || '-';
+    }
+    if (modalPayPeriod) modalPayPeriod.textContent = period || '-';
+
+    // Attempt to fetch payroll record for staff+period
+    let payrollRecord = null;
+    if (typeof API !== 'undefined' && API && typeof API.getPayrollRunsByPeriod === 'function') {
+      try {
+        const runs = await API.getPayrollRunsByPeriod(period).catch(() => []);
+        const records = Array.isArray(runs) ? runs : (runs && runs.records) ? runs.records : [];
+        payrollRecord = records.find(r => {
+          const staff = r['Staff Number'] || r.staff || r.staffNumber || r['staffNumber'];
+          return staff === staffNumber;
+        });
+      } catch (e) {
+        payrollRecord = null;
+      }
+    }
+
+    // if we have a payroll record, render values; otherwise show placeholder content
+    if (payrollRecord) {
+      // build a simple table with key items (basic, allowances, paye, pension, net pay)
+      const basic = formatCurrency(getFirstNumber(payrollRecord, ['Basic Salary','basicSalary']) || 0);
+      const allowances = formatCurrency(getFirstNumber(payrollRecord, ['Total Allowances','Total Allowance','allowances']) || 0);
+      const paye = formatCurrency(getFirstNumber(payrollRecord, ['PAYE','paye']) || 0);
+      const empPension = formatCurrency(getFirstNumber(payrollRecord, ['Employee Pension (5.5%)','employeePension']) || 0);
+      const empPf = formatCurrency(getFirstNumber(payrollRecord, ['Employee PF','employeePf']) || 0);
+      const monthlyLoan = formatCurrency(getFirstNumber(payrollRecord, ['Monthly Loan','loanMonthly']) || 0);
+      const netPay = formatCurrency(getFirstNumber(payrollRecord, ['Net Pay','netPay']) || 0);
+      modalArea.innerHTML = `
+        <table style="width:100%; border-collapse:collapse; font-size:14px;">
+          <thead><tr><th style="text-align:left; padding:8px 6px;">Description</th><th style="text-align:right; padding:8px 6px;">This Period (GHS)</th></tr></thead>
+          <tbody>
+            <tr><td style="padding:6px;">Basic Salary</td><td style="padding:6px; text-align:right;">${basic}</td></tr>
+            <tr><td style="padding:6px;">Total Allowances</td><td style="padding:6px; text-align:right;">${allowances}</td></tr>
+            <tr><td style="padding:6px;">PAYE</td><td style="padding:6px; text-align:right;">${paye}</td></tr>
+            <tr><td style="padding:6px;">Employee Pension (5.5%)</td><td style="padding:6px; text-align:right;">${empPension}</td></tr>
+            <tr><td style="padding:6px;">Employee PF</td><td style="padding:6px; text-align:right;">${empPf}</td></tr>
+            <tr><td style="padding:6px;">Monthly Loan</td><td style="padding:6px; text-align:right;">${monthlyLoan}</td></tr>
+            <tr style="font-weight:800; border-top:1px solid #ddd;"><td style="padding:6px;">Net Pay</td><td style="padding:6px; text-align:right;">${netPay}</td></tr>
+          </tbody>
+        </table>
+      `;
+    } else {
+      modalArea.innerHTML = `<div style="padding:18px; color:#666;">Payslip data for ${escapeHtml(staffNumber)} in ${escapeHtml(period || '')} not found.</div>`;
+    }
+
+    // show modal
+    modal.style.display = 'flex';
+
+    // attach close/send handlers
+    document.getElementById('modalCloseBtn').onclick = function() { modal.style.display = 'none'; };
+    document.getElementById('modalSendBtn').onclick = function() { sendPayslip(staffNumber); };
+  };
+
+  // send single payslip
+  window.sendPayslip = async function(staffNumber) {
+    closeActionDropdown();
+    const period = _currentPeriod;
+    if (!period) {
+      showToast('Please select a period first', 'warning');
+      return;
+    }
+    try {
+      if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
+        showToast('Sending payslip to ' + staffNumber + '...', 'info');
+        const res = await API.sendPayslip(staffNumber, period);
+        if (res && res.success !== false) {
+          showToast('Payslip sent to ' + staffNumber, 'success');
+        } else {
+          showToast('Failed to send payslip: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
+        }
+      } else {
+        // fallback: pretend sent
+        showToast('Send feature not configured on server. (Simulated send)', 'info');
+      }
+    } catch (err) {
+      console.error('sendPayslip error', err);
+      showToast('Failed to send payslip', 'error');
+    }
+  };
+
+  // send all
+  async function sendAllPayslips(period) {
+    const tbody = document.getElementById('payslipListBody');
+    if (!tbody) return;
+    const rows = Array.from(tbody.querySelectorAll('tr[data-staff]'));
+    if (rows.length === 0) {
+      showToast('No employees to send', 'warning');
+      return;
+    }
+    for (const r of rows) {
+      const staff = r.getAttribute('data-staff');
+      // small delay to avoid flooding (optional)
+      await new Promise(res => setTimeout(res, 150));
+      await window.sendPayslip(staff);
+    }
+    showToast('Send process completed', 'success');
+  }
+
+  // helpers
+  function showToast(msg, type) {
+    type = type || 'info';
+    // reuse global toast if present
+    const g = document.getElementById('global-toast');
+    if (g) {
+      g.textContent = msg;
+      g.className = type;
+      g.style.display = 'block';
+      clearTimeout(g._t);
+      g._t = setTimeout(() => { g.style.display = 'none'; }, 3000);
+    } else {
+      alert(msg);
+    }
+  }
+
+  function formatCurrency(n) {
+    const num = parseFloat(n) || 0;
+    return num.toLocaleString('en-US', { minimumFractionDigits:2, maximumFractionDigits:2 });
+  }
+
+  function getFirstNumber(obj, keys) {
+    for (const k of keys) {
+      const v = obj[k];
+      if (v !== undefined && v !== null && v !== '') {
+        const n = parseFloat(String(v).replace(/,/g,''));
+        if (!isNaN(n)) return n;
+      }
+      // try lower variants
+      const lower = k.replace(/\s+/g,'').toLowerCase();
+      if (obj[lower] !== undefined) {
+        const n = parseFloat(String(obj[lower]).replace(/,/g,''));
+        if (!isNaN(n)) return n;
+      }
+    }
+    return null;
   }
 
   function escapeHtml(s) {
     if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"'`]/g, ch => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;' }[ch]));
-  }
-
-  // Build table rows for employees
-  async function loadPayslipTable() {
-    const tbody = qs('payslipTableBody');
-    if (!tbody) return;
-
-    tbody.innerHTML = '<tr><td colspan="3" style="padding:12px; text-align:center; color:#6b7280;">Loading...</td></tr>';
-
-    // Determine period
-    const periodInput = qs('payslipPeriod');
-    const period = periodInput && periodInput.value ? periodInput.value : '';
-
-    // Fetch employees from API or fallback
-    let employees = [];
-    if (window.API && typeof API.getEmployees === 'function') {
-      try {
-        const resp = await API.getEmployees({ useCache: true }).catch(() => []);
-        employees = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : [];
-      } catch (e) {
-        console.error('API.getEmployees error', e);
-      }
-    }
-
-    // Fallback: try window.getEmployeesFromServer if app provides
-    if ((!employees || employees.length === 0) && typeof window.getEmployeesFromServer === 'function') {
-      employees = await window.getEmployeesFromServer().catch(()=>[]);
-    }
-
-    // Final fallback: empty
-    if (!employees || employees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="padding:12px; text-align:center; color:#6b7280;">No employees found</td></tr>';
-      return;
-    }
-
-    // Normalize employees records (support array of objects or Google-style records)
-    const rows = employees.map(emp => {
-      const staff = emp['Staff Number'] || emp.staff || emp.staffNumber || '';
-      const name = emp['Full Name'] || emp.name || emp.fullName || '';
-      const staffEsc = escapeHtml(staff);
-      const nameEsc = escapeHtml(name);
-
-      return `
-        <tr data-staff="${escapeHtml(staff)}" data-name="${escapeHtml(name)}">
-          <td style="padding:10px;">${staffEsc}</td>
-          <td style="padding:10px;">${nameEsc}</td>
-          <td style="padding:8px; text-align:center;">
-            <div style="position:relative; display:inline-block;">
-              <button class="payslip-action-btn btn-outline" data-staff="${staffEsc}" data-name="${nameEsc}" style="padding:6px 10px;">Action ▾</button>
-            </div>
-          </td>
-        </tr>
-      `;
-    }).join('');
-
-    tbody.innerHTML = rows;
-
-    // attach action handlers
-    document.querySelectorAll('.payslip-action-btn').forEach(btn => {
-      btn.addEventListener('click', openPayslipActionDropdown);
+    return String(s).replace(/[&<>"']/g, function(m) {
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m];
     });
   }
 
-  // Small dropdown portal for per-row actions
-  let _payslipPortal = null;
-  function ensurePortal() {
-    if (!_payslipPortal) {
-      _payslipPortal = document.createElement('div');
-      _payslipPortal.id = 'payslipActionPortal';
-      _payslipPortal.style.position = 'fixed';
-      _payslipPortal.style.display = 'none';
-      _payslipPortal.style.zIndex = 4000;
-      document.body.appendChild(_payslipPortal);
-    }
-    return _payslipPortal;
+  function escapeJs(s) {
+    return String(s || '').replace(/'/g, "\\'");
   }
 
-  function openPayslipActionDropdown(e) {
-    const btn = e.currentTarget;
-    const staff = btn.getAttribute('data-staff') || '';
-    const name = btn.getAttribute('data-name') || '';
-
-    const rect = btn.getBoundingClientRect();
-    const portal = ensurePortal();
-
-    portal.innerHTML = `
-      <div style="background:white; border:1px solid #e5e7eb; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08); overflow:hidden; min-width:140px;">
-        <button class="dropdown-item" data-action="view" style="display:block; width:100%; padding:8px 12px; text-align:left; border:none; background:transparent; cursor:pointer;">View</button>
-        <button class="dropdown-item" data-action="send" style="display:block; width:100%; padding:8px 12px; text-align:left; border:none; background:transparent; cursor:pointer;">Send</button>
-      </div>
-    `;
-
-    // position
-    portal.style.top = (rect.bottom + window.scrollY + 6) + 'px';
-    portal.style.left = (rect.left + window.scrollX) + 'px';
-    portal.style.display = 'block';
-
-    // attach handlers
-    portal.querySelectorAll('.dropdown-item').forEach(item => {
-      item.onclick = async function(ev) {
-        const action = this.getAttribute('data-action');
-        closePayslipActionPortal();
-        if (action === 'view') {
-          await handleViewPayslip(staff, name);
-        } else if (action === 'send') {
-          await handleSendPayslip(staff, name);
-        }
-      };
-    });
-
-    // click outside closes
-    setTimeout(() => {
-      document.addEventListener('click', onDocClickClosePortal);
-    }, 10);
-
-    e.stopPropagation();
-  }
-
-  function onDocClickClosePortal(ev) {
-    const portal = qs('payslipActionPortal');
-    if (portal && !portal.contains(ev.target)) {
-      closePayslipActionPortal();
-    }
-  }
-
-  function closePayslipActionPortal() {
-    const portal = qs('payslipActionPortal');
-    if (portal) portal.style.display = 'none';
-    document.removeEventListener('click', onDocClickClosePortal);
-  }
-
-  // View payslip: try API.getPayslip(staff, period) else compute preview client-side
-  async function handleViewPayslip(staff, name) {
-    const period = qs('payslipPeriod')?.value || '';
-    let payslipHtml = `<div style="padding:8px 0 12px;"><strong>${escapeHtml(name)} (${escapeHtml(staff)})</strong><br><small>Period: ${escapeHtml(period || '(not selected)')}</small></div>`;
-
-    let payload = null;
-    if (window.API && typeof API.getPayslip === 'function') {
-      try {
-        payload = await API.getPayslip(staff, period);
-      } catch (err) {
-        console.warn('API.getPayslip error', err);
-      }
-    }
-
-    if (payload && (payload.items || payload.netPay || payload.gross)) {
-      // render if API response includes nice structure
-      payslipHtml += `<pre style="white-space:pre-wrap; font-family:monospace; font-size:13px;">${escapeHtml(JSON.stringify(payload, null, 2))}</pre>`;
-    } else {
-      // Fallback: try to compute using computePayrollRow if available
-      let empRecord = null;
-      if (window.getEmployeesFromServer) {
-        try {
-          const list = await window.getEmployeesFromServer();
-          empRecord = (list || []).find(r => (r['Staff Number'] || r.staff || r.staffNumber) == staff);
-        } catch (e) {}
-      }
-
-      if (empRecord || window.computePayrollRow) {
-        // build demo preview: basic salary + allowances -> compute
-        const basic = parseFloat(empRecord?.['Basic Salary'] || empRecord?.basicSalary || 0) || 0;
-        let allowances = [];
-        if (empRecord && empRecord.allowances) allowances = empRecord.allowances;
-        // Try to request allowances via API if available
-        if (window.API && typeof API.getAllowancesByStaff === 'function') {
-          try {
-            const a = await API.getAllowancesByStaff(staff).catch(()=>[]);
-            allowances = Array.isArray(a) ? a : allowances;
-          } catch (e) {}
-        }
-        const computed = (typeof computePayrollRow === 'function')
-          ? computePayrollRow({ basicSalary: basic, allowances: allowances })
-          : { grossSalary: basic, netPay: 0 };
-
-        payslipHtml += `
-          <table style="width:100%; border-collapse:collapse; font-family:monospace;">
-            <tbody>
-              <tr><td style="padding:6px 8px;">Basic Salary</td><td style="padding:6px 8px; text-align:right;">GH₵ ${formatMoney(basic)}</td></tr>
-              <tr><td style="padding:6px 8px;">Total Allowances</td><td style="padding:6px 8px; text-align:right;">GH₵ ${formatMoney(computed.totalAllowances || 0)}</td></tr>
-              <tr><td style="padding:6px 8px;">Gross Salary</td><td style="padding:6px 8px; text-align:right;">GH₵ ${formatMoney(computed.grossSalary || 0)}</td></tr>
-              <tr><td style="padding:6px 8px;">PAYE</td><td style="padding:6px 8px; text-align:right;">GH₵ ${formatMoney(computed.paye || 0)}</td></tr>
-              <tr><td style="padding:6px 8px;">Net Pay</td><td style="padding:6px 8px; text-align:right; font-weight:700;">GH₵ ${formatMoney(computed.netPay || 0)}</td></tr>
-            </tbody>
-          </table>
-        `;
-      } else {
-        payslipHtml += '<div style="padding:8px; color:#6b7280;">No payslip data available for this staff/period.</div>';
-      }
-    }
-
-    qs('payslipPreviewContent').innerHTML = payslipHtml;
-    qs('payslipPreviewModal').style.display = 'flex';
-  }
-
-  // Send payslip for a single staff
-  async function handleSendPayslip(staff, name) {
-    const period = qs('payslipPeriod')?.value || '';
-    if (!period) {
-      showToast('Please select a period (month)', 'warning');
-      return;
-    }
-
-    // confirm
-    if (!confirm(`Send payslip to ${name} (${staff}) for ${period}?`)) return;
-
-    if (window.API && typeof API.sendPayslip === 'function') {
-      try {
-        showToast('Sending payslip...', 'info');
-        const resp = await API.sendPayslip(staff, period);
-        if (resp && resp.success !== false) {
-          showToast(`Payslip sent to ${name}`, 'success');
-        } else {
-          showToast(`Failed to send payslip: ${resp?.error || 'Unknown'}`, 'error');
-        }
-      } catch (err) {
-        console.error('sendPayslip error', err);
-        showToast('Failed to send payslip (network)', 'error');
-      }
-    } else {
-      // simulate
-      showToast(`(Simulated) Payslip sent to ${name}`, 'success');
-    }
-  }
-
-  // Bulk send
-  async function sendAllPayslips() {
-    const period = qs('payslipPeriod')?.value || '';
-    if (!period) {
-      showToast('Please select a period (month) before sending', 'warning');
-      return;
-    }
-
-    if (!confirm(`Send payslips to all employees for ${period}?`)) return;
-
-    // collect staff numbers
-    const rows = Array.from(document.querySelectorAll('#payslipTableBody tr[data-staff]'));
-    if (rows.length === 0) {
-      showToast('No employees to send to', 'warning');
-      return;
-    }
-
-    showToast('Sending payslips (this may take a while)...', 'info');
-
-    for (let i = 0; i < rows.length; i++) {
-      const staff = rows[i].getAttribute('data-staff');
-      const name = rows[i].getAttribute('data-name') || staff;
-      try {
-        if (window.API && typeof API.sendPayslip === 'function') {
-          const resp = await API.sendPayslip(staff, period);
-          if (!(resp && resp.success !== false)) {
-            console.warn('sendPayslip response fail for', staff, resp);
-          }
-        } else {
-          // simulate small delay
-          await new Promise(r => setTimeout(r, 120));
-        }
-      } catch (err) {
-        console.error('Error sending payslip for', staff, err);
-      }
-    }
-
-    showToast('Payslip send process completed', 'success');
-  }
-
-  // Modal handlers
-  function initModalHandlers() {
-    const closeBtn = qs('payslipModalCloseBtn');
-    const printBtn = qs('payslipPrintBtn');
-    if (closeBtn) closeBtn.addEventListener('click', () => qs('payslipPreviewModal').style.display = 'none');
-    if (printBtn) printBtn.addEventListener('click', () => {
-      // Simple print of preview content
-      const content = qs('payslipPreviewContent').innerHTML;
-      const w = window.open('', '_blank');
-      w.document.write('<html><head><title>Payslip</title></head><body>' + content + '</body></html>');
-      w.document.close();
-      w.print();
-      w.close();
-    });
-    // close modal when clicking outside content
-    const modal = qs('payslipPreviewModal');
-    if (modal) {
-      modal.addEventListener('click', (e) => {
-        if (e.target === modal) modal.style.display = 'none';
-      });
-    }
-  }
-
-  // initialize module
-  function initPayslipModule() {
-    // set default period to current month
-    const input = qs('payslipPeriod');
-    if (input && !input.value) {
-      const d = new Date();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      input.value = `${d.getFullYear()}-${mm}`;
-    }
-
-    // wire buttons
-    const refreshBtn = qs('payslipRefreshBtn');
-    const sendAllBtn = qs('payslipSendAllBtn');
-    if (refreshBtn) refreshBtn.addEventListener('click', loadPayslipTable);
-    if (sendAllBtn) sendAllBtn.addEventListener('click', sendAllPayslips);
-    if (qs('payslipPeriod')) qs('payslipPeriod').addEventListener('change', loadPayslipTable);
-
-    initModalHandlers();
-    loadPayslipTable();
-  }
-
-  // expose globally for main.js to call
+  // expose init
   window.initPayslipModule = initPayslipModule;
-
 })();
