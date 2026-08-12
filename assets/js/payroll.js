@@ -1,11 +1,12 @@
 /**
  * payroll.js - Updated UI flow (month modal)
  *
- * - No persistent month selector in header.
+ * - Print/Delete only appear when viewing a saved payroll run for the selected month.
+ * - Uses explicit setButtonsForSavedRun(true|false) to control button visibility.
  * - Process opens a month modal; selecting a month runs preview for active employees.
- * - View opens same modal; selecting a month attempts to load saved payroll for that month.
+ * - View opens same modal; selecting a month attempts to load saved payroll run for that month.
  * - Header shows selected period automatically after selection.
- * - Run Payroll saves the current preview (unchanged semantics).
+ * - Run Payroll saves the current preview.
  */
 
 let currentPayrollData = [];
@@ -27,7 +28,7 @@ function initPayroll() {
   updateHeaderPeriodLabel();
 
   // Default buttons: show Process/Run (no saved run)
-  toggleActionButtons(false);
+  setButtonsForSavedRun(false);
 
   // Pre-fill modal input with current month for convenience
   const input = document.getElementById('monthModalInput');
@@ -68,20 +69,21 @@ function updateHeaderPeriodLabel() {
   }
 }
 
-/* Toggle action buttons:
-   When saved run exists for the selected period, show Print/Delete.
-   Otherwise show Process/Run.
-   Pass showProcessRun = true to show Process+Run, false to show Print+Delete.
+/* ===========================
+   Button visibility (explicit)
+   ===========================
+   Use setButtonsForSavedRun(true) to show Print/Delete (saved run loaded).
+   Use setButtonsForSavedRun(false) to show Process/Run (no saved run).
 */
-function toggleActionButtons(showProcessRun) {
+function setButtonsForSavedRun(isSaved) {
   const pr = document.getElementById('actions-process-run');
   const pd = document.getElementById('actions-print-delete');
-  if (showProcessRun) {
-    if (pr) pr.style.display = 'flex';
-    if (pd) pd.style.display = 'none';
-  } else {
+  if (isSaved) {
     if (pr) pr.style.display = 'none';
     if (pd) pd.style.display = 'flex';
+  } else {
+    if (pr) pr.style.display = 'flex';
+    if (pd) pd.style.display = 'none';
   }
 }
 
@@ -128,7 +130,7 @@ async function onMonthModalOk() {
 
   if (monthModalMode === 'view') {
     // Load saved run for this period (if exists)
-    await checkPayrollExistsAndToggle(currentPeriod);
+    await loadSavedRunForPeriod(currentPeriod);
   } else {
     // Process payroll preview for this period (active employees)
     await processPayrollPreviewForPeriod(currentPeriod);
@@ -136,30 +138,31 @@ async function onMonthModalOk() {
 }
 
 /* ===========================
-   Check saved run & toggle buttons
+   Load saved run for a period (VIEW)
    =========================== */
 
-async function checkPayrollExistsAndToggle(period) {
+async function loadSavedRunForPeriod(period) {
   try {
-    showLoadingModal && showLoadingModal('Checking saved payroll...');
+    showLoadingModal && showLoadingModal('Loading saved payroll...');
     const records = await API.getPayrollRunsByPeriod(period).catch(() => []);
     if (records && Array.isArray(records) && records.length > 0) {
       currentPayrollData = records;
       currentRunId = records[0]['Run ID'] || records[0].runId || null;
       renderPayrollTable(records, false);
-      toggleActionButtons(false); // show Print/Delete
+      setButtonsForSavedRun(true); // show Print/Delete because this is a viewed saved run
       showToast(`Loaded saved payroll for ${formatDisplayMonth(period)}`, 'info');
     } else {
+      // no saved run available
       currentPayrollData = [];
       currentRunId = null;
       renderPayrollTable([], true);
-      toggleActionButtons(true); // show Process + Run
+      setButtonsForSavedRun(false); // show Process/Run so user can generate preview
       showToast(`No saved payroll found for ${formatDisplayMonth(period)}. Use Process to generate preview.`, 'info');
     }
   } catch (err) {
-    console.error('checkPayrollExistsAndToggle error', err);
+    console.error('loadSavedRunForPeriod error', err);
     showToast('Failed to load saved payroll', 'error');
-    toggleActionButtons(true);
+    setButtonsForSavedRun(false);
   } finally {
     hideLoadingModal && hideLoadingModal();
   }
@@ -245,7 +248,7 @@ async function processPayrollPreviewForPeriod(period) {
     currentPayrollData = payrollData;
     currentRunId = null;
     renderPayrollTable(payrollData, true);
-    toggleActionButtons(true); // show Process + Run
+    setButtonsForSavedRun(false); // preview: show Process/Run, not Print/Delete
     showToast(`Payroll preview generated for ${formatDisplayMonth(period)}`, 'success');
   } catch (err) {
     console.error('processPayrollPreviewForPeriod error', err);
@@ -312,7 +315,7 @@ async function processPayroll() {
 
         if (savedCount > 0) {
           showToast(`Payroll saved for ${formatDisplayMonth(currentPeriod)} (${savedCount} records)`, 'success');
-          await checkPayrollExistsAndToggle(currentPeriod);
+          await loadSavedRunForPeriod(currentPeriod); // reload saved data & show Print/Delete if present
         } else {
           showToast('Failed to save payroll records', 'error');
         }
@@ -360,7 +363,7 @@ async function deletePayrollPeriod() {
             showToast(`Deleted payroll records for ${formatDisplayMonth(currentPeriod)}`, 'success');
             currentPayrollData = [];
             currentRunId = null;
-            toggleActionButtons(true);
+            setButtonsForSavedRun(false); // back to Process/Run
             renderPayrollTable([], true);
           } else {
             showToast(response?.error || 'Failed to delete payroll', 'error');
@@ -396,7 +399,7 @@ function renderPayrollTable(data, isPreview = false) {
         <td colspan="16" class="payroll-table-empty">
           <i class="fas fa-money-check-alt"></i>
           <p>No payroll data</p>
-          <span class="sub-text">${isPreview ? 'Click Process Payroll to generate preview' : 'Select View and choose a month'}</span>
+          <span class="sub-text">${isPreview ? 'Click Process Payroll to generate preview' : 'Use View to load a saved month'}</span>
         </td>
       </tr>
     `;
