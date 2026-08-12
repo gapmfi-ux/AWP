@@ -1,30 +1,50 @@
-<div class="payslip-container">
-  <div class="module-header">
-    <h1><i class="fas fa-file-invoice"></i> Payslip</h1>
-  </div>
-
-  <div id="payslipContainer">
-    <p>Select a payslip from the Payroll table to view details here. Use the payroll module to generate payslips first.</p>
-  </div>
-
-  <div id="payslipView" style="display:none; margin-top:12px;">
-    <div class="payslip-card">
-      <h2 id="psName">Name</h2>
-      <p><strong>Staff Number:</strong> <span id="psStaff"></span></p>
-      <p><strong>Designation:</strong> <span id="psDesignation"></span></p>
-      <p><strong>Basic Salary:</strong> GH₵ <span id="psBasic"></span></p>
-      <p><strong>Employee PF:</strong> GH₵ <span id="psEmployeePF"></span></p>
-      <p><strong>PF (10%):</strong> GH₵ <span id="psPF10"></span></p>
-      <p><strong>Tax Reliefs:</strong> GH₵ <span id="psRelief"></span></p>
-      <p><strong>Taxable Income:</strong> GH₵ <span id="psTaxable"></span></p>
-      <p><strong>PAYE:</strong> GH₵ <span id="psPAYE"></span></p>
-      <p><strong>Total Deduction:</strong> GH₵ <span id="psTotalDeduction"></span></p>
-      <p><strong>Net Pay:</strong> GH₵ <span id="psNetPay"></span></p>
-
-      <div style="margin-top:12px;">
-        <button class="primary-btn" onclick="printPayslip()">Print Payslip</button>
-        <button onclick="closePayslipView()">Close</button>
+<!-- modules/payslip.html -->
+<div class="payslip-module">
+  <div class="module-header" style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px;">
+    <div style="display:flex; align-items:center; gap:12px;">
+      <h2 style="margin:0;">Payslips</h2>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <label for="payslipPeriod" style="font-weight:600; font-size:13px; color:#374151;">Period</label>
+        <input id="payslipPeriod" type="month" style="padding:6px 8px; border:1px solid #e5e7eb; border-radius:6px;">
       </div>
+    </div>
+
+    <div style="display:flex; align-items:center; gap:8px;">
+      <button id="payslipRefreshBtn" class="btn-outline" style="padding:6px 12px;">Refresh</button>
+      <button id="payslipSendAllBtn" class="btn-primary" style="padding:8px 14px;">Send All</button>
+    </div>
+  </div>
+
+  <div class="table-wrapper" style="background:#fff; border:1px solid #e6edf3; border-radius:8px; padding:12px;">
+    <table class="report-table" style="width:100%; border-collapse:collapse;">
+      <thead style="background:#f3f6f9;">
+        <tr>
+          <th style="text-align:left; padding:10px;">Staff Number</th>
+          <th style="text-align:left; padding:10px;">Full Name</th>
+          <th style="text-align:center; padding:10px; width:140px;">Payslip</th>
+        </tr>
+      </thead>
+      <tbody id="payslipTableBody">
+        <tr><td colspan="3" style="padding:12px; text-align:center; color:#6b7280;">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Simple modal for viewing payslip -->
+<div id="payslipPreviewModal" class="modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); align-items:center; justify-content:center; z-index:3000;">
+  <div style="background:white; border-radius:8px; padding:18px; width:720px; max-width:95%; max-height:90vh; overflow:auto;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+      <h3 style="margin:0;">Payslip Preview</h3>
+      <div style="display:flex; gap:8px;">
+        <button id="payslipPrintBtn" class="btn-outline">Print</button>
+        <button id="payslipModalCloseBtn" class="btn-primary">Close</button>
+      </div>
+    </div>
+    <div id="payslipPreviewContent" style="font-family:monospace; font-size:13px; color:#111827;">
+      <!-- populated dynamically -->
     </div>
   </div>
 </div>
+
+<script src="assets/js/payslip.js"></script>
