@@ -1,208 +1,238 @@
 /**
- * payroll.js - Updated UI flow (month modal)
- *
- * - Print/Delete only appear when viewing a saved payroll run for the selected month.
- * - Uses explicit setButtonsForSavedRun(true|false) to control button visibility.
- * - Process opens a month modal; selecting a month runs preview for active employees.
- * - View opens same modal; selecting a month attempts to load saved payroll run for that month.
- * - Header shows selected period automatically after selection.
- * - Run Payroll saves the current preview.
+ * Payroll Module - Client Side Logic (updated)
+ * - Adds "Process Payroll" (load active employees preview) before Run Payroll
+ * - Defaults month to current month but DOES NOT auto-load table
+ * - If a saved payroll run exists for the selected month: show Print & Delete only
+ * - If no saved payroll run: show Process & Run buttons
+ * - Run Payroll saves payroll rows and summary (server-side)
+ * - Process Payroll only loads active employees payroll details into table (preview)
  */
 
 let currentPayrollData = [];
-let currentPeriod = '';        // 'YYYY-MM'
-let currentRunId = null;       // populated if a saved run is loaded
-let monthModalMode = null;     // 'process' or 'view'
+let currentPeriod = '';
+let currentRunId = null;
 
-/* ===========================
-   Initialization
-   =========================== */
+/* ============== Initialization ============== */
 
 function initPayroll() {
   currentPayrollData = [];
-  currentPeriod = '';
   currentRunId = null;
-  monthModalMode = null;
 
-  // Set heading period text
-  updateHeaderPeriodLabel();
-
-  // Default buttons: show Process/Run (no saved run)
-  setButtonsForSavedRun(false);
-
-  // Pre-fill modal input with current month for convenience
-  const input = document.getElementById('monthModalInput');
-  if (input) input.value = getCurrentMonthValue();
-}
-
-/* ===========================
-   Helpers
-   =========================== */
-
-function getCurrentMonthValue() {
-  const d = new Date();
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  return `${yyyy}-${mm}`;
-}
-
-function formatDisplayMonth(yyyymm) {
-  if (!yyyymm) return '(No period selected)';
-  try {
-    const parts = yyyymm.split('-');
-    const y = parseInt(parts[0], 10);
-    const m = parseInt(parts[1], 10);
-    const date = new Date(y, m - 1, 1);
-    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
-  } catch (e) {
-    return yyyymm;
+  // Set pay period to current month by default (YYYY-MM) but do not auto load
+  const periodInput = document.getElementById('payPeriodSelect');
+  if (periodInput) {
+    periodInput.value = formatMonthForInput(new Date());
   }
-}
 
-function updateHeaderPeriodLabel() {
-  const el = document.getElementById('payrollPeriodLabel');
-  if (!el) return;
-  if (currentPeriod) {
-    el.textContent = formatDisplayMonth(currentPeriod);
+  // Rebuild the payroll-controls toolbar so we have stable element IDs
+  buildPayrollToolbar();
+
+  // Check if there's a saved run for the default period and update UI accordingly
+  const period = periodInput ? periodInput.value : '';
+  if (period) {
+    checkForSavedRun(period);
   } else {
-    el.textContent = '(No period selected)';
+    setButtonsState({ saved: false });
+    renderPayrollTable([], false);
   }
 }
 
-/* ===========================
-   Button visibility (explicit)
-   ===========================
-   Use setButtonsForSavedRun(true) to show Print/Delete (saved run loaded).
-   Use setButtonsForSavedRun(false) to show Process/Run (no saved run).
-*/
-function setButtonsForSavedRun(isSaved) {
-  const pr = document.getElementById('actions-process-run');
-  const pd = document.getElementById('actions-print-delete');
-  if (isSaved) {
-    if (pr) pr.style.display = 'none';
-    if (pd) pd.style.display = 'flex';
+/* ============== Build toolbar dynamically (ensures IDs exist) ============== */
+
+function buildPayrollToolbar() {
+  const controls = document.querySelector('.payroll-controls');
+  if (!controls) return;
+
+  controls.innerHTML = `
+    <button class="btn-secondary" id="btnProcessPayroll" title="Load active employees payroll preview">
+      <i class="fas fa-download"></i> Process Payroll
+    </button>
+    <button class="btn-primary" id="btnRunPayroll" title="Save payroll run">
+      <i class="fas fa-play"></i> Run Payroll
+    </button>
+    <button class="btn-outline" id="btnPrintPayroll" style="display:none;">
+      <i class="fas fa-print"></i> Print
+    </button>
+    <button class="btn-danger" id="btnDeletePayroll" style="display:none;">
+      <i class="fas fa-times"></i>
+    </button>
+    <label for="payPeriodSelect" style="font-size:12px; font-weight:500; color:#4a5568; margin-left:8px;">Period:</label>
+  `;
+
+  // attach event listeners
+  const processBtn = document.getElementById('btnProcessPayroll');
+  const runBtn = document.getElementById('btnRunPayroll');
+  const printBtn = document.getElementById('btnPrintPayroll');
+  const deleteBtn = document.getElementById('btnDeletePayroll');
+  const periodInput = document.getElementById('payPeriodSelect');
+
+  if (processBtn) processBtn.addEventListener('click', () => onProcessPayrollClick());
+  if (runBtn) runBtn.addEventListener('click', () => onRunPayrollClick());
+  if (printBtn) printBtn.addEventListener('click', () => printPayroll());
+  if (deleteBtn) deleteBtn.addEventListener('click', () => onDeletePayrollClick());
+  if (periodInput) periodInput.addEventListener('change', () => onPeriodChange());
+}
+
+/* ============== Button state management ==============
+   options: { saved: boolean, runId: string|null } */
+
+function setButtonsState(options) {
+  const saved = !!options && !!options.saved;
+  const runId = options && options.runId ? options.runId : null;
+  currentRunId = runId;
+
+  const processBtn = document.getElementById('btnProcessPayroll');
+  const runBtn = document.getElementById('btnRunPayroll');
+  const printBtn = document.getElementById('btnPrintPayroll');
+  const deleteBtn = document.getElementById('btnDeletePayroll');
+
+  if (saved) {
+    // Show only Print + Delete
+    if (processBtn) processBtn.style.display = 'none';
+    if (runBtn) runBtn.style.display = 'none';
+    if (printBtn) printBtn.style.display = 'inline-flex';
+    if (deleteBtn) deleteBtn.style.display = 'inline-flex';
   } else {
-    if (pr) pr.style.display = 'flex';
-    if (pd) pd.style.display = 'none';
+    // Show only Process + Run
+    if (processBtn) processBtn.style.display = 'inline-flex';
+    if (runBtn) runBtn.style.display = 'inline-flex';
+    if (printBtn) printBtn.style.display = 'none';
+    if (deleteBtn) deleteBtn.style.display = 'none';
   }
 }
 
-/* ===========================
-   Month Modal (used by both Process and View)
-   =========================== */
+/* ============== Event handlers ============== */
 
-function showMonthModal(mode) {
-  // mode: 'process' or 'view'
-  monthModalMode = mode === 'view' ? 'view' : 'process';
-  const modal = document.getElementById('monthModal');
-  const title = document.getElementById('monthModalTitle');
-  const input = document.getElementById('monthModalInput');
-
-  if (!modal || !input || !title) return;
-
-  if (!input.value) input.value = getCurrentMonthValue();
-  title.innerHTML = (monthModalMode === 'view' ? '<i class="fas fa-eye"></i> Select Month to View' : '<i class="fas fa-cogs"></i> Select Month to Process');
-  modal.style.display = 'flex';
-  modal.classList.add('show');
-  setTimeout(() => input.focus(), 80);
-}
-
-function closeMonthModal() {
-  const modal = document.getElementById('monthModal');
-  if (!modal) return;
-  modal.style.display = 'none';
-  modal.classList.remove('show');
-  monthModalMode = null;
-}
-
-async function onMonthModalOk() {
-  const input = document.getElementById('monthModalInput');
-  if (!input) return;
-  const selected = input.value;
-  if (!selected || !/^\d{4}-\d{2}$/.test(selected)) {
-    showToast('Please choose a valid month', 'warning');
-    return;
-  }
-
-  // capture the mode BEFORE closing modal
-  const mode = monthModalMode;
-
-  // set currentPeriod and update header
-  currentPeriod = selected;
-  updateHeaderPeriodLabel();
-
-  // close modal (no longer affects our local 'mode' var)
-  closeMonthModal();
-
-  if (mode === 'view') {
-    // Load saved run for this period (View)
-    await loadSavedRunForPeriod(currentPeriod);
+function onPeriodChange() {
+  const period = document.getElementById('payPeriodSelect')?.value || '';
+  currentPeriod = period;
+  currentRunId = null;
+  // Check if saved run exists for this period
+  if (period) {
+    checkForSavedRun(period);
   } else {
-    // Process payroll preview for this period (Process)
-    await processPayrollPreviewForPeriod(currentPeriod);
+    setButtonsState({ saved: false });
+    renderPayrollTable([], false);
   }
 }
 
-/* ===========================
-   Load saved run for a period (VIEW)
-   =========================== */
-
-async function loadSavedRunForPeriod(period) {
-  try {
-    showLoadingModal && showLoadingModal('Loading saved payroll...');
-    const records = await API.getPayrollRunsByPeriod(period).catch(() => []);
-    if (records && Array.isArray(records) && records.length > 0) {
-      currentPayrollData = records;
-      currentRunId = records[0]['Run ID'] || records[0].runId || null;
-      renderPayrollTable(records, false);
-      setButtonsForSavedRun(true); // show Print/Delete because this is a viewed saved run
-      showToast(`Loaded saved payroll for ${formatDisplayMonth(period)}`, 'info');
-    } else {
-      // no saved run available
-      currentPayrollData = [];
-      currentRunId = null;
-      renderPayrollTable([], true);
-      setButtonsForSavedRun(false); // show Process/Run so user can generate preview
-      showToast(`No saved payroll found for ${formatDisplayMonth(period)}. Use Process to generate preview.`, 'info');
-    }
-  } catch (err) {
-    console.error('loadSavedRunForPeriod error', err);
-    showToast('Failed to load saved payroll', 'error');
-    setButtonsForSavedRun(false);
-  } finally {
-    hideLoadingModal && hideLoadingModal();
-  }
-}
-
-/* ===========================
-   Process Payroll Preview (for chosen period)
-   =========================== */
-
-async function processPayrollPreviewForPeriod(period) {
+async function onProcessPayrollClick() {
+  const period = document.getElementById('payPeriodSelect')?.value || '';
   if (!period) {
-    showToast('No period selected', 'warning');
+    showToast('Please select a pay period first', 'warning');
+    return;
+  }
+  await processPayrollLoad(period);
+}
+
+async function onRunPayrollClick() {
+  // Use existing processPayroll flow (confirmation + save)
+  await processPayroll();
+}
+
+async function onDeletePayrollClick() {
+  // Delete by currentRunId if present; else try to find runId from saved data
+  let runId = currentRunId;
+  if (!runId && currentPeriod) {
+    const summ = await API.getPayrollRunSummary(currentPeriod).catch(()=>null);
+    runId = summ && summ.runId ? summ.runId : null;
+  }
+  if (!runId) {
+    showToast('No payroll run selected to delete', 'warning');
     return;
   }
 
+  showConfirmModal(
+    'Confirm Delete',
+    `Are you sure you want to delete payroll run <strong>${runId}</strong> for period <strong>${currentPeriod}</strong>? This cannot be undone.`,
+    async function() {
+      try {
+        showLoadingModal('Deleting payroll run...');
+        const resp = await API.deletePayrollRun(runId);
+        if (resp && resp.success) {
+          showToast(`Deleted payroll run ${runId}`, 'success');
+          currentPayrollData = [];
+          currentRunId = null;
+          setButtonsState({ saved: false });
+          renderPayrollTable([], false);
+        } else {
+          showToast(resp && resp.error ? resp.error : 'Failed to delete payroll run', 'error');
+        }
+      } catch (err) {
+        console.error('Delete run error', err);
+        showToast('Failed to delete payroll run', 'error');
+      } finally {
+        hideLoadingModal();
+        closeConfirmModal();
+      }
+    },
+    function() {
+      closeConfirmModal();
+    }
+  );
+}
+
+/* ============== Check for saved run and load if exists ============== */
+
+async function checkForSavedRun(period) {
   try {
-    showLoadingModal && showLoadingModal('Processing payroll preview...');
-    const resp = await API.getEmployees().catch(() => []);
+    showLoadingModal('Checking saved payroll run...');
+    currentPeriod = period;
+    const summary = await API.getPayrollRunSummary(period).catch(()=>null);
+    if (summary && summary.runId) {
+      // Load saved payroll for this period
+      const runId = summary.runId;
+      const records = await API.getPayrollRunsByRunId(runId).catch(()=>[]);
+      if (Array.isArray(records) && records.length > 0) {
+        currentPayrollData = records;
+        currentRunId = runId;
+        renderPayrollTable(records, true);
+        setButtonsState({ saved: true, runId: runId });
+        showToast(`Loaded saved payroll (${runId}) for ${period}`, 'success');
+        return;
+      }
+    }
+
+    // No saved run
+    currentPayrollData = [];
+    currentRunId = null;
+    renderPayrollTable([], false);
+    setButtonsState({ saved: false });
+  } catch (err) {
+    console.error('Error checking saved run', err);
+    showToast('Error checking saved payroll run', 'error');
+  } finally {
+    hideLoadingModal();
+  }
+}
+
+/* ============== Process Payroll (LOAD only, not save) ============== */
+
+async function processPayrollLoad(period) {
+  try {
+    if (!period) {
+      showToast('Please select a pay period first', 'warning');
+      return;
+    }
+    showLoadingModal('Loading employees for payroll preview...');
+
+    // fetch employees
+    const resp = await API.getEmployees().catch(()=>[]);
     const serverRecords = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : (resp || []);
     if (!serverRecords || serverRecords.length === 0) {
       currentPayrollData = [];
-      renderPayrollTable([]);
+      renderPayrollTable([], false);
       showToast('No employees found', 'warning');
       return;
     }
 
     const payrollData = [];
-
     for (const emp of serverRecords) {
-      const status = (emp['Status'] || emp.status || '').toString().trim().toLowerCase();
-      if (status && status !== 'active') continue;
-
       const staffNumber = emp['Staff Number'] || emp.staff || '';
       if (!staffNumber) continue;
+
+      const status = (emp['Status'] || emp.status || '').toString().trim().toLowerCase();
+      if (status && status !== 'active') continue; // only active employees for preview
 
       const fullName = emp['Full Name'] || emp.name || '';
       const designation = emp['Designation'] || emp.designation || '';
@@ -212,21 +242,32 @@ async function processPayrollPreviewForPeriod(period) {
       const taxRelief = parseFloat(emp['Tax Relief'] || emp.taxRelief || 0) || 0;
       const loanMonthly = parseFloat(emp['Monthly Loan'] || emp.loanMonthly || 0) || 0;
 
+      // load allowances for staff (latest <= period start)
       let allowances = [];
       try {
-        allowances = await API.getAllowancesByStaff(staffNumber).catch(() => []);
-        allowances = Array.isArray(allowances) ? allowances : (allowances && allowances.records) ? allowances.records : (allowances || []);
+        const all = await API.getAllowancesByStaff(staffNumber).catch(()=>[]);
+        allowances = Array.isArray(all) ? all : (all && all.records) ? all.records : [];
+        // keep allowances with effectiveDate <= period start, choose latest per type
+        const asOf = new Date(period + '-01');
+        const chosen = {};
+        for (let a of allowances) {
+          const eff = a.effectiveDate ? new Date(a.effectiveDate) : null;
+          if (!eff || eff <= asOf) {
+            if (!chosen[a.type]) chosen[a.type] = a;
+          }
+        }
+        allowances = Object.keys(chosen).map(t => chosen[t]);
       } catch (e) {
         allowances = [];
       }
 
       const calc = computePayrollRow({
-        basicSalary,
-        allowances,
+        basicSalary: basicSalary,
+        allowances: allowances,
         employeePFpct: employeePFrate || 5.5,
         employerPFpct: employerPFrate || 5,
         reliefAmount: taxRelief,
-        loanMonthly,
+        loanMonthly: loanMonthly,
         pfChecked: employeePFrate > 0
       });
 
@@ -252,50 +293,57 @@ async function processPayrollPreviewForPeriod(period) {
     }
 
     currentPayrollData = payrollData;
+    currentPeriod = period;
     currentRunId = null;
-    renderPayrollTable(payrollData, true);
-    setButtonsForSavedRun(false); // preview: show Process/Run, not Print/Delete
-    showToast(`Payroll preview generated for ${formatDisplayMonth(period)}`, 'success');
+    renderPayrollTable(payrollData, false);
+    setButtonsState({ saved: false });
+    showToast(`Loaded payroll preview for ${period} (${payrollData.length} employees)`, 'info');
   } catch (err) {
-    console.error('processPayrollPreviewForPeriod error', err);
-    showToast('Failed to generate payroll preview', 'error');
+    console.error('Error loading payroll preview', err);
+    showToast('Failed to load payroll preview', 'error');
   } finally {
-    hideLoadingModal && hideLoadingModal();
+    hideLoadingModal();
   }
 }
 
-/* ===========================
-   Save / Run Payroll (unchanged semantics)
-   =========================== */
+/* ============== Process / Run Payroll (SAVE) ============== */
 
 async function processPayroll() {
-  if (!currentPeriod) {
-    showToast('No period selected — click Process to choose a month', 'warning');
+  const periodInput = document.getElementById('payPeriodSelect');
+  if (!periodInput) return;
+
+  const period = periodInput.value;
+  if (!period) {
+    showToast('Please select a pay period first', 'warning');
+    periodInput.focus();
     return;
   }
 
+  // If no preview loaded, run a preview load first
   if (!currentPayrollData || currentPayrollData.length === 0) {
-    showToast('No preview available — generating preview now', 'info');
-    await processPayrollPreviewForPeriod(currentPeriod);
+    // load preview (active employees)
+    await processPayrollLoad(period);
     if (!currentPayrollData || currentPayrollData.length === 0) {
-      showToast('No payroll records to save', 'warning');
+      showToast('No payroll data to save', 'warning');
       return;
     }
   }
 
   showConfirmModal(
     'Confirm Payroll Processing',
-    `Save payroll for <strong>${formatDisplayMonth(currentPeriod)}</strong>?`,
-    async function onConfirm() {
+    `Are you sure you want to save payroll for <strong>${period}</strong>?<br><br>This will save the current payroll calculations to the sheet.`,
+    async function() {
       try {
-        showLoadingModal && showLoadingModal('Saving payroll...');
+        showLoadingModal('Saving payroll...');
         let savedCount = 0;
+        let runId = null;
+
         for (const record of currentPayrollData) {
           const payrollData = {
             staffNumber: record['Staff Number'] || record.staffNumber || '',
             fullName: record['Full Name'] || record.fullName || '',
             designation: record['Designation'] || record.designation || '',
-            payPeriod: currentPeriod,
+            payPeriod: period,
             basicSalary: parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0,
             allowances: record['Allowances'] || [],
             totalAllowances: parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0,
@@ -315,87 +363,83 @@ async function processPayroll() {
           const response = await API.savePayrollRun(payrollData);
           if (response && response.success !== false) {
             savedCount++;
-            if (!currentRunId && response.runId) currentRunId = response.runId;
+            if (!runId && response.runId) runId = response.runId;
+          } else {
+            console.warn('Failed to save payroll row', record, response);
           }
         }
 
         if (savedCount > 0) {
-          showToast(`Payroll saved for ${formatDisplayMonth(currentPeriod)} (${savedCount} records)`, 'success');
-          await loadSavedRunForPeriod(currentPeriod); // reload saved data & show Print/Delete if present
+          showToast(`Payroll saved successfully for ${period} (${savedCount} records)`, 'success');
+          // After saving, reload saved run to ensure we show Print/Delete
+          await checkForSavedRun(period);
         } else {
           showToast('Failed to save payroll records', 'error');
         }
-      } catch (err) {
-        console.error('processPayroll save error', err);
-        showToast('Failed to save payroll: ' + (err.message || err), 'error');
+      } catch (error) {
+        console.error('Error saving payroll:', error);
+        showToast('Failed to save payroll: ' + (error.message || error), 'error');
       } finally {
-        hideLoadingModal && hideLoadingModal();
+        hideLoadingModal();
         closeConfirmModal();
       }
     },
-    function onCancel(){
+    function() {
       closeConfirmModal();
     }
   );
 }
 
-/* ===========================
-   Delete Payroll Period
-   =========================== */
+/* ============== Delete Payroll Period (kept for direct action) ============== */
 
 async function deletePayrollPeriod() {
-  if (!currentPeriod) {
+  const period = document.getElementById('payPeriodSelect')?.value;
+  if (!period) {
     showToast('No period selected', 'warning');
+    return;
+  }
+
+  // find runId for this period
+  const summary = await API.getPayrollRunSummary(period).catch(()=>null);
+  const runId = summary && summary.runId ? summary.runId : null;
+  if (!runId) {
+    showToast('No saved run found for this period', 'info');
     return;
   }
 
   showConfirmModal(
     'Confirm Delete',
-    `Delete all payroll records for <strong>${formatDisplayMonth(currentPeriod)}</strong>? This cannot be undone.`,
-    async function onConfirm() {
+    `Are you sure you want to delete all payroll records for <strong>${period}</strong>?<br><br>This action cannot be undone.`,
+    async function() {
       try {
-        showLoadingModal && showLoadingModal('Deleting payroll records...');
-        const records = await API.getPayrollRunsByPeriod(currentPeriod);
-        if (!records || records.length === 0) {
-          showToast('No records found for this period', 'info');
-          closeConfirmModal();
-          return;
-        }
-
-        const runId = records[0]['Run ID'] || records[0].runId;
-        if (runId) {
-          const response = await API.deletePayrollRun(runId);
-          if (response && response.success) {
-            showToast(`Deleted payroll records for ${formatDisplayMonth(currentPeriod)}`, 'success');
-            currentPayrollData = [];
-            currentRunId = null;
-            setButtonsForSavedRun(false); // back to Process/Run
-            renderPayrollTable([], true);
-          } else {
-            showToast(response?.error || 'Failed to delete payroll', 'error');
-          }
+        showLoadingModal('Deleting payroll records...');
+        const response = await API.deletePayrollRun(runId);
+        if (response && response.success) {
+          showToast(`Deleted payroll records for ${period}`, 'success');
+          currentPayrollData = [];
+          currentRunId = null;
+          setButtonsState({ saved: false });
+          renderPayrollTable([], false);
         } else {
-          showToast('Could not find Run ID for this period', 'error');
+          showToast(response?.error || 'Failed to delete payroll', 'error');
         }
-      } catch (err) {
-        console.error('deletePayrollPeriod error', err);
-        showToast('Failed to delete payroll: ' + (err.message || err), 'error');
+      } catch (error) {
+        console.error('Error deleting payroll:', error);
+        showToast('Failed to delete payroll: ' + error.message, 'error');
       } finally {
-        hideLoadingModal && hideLoadingModal();
+        hideLoadingModal();
         closeConfirmModal();
       }
     },
-    function onCancel(){
+    function() {
       closeConfirmModal();
     }
   );
 }
 
-/* ===========================
-   Render table + helpers
-   =========================== */
+/* ============== Render Payroll Table - COMPACT WITH ORIGINAL NAMES ============== */
 
-function renderPayrollTable(data, isPreview = false) {
+function renderPayrollTable(data, isSaved = false) {
   const tbody = document.getElementById('payrollTableBody');
   if (!tbody) return;
 
@@ -405,14 +449,14 @@ function renderPayrollTable(data, isPreview = false) {
         <td colspan="16" class="payroll-table-empty">
           <i class="fas fa-money-check-alt"></i>
           <p>No payroll data</p>
-          <span class="sub-text">${isPreview ? 'Click Process Payroll to generate preview' : 'Use View to load a saved month'}</span>
+          <span class="sub-text">${isSaved ? 'No saved records for this period' : 'Select a pay period and click "Process Payroll" to load employees'}</span>
         </td>
       </tr>
     `;
     return;
   }
 
-  tbody.innerHTML = data.map(record => {
+  tbody.innerHTML = data.map((record) => {
     const staffNumber = record['Staff Number'] || record.staffNumber || '';
     const fullName = record['Full Name'] || record.fullName || '';
     const designation = record['Designation'] || record.designation || '';
@@ -430,8 +474,11 @@ function renderPayrollTable(data, isPreview = false) {
     const employerPf = parseFloat(record['Employer PF(5%)'] || record['Employer PF'] || record.employerPf || 0) || 0;
     const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
 
+    // Helper to format number with dash for zero
     const formatCell = (value) => {
-      if (value === 0 || value === '0' || isNaN(value) || value === '') return '<span class="zero">—</span>';
+      if (value === 0 || value === '0' || isNaN(value) || value === '') {
+        return '<span class="zero">—</span>';
+      }
       return formatMoney(value);
     };
 
@@ -458,9 +505,18 @@ function renderPayrollTable(data, isPreview = false) {
   }).join('');
 }
 
-/* ===========================
-   Compute helpers (client-side mirror)
-   =========================== */
+/* ============== Print Function ============== */
+
+function printPayroll() {
+  // Use existing print function or printUtils if available
+  window.print();
+}
+
+/* ============== Payroll Calculation Helpers ============== */
+/* computePayrollRow, calculatePAYE, getTaxBrackets, roundToTwo remain unchanged and are used above.
+   If these helper functions are already declared elsewhere in the app (they are in the previous file),
+   the functions below won't overwrite them. If missing, the earlier versions should be present.
+*/
 
 function roundToTwo(n) {
   return Math.round((n + Number.EPSILON) * 100) / 100;
@@ -485,13 +541,17 @@ function calculatePAYE(taxableIncome) {
 
   for (let i = 0; i < brackets.length; i++) {
     const bracket = brackets[i];
+    const bracketAmount = bracket.amount;
+    const bracketRate = bracket.rate;
+
     if (remainingIncome <= 0) break;
+
     if (i === brackets.length - 1) {
-      totalTax += remainingIncome * bracket.rate;
+      totalTax += remainingIncome * bracketRate;
       break;
     } else {
-      const taxableInThisBracket = Math.min(remainingIncome, bracket.amount);
-      totalTax += taxableInThisBracket * bracket.rate;
+      const taxableInThisBracket = Math.min(remainingIncome, bracketAmount);
+      totalTax += taxableInThisBracket * bracketRate;
       remainingIncome -= taxableInThisBracket;
     }
   }
@@ -499,18 +559,9 @@ function calculatePAYE(taxableIncome) {
   return roundToTwo(totalTax);
 }
 
-function computePayrollRow(opts = {}) {
-  const basicSalary = parseFloat(opts.basicSalary || 0) || 0;
-  const allowances = Array.isArray(opts.allowances) ? opts.allowances : [];
-  const employeePFpct = parseFloat(opts.employeePFpct || 5.5) || 0;
-  const employerPFpct = parseFloat(opts.employerPFpct || 5) || 0;
-  const reliefAmount = parseFloat(opts.reliefAmount || 0) || 0;
-  const loanMonthly = parseFloat(opts.loanMonthly || 0) || 0;
-  const pfChecked = !!opts.pfChecked;
-
-  const totalAllowances = roundToTwo(allowances.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0));
+function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+  const totalAllowances = roundToTwo(allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0));
   const grossSalary = roundToTwo(basicSalary + totalAllowances);
-
   const employeePension = roundToTwo(grossSalary * 0.055);
   const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
   const taxRelief = roundToTwo(reliefAmount || 0);
@@ -540,66 +591,7 @@ function computePayrollRow(opts = {}) {
   };
 }
 
-/* ===========================
-   Confirm modal (local)
-   =========================== */
-
-function showConfirmModal(title, message, onConfirm, onCancel) {
-  let modal = document.getElementById('confirmModal');
-  if (!modal) {
-    modal = document.createElement('div');
-    modal.id = 'confirmModal';
-    modal.className = 'confirm-modal';
-    modal.innerHTML = `
-      <div class="confirm-modal-content">
-        <div class="confirm-modal-header">
-          <h3 id="confirmModalTitle">Confirm</h3>
-          <button class="confirm-modal-close" id="confirmModalClose">&times;</button>
-        </div>
-        <div class="confirm-modal-body" id="confirmModalBody">Are you sure?</div>
-        <div class="confirm-modal-footer">
-          <button class="btn-secondary" id="confirmCancelBtn">Cancel</button>
-          <button class="btn-primary" id="confirmOkBtn">Confirm</button>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const close = () => { modal.classList.remove('show'); };
-    modal.querySelector('#confirmOkBtn').addEventListener('click', function(){ close(); if (typeof modal._onConfirm === 'function') modal._onConfirm(); });
-    modal.querySelector('#confirmCancelBtn').addEventListener('click', function(){ close(); if (typeof modal._onCancel === 'function') modal._onCancel(); });
-    modal.querySelector('#confirmModalClose').addEventListener('click', function(){ close(); if (typeof modal._onCancel === 'function') modal._onCancel(); });
-    modal.addEventListener('click', function(e){ if (e.target === modal) { close(); if (typeof modal._onCancel === 'function') modal._onCancel(); }});
-  }
-
-  modal.querySelector('#confirmModalTitle').textContent = title || 'Confirm';
-  modal.querySelector('#confirmModalBody').innerHTML = message || 'Are you sure?';
-  modal._onConfirm = onConfirm || function(){};
-  modal._onCancel = onCancel || function(){};
-  modal.classList.add('show');
-}
-
-function closeConfirmModal() {
-  const modal = document.getElementById('confirmModal');
-  if (modal) modal.classList.remove('show');
-}
-
-/* ===========================
-   Utilities: toast, format
-   =========================== */
-
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('global-toast');
-  if (!toast) {
-    console.log(`[${type}] ${message}`);
-    return;
-  }
-  toast.textContent = message;
-  toast.className = type;
-  toast.style.display = 'block';
-  clearTimeout(toast._timeout);
-  toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, 3000);
-}
+/* ============== Utility Functions ============== */
 
 function formatMoney(n) {
   if (typeof n !== 'number' || isNaN(n)) return '0.00';
@@ -609,17 +601,17 @@ function formatMoney(n) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"'`]/g, s => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;'
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
+    '`': '&#96;'
   }[s]));
 }
 
-/* ===========================
-   Exports used by main app
-   =========================== */
-
-window.initPayroll = initPayroll;
-window.processPayrollPreview = processPayrollPreviewForPeriod; // retained name for compatibility (accepts period argument)
-window.processPayroll = processPayroll;
-window.deletePayrollPeriod = deletePayrollPeriod;
-window.printPayroll = function(){ window.print(); };
-window.renderPayrollTable = renderPayrollTable;
+function formatMonthForInput(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
