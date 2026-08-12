@@ -395,6 +395,74 @@ async function deletePayrollPeriod() {
    Render table + helpers
    =========================== */
 
+/**
+ * Try to find the first non-empty value on `record` for a list of possible key names.
+ * Accepts exact keys and common variants (camelCase, lower-case, without spaces).
+ */
+function getRecordValue(record, candidates) {
+  if (!record) return undefined;
+
+  const toTry = new Set();
+
+  candidates.forEach(k => {
+    if (!k) return;
+    toTry.add(k);
+    toTry.add(k.replace(/\s+/g, ''));               // no spaces
+    toTry.add(k.replace(/\s+/g, '').toLowerCase()); // no spaces lower
+    toTry.add(k.toLowerCase());                      // lower
+    // camelCase variant
+    const camel = k.toLowerCase().replace(/[^a-z0-9]+([a-z0-9])/g, (m, ch) => ch.toUpperCase());
+    toTry.add(camel);
+    // snake_case
+    toTry.add(k.toLowerCase().replace(/[^a-z0-9]+/g, '_'));
+  });
+
+  for (const key of toTry) {
+    if (key in record && record[key] !== null && record[key] !== undefined && String(record[key]).trim() !== '') {
+      return record[key];
+    }
+  }
+
+  // Check nested values or common locations
+  if (record.values && Array.isArray(record.values) && record.values.length > 0) {
+    // return first non-empty entry
+    for (const v of record.values) {
+      if (v !== null && v !== undefined && String(v).trim() !== '') return v;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * Try to get a numeric value from a record using multiple candidate keys.
+ * Returns a Number or null if not available.
+ */
+function getNumeric(record, candidates) {
+  const v = getRecordValue(record, candidates);
+  if (v === undefined || v === null || v === '') return null;
+  const num = parseFloat(String(v).replace(/,/g, ''));
+  return isNaN(num) ? null : num;
+}
+
+/**
+ * Format cell value for payroll table.
+ * - If null/undefined/empty -> show '—'
+ * - If numeric -> show formatted money (0.00 for zero)
+ * - Else -> escaped text
+ */
+function formatPayrollCell(value) {
+  if (value === null || value === undefined || value === '') {
+    return '<span class="zero">—</span>';
+  }
+  const num = parseFloat(String(value).toString().replace(/,/g, ''));
+  if (!isNaN(num)) {
+    return formatMoney(num);
+  }
+  return escapeHtml(String(value));
+}
+
+
 function renderPayrollTable(data, isPreview = false) {
   const tbody = document.getElementById('payrollTableBody');
   if (!tbody) return;
@@ -412,28 +480,37 @@ function renderPayrollTable(data, isPreview = false) {
     return;
   }
 
-  tbody.innerHTML = data.map(record => {
-    const staffNumber = record['Staff Number'] || record.staffNumber || '';
-    const fullName = record['Full Name'] || record.fullName || '';
-    const designation = record['Designation'] || record.designation || '';
-    const basicSalary = parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0;
-    const totalAllowances = parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0;
-    const grossSalary = parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0;
-    const employeePension = parseFloat(record['Employee Pension(5.5%)'] || record['Employee Pension (5.5%)'] || record.employeePension || 0) || 0;
-    const employeePf = parseFloat(record['Employee PF(10%)'] || record['Employee PF'] || record.employeePf || 0) || 0;
-    const taxRelief = parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0;
-    const taxableIncome = parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0;
-    const paye = parseFloat(record['PAYE'] || record.paye || 0) || 0;
-    const totalDeduction = parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0;
-    const netPay = parseFloat(record['Net Pay'] || record.netPay || 0) || 0;
-    const employerPension = parseFloat(record['Employer Pension(13%)'] || record['Employer Pension (13%)'] || record.employerPension || 0) || 0;
-    const employerPf = parseFloat(record['Employer PF(5%)'] || record['Employer PF'] || record.employerPf || 0) || 0;
-    const loanMonthly = parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0;
+  // For each record, normalize field names and render row.
+  const rowsHtml = data.map(record => {
+    // Basic identity fields (try multiple possible keys)
+    const staffNumber = getRecordValue(record, ['Staff Number', 'staff', 'staffNumber']) || '';
+    const fullName = getRecordValue(record, ['Full Name', 'name', 'fullName']) || '';
+    const designation = getRecordValue(record, ['Designation', 'designation']) || '';
 
-    const formatCell = (value) => {
-      if (value === 0 || value === '0' || isNaN(value) || value === '') return '<span class="zero">—</span>';
-      return formatMoney(value);
-    };
+    // Numeric fields - try many aliases
+    const basicSalary = getNumeric(record, ['Basic Salary', 'basicSalary', 'basic_salary']) || 0;
+    const totalAllowances = getNumeric(record, ['Total Allowances', 'Total Allowance', 'Allowances', 'allowances', 'totalAllowances']) || 0;
+    const grossSalary = getNumeric(record, ['Gross Salary', 'grossSalary']) || 0;
+
+    const employeePension = getNumeric(record, ['Employee Pension (5.5%)', 'Employee Pension(5.5%)', 'Employee Pension', 'employeePension']) ;
+    const employeePf = getNumeric(record, ['Employee PF', 'Employee PF(10%)', 'employeePf', 'employee_pf']) ;
+    const taxRelief = getNumeric(record, ['Tax Relief', 'taxRelief']) || 0;
+    const taxableIncome = getNumeric(record, ['Taxable Income', 'taxableIncome']) || 0;
+    const paye = getNumeric(record, ['PAYE', 'paye']) || 0;
+    const totalDeduction = getNumeric(record, ['Total Deduction', 'totalDeduction']) || 0;
+    const netPay = getNumeric(record, ['Net Pay', 'netPay']) || 0;
+    const employerPension = getNumeric(record, ['Employer Pension (13%)', 'Employer Pension(13%)', 'employerPension']) ;
+    const employerPf = getNumeric(record, ['Employer PF', 'Employer PF(5%)', 'employerPf']) ;
+    const monthlyLoan = getNumeric(record, ['Monthly Loan', 'loanMonthly', 'MonthlyLoan']) || 0;
+
+    // If some pension/PF fields are null because server saved different names, attempt common fallbacks:
+    const employeePensionFinal = employeePension !== null ? employeePension : (getNumeric(record, ['employeePension', 'employee_pension']) || 0);
+    const employeePfFinal = employeePf !== null ? employeePf : (getNumeric(record, ['employeePf', 'employee_pf']) || 0);
+    const employerPensionFinal = employerPension !== null ? employerPension : (getNumeric(record, ['employerPension', 'employer_pension']) || 0);
+    const employerPfFinal = employerPf !== null ? employerPf : (getNumeric(record, ['employerPf', 'employer_pf']) || 0);
+
+    // Build HTML cells using formatPayrollCell (which formats numbers and handles nulls)
+    const formatCell = (v) => formatPayrollCell(v);
 
     return `
       <tr>
@@ -443,21 +520,22 @@ function renderPayrollTable(data, isPreview = false) {
         <td class="col-number">${formatCell(basicSalary)}</td>
         <td class="col-number">${formatCell(totalAllowances)}</td>
         <td class="col-number positive">${formatCell(grossSalary)}</td>
-        <td class="col-number">${formatCell(employeePension)}</td>
-        <td class="col-number">${formatCell(employeePf)}</td>
+        <td class="col-number">${formatCell(employeePensionFinal)}</td>
+        <td class="col-number">${formatCell(employeePfFinal)}</td>
         <td class="col-number">${formatCell(taxRelief)}</td>
         <td class="col-number">${formatCell(taxableIncome)}</td>
         <td class="col-number negative">${formatCell(paye)}</td>
         <td class="col-number negative">${formatCell(totalDeduction)}</td>
         <td class="col-number positive">${formatCell(netPay)}</td>
-        <td class="col-number">${formatCell(employerPension)}</td>
-        <td class="col-number">${formatCell(employerPf)}</td>
-        <td class="col-number">${formatCell(loanMonthly)}</td>
+        <td class="col-number">${formatCell(employerPensionFinal)}</td>
+        <td class="col-number">${formatCell(employerPfFinal)}</td>
+        <td class="col-number">${formatCell(monthlyLoan)}</td>
       </tr>
     `;
   }).join('');
-}
 
+  tbody.innerHTML = rowsHtml;
+}
 /* ===========================
    Compute helpers (client-side mirror)
    =========================== */
