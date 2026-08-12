@@ -771,6 +771,62 @@ const printUtils = {
       this.openPrintWindow(printDocument, title);
     }
   },
+    // Print payroll table (preview or saved run)
+  printPayrollReport: function() {
+    console.log('printPayrollReport called');
+
+    // Locate the payroll body
+    const tbody = document.getElementById('payrollTableBody');
+    if (!tbody) {
+      this.showMessage('Payroll table not found. Please generate or load the payroll first.', 'error');
+      return;
+    }
+
+    // Build a table with explicit headers to ensure consistent print columns
+    const headers = [
+      'Staff Number', 'Full Name', 'Designation', 'Basic Salary', 'Total Allowances',
+      'Gross Salary', 'Employee Pension (5.5%)', 'Employee PF', 'Tax Relief',
+      'Taxable Income', 'PAYE', 'Total Deduction', 'Net Pay',
+      'Employer Pension (13%)', 'Employer PF', 'Monthly Loan'
+    ];
+
+    const table = document.createElement('table');
+
+    // Create thead
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    headers.forEach(h => {
+      const th = document.createElement('th');
+      th.textContent = h;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    // Clone the existing tbody and sanitize it
+    const tbodyClone = tbody.cloneNode(true);
+
+    // Remove any interactive elements, buttons and event attributes
+    tbodyClone.querySelectorAll('button, .action-btn, .dropdown-item, [onclick]').forEach(el => el.remove());
+    tbodyClone.querySelectorAll('*').forEach(el => {
+      el.removeAttribute('onclick');
+      el.removeAttribute('onchange');
+      el.removeAttribute('oninput');
+      el.removeAttribute('data-*');
+    });
+
+    // Some implementations put extra columns or action cells; use helper to remove them
+    table.appendChild(tbodyClone);
+    const cleaned = this.removeActionColumns(table);
+
+    // Compose period info if available
+    const periodLabel = document.getElementById('payrollPeriodLabel');
+    const periodInfo = periodLabel ? `Period: ${periodLabel.textContent.trim()}` : '';
+
+    const tableHtml = `<div class="print-table-wrapper">${cleaned.outerHTML}</div>`;
+    const printDocument = this.generatePrintDocument('Payroll Report', tableHtml, periodInfo);
+    this.openPrintWindow(printDocument, 'Payroll Report');
+  },
 
   // Open print window with proper handling
   openPrintWindow: function(printContent, title) {
