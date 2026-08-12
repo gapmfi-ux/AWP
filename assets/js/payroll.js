@@ -123,16 +123,22 @@ async function onMonthModalOk() {
     showToast('Please choose a valid month', 'warning');
     return;
   }
+
+  // capture the mode BEFORE closing modal
+  const mode = monthModalMode;
+
   // set currentPeriod and update header
   currentPeriod = selected;
   updateHeaderPeriodLabel();
+
+  // close modal (no longer affects our local 'mode' var)
   closeMonthModal();
 
-  if (monthModalMode === 'view') {
-    // Load saved run for this period (if exists)
+  if (mode === 'view') {
+    // Load saved run for this period (View)
     await loadSavedRunForPeriod(currentPeriod);
   } else {
-    // Process payroll preview for this period (active employees)
+    // Process payroll preview for this period (Process)
     await processPayrollPreviewForPeriod(currentPeriod);
   }
 }
