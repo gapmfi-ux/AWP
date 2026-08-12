@@ -2,11 +2,11 @@
 <div class="payroll-container">
   <!-- Header with Title and Controls in same row -->
   <div class="payroll-header">
-    <h2><i class="fas fa-calculator"></i> Payroll</h2>
-    <div class="payroll-controls">
-      <!-- When no saved run for period: show process & run -->
+    <h2 id="payrollTitle"><i class="fas fa-calculator"></i> Payroll <span id="payrollPeriodLabel" style="font-weight:500; font-size:13px; margin-left:8px; color:#4a5568;">(No period selected)</span></h2>
+    <div class="payroll-controls" style="align-items:center;">
+      <!-- Process & Run group (visible when no saved run or when preview mode) -->
       <div id="actions-process-run" style="display:flex; gap:8px; align-items:center;">
-        <button class="btn-primary" id="btnProcessPayroll" onclick="processPayrollPreview()">
+        <button class="btn-primary" id="btnProcessPayroll" onclick="showMonthModal('process')">
           <i class="fas fa-cogs"></i> Process Payroll
         </button>
         <button class="btn-primary" id="btnRunPayroll" onclick="processPayroll()">
@@ -14,7 +14,7 @@
         </button>
       </div>
 
-      <!-- When saved run exists for period: show print & delete -->
+      <!-- Print & Delete group (visible when saved run exists for selected month) -->
       <div id="actions-print-delete" style="display:none; gap:8px; align-items:center;">
         <button class="btn-outline" id="btnPrintPayroll" onclick="printPayroll()">
           <i class="fas fa-print"></i> Print
@@ -24,8 +24,10 @@
         </button>
       </div>
 
-      <label for="payPeriodSelect" style="font-size:12px; font-weight:500; color:#4a5568;">Period:</label>
-      <input type="month" id="payPeriodSelect" onchange="onPeriodChange()" style="padding:6px 10px; border:1px solid #e2e8f0; border-radius:6px; font-size:13px; background:#f7fafc; color:#2d3748;">
+      <!-- View button (always available) -->
+      <button class="btn-outline" id="btnViewPayroll" onclick="showMonthModal('view')" style="margin-left:10px;">
+        <i class="fas fa-eye"></i> View
+      </button>
     </div>
   </div>
 
@@ -57,10 +59,36 @@
           <td colspan="16" class="payroll-table-empty">
             <i class="fas fa-money-check-alt"></i>
             <p>No payroll data</p>
-            <span class="sub-text">Select a pay period or click "Process Payroll"</span>
+            <span class="sub-text">Click "Process Payroll" or "View" to select a month</span>
           </td>
         </tr>
       </tbody>
     </table>
+  </div>
+</div>
+
+<!-- Month Selection Modal (used by Process and View) -->
+<div id="monthModal" class="payroll-modal" style="display:none;">
+  <div class="payroll-modal-content" style="max-width:420px;">
+    <div class="payroll-modal-header">
+      <h3 id="monthModalTitle"><i class="fas fa-calendar-alt"></i> Select Month</h3>
+      <button class="payroll-modal-close" onclick="closeMonthModal()">&times;</button>
+    </div>
+    <div class="payroll-modal-body" style="padding:18px;">
+      <div style="margin-bottom:12px; font-size:13px; color:#4a5568;">
+        Choose a month:
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <input type="month" id="monthModalInput" style="padding:6px 8px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px; background:#fff;">
+        <div style="flex:1;"></div>
+      </div>
+      <div style="margin-top:12px; font-size:12px; color:#718096;">
+        After choosing, click "OK" to continue.
+      </div>
+    </div>
+    <div class="payroll-modal-footer" style="display:flex; gap:8px;">
+      <button class="btn-secondary" onclick="closeMonthModal()">Cancel</button>
+      <button class="btn-primary" id="monthModalOkBtn" onclick="onMonthModalOk()">OK</button>
+    </div>
   </div>
 </div>
