@@ -1,27 +1,38 @@
 <!-- modules/payslip.html -->
 <div class="payslips-page">
-  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:12px;">
-    <div style="font-size:20px; font-weight:800; letter-spacing:1px; color:#1a1a2e;">Payslips</div>
-    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-      <label for="payslipPeriod" style="font-weight:700; color:#333; font-size:13px;">Period</label>
-      <input id="payslipPeriod" type="month" style="padding:6px 10px; border-radius:6px; border:1px solid #ccc; font-size:14px;">
-      <button id="sendAllPayslipsBtn" class="btn-primary" style="padding:8px 16px; font-weight:700; background:#1a5c2a; border:none; border-radius:6px; color:white; cursor:pointer;">
+  <!-- Header with Title and Controls -->
+  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px;">
+    <div style="font-size:18px; font-weight:800; letter-spacing:1px; color:#1a1a2e;">
+      <i class="fas fa-file-invoice" style="margin-right:8px; color:#555;"></i> Payslips
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <button id="generatePayslipBtn" class="btn-primary" style="padding:7px 16px; font-weight:700; background:#1a5c2a; border:none; border-radius:6px; color:white; cursor:pointer; font-size:13px;">
+        <i class="fas fa-sync-alt"></i> Generate
+      </button>
+      <label for="payslipPeriod" style="font-weight:600; color:#333; font-size:13px;">Period</label>
+      <input id="payslipPeriod" type="month" style="padding:5px 10px; border-radius:6px; border:1px solid #ccc; font-size:13px; width:160px;">
+      <button id="sendAllPayslipsBtn" class="btn-primary" style="padding:7px 16px; font-weight:700; background:#0057a3; border:none; border-radius:6px; color:white; cursor:pointer; font-size:13px;">
         <i class="fas fa-envelope"></i> Send All
       </button>
     </div>
   </div>
 
-  <div style="overflow:auto; border:1px solid #e0e0e0; border-radius:8px;">
-    <table id="payslipListTable" class="payroll-table" style="width:100%; border-collapse:collapse; font-size:14px;">
+  <!-- Employee Table - Compact -->
+  <div style="overflow:auto; border:1px solid #e0e0e0; border-radius:6px;">
+    <table id="payslipListTable" style="width:100%; border-collapse:collapse; font-size:13px;">
       <thead>
         <tr style="background:#f0f0f0;">
-          <th style="padding:12px 16px; text-align:left; width:20%; font-weight:700; color:#333;">Staff Number</th>
-          <th style="padding:12px 16px; text-align:left; width:60%; font-weight:700; color:#333;">Full Name</th>
-          <th style="padding:12px 16px; text-align:right; width:20%; font-weight:700; color:#333;">Action</th>
+          <th style="padding:8px 14px; text-align:left; width:25%; font-weight:700; color:#333; border-bottom:2px solid #ccc;">Staff Number</th>
+          <th style="padding:8px 14px; text-align:left; width:55%; font-weight:700; color:#333; border-bottom:2px solid #ccc;">Full Name</th>
+          <th style="padding:8px 14px; text-align:center; width:20%; font-weight:700; color:#333; border-bottom:2px solid #ccc;">Action</th>
         </tr>
       </thead>
       <tbody id="payslipListBody">
-        <tr><td colspan="3" style="padding:20px; text-align:center; color:#999;">Loading employees...</td></tr>
+        <tr>
+          <td colspan="3" style="padding:16px; text-align:center; color:#999; font-size:13px;">
+            <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Loading employees...
+          </td>
+        </tr>
       </tbody>
     </table>
   </div>
@@ -36,49 +47,55 @@
 <div id="payslipModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:3000; background:rgba(0,0,0,0.6); padding:20px;">
   <div id="payslipModalContent" style="max-width:920px; width:100%; max-height:90vh; overflow-y:auto; background:#ffffff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3);">
     
+    <!-- Loading Overlay inside Modal -->
+    <div id="modalLoadingOverlay" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.85); z-index:10; border-radius:12px; align-items:center; justify-content:center; flex-direction:column;">
+      <div style="width:40px; height:40px; border:4px solid #e0e0e0; border-top-color:#1a5c2a; border-radius:50%; animation:spin 0.8s linear infinite;"></div>
+      <div style="margin-top:12px; font-size:14px; color:#555; font-weight:600;">Loading payslip...</div>
+    </div>
+    
     <!-- ===== PAYSLIP CONTAINER ===== -->
-    <div style="padding:30px 35px 20px 35px; background:#ffffff;">
+    <div style="padding:25px 30px 18px 30px; background:#ffffff; position:relative;">
       
       <!-- HEADER -->
-      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #000000; padding-bottom:16px; margin-bottom:20px;">
+      <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #000000; padding-bottom:14px; margin-bottom:16px;">
         <!-- LEFT: LOGO -->
         <div>
-          <div style="width:80px; height:65px; background:#f0f0f0; border:2px dashed #888; border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Arial',sans-serif; font-size:12px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:1px;" id="modalLogo">
+          <div style="width:70px; height:55px; background:#f0f0f0; border:2px dashed #888; border-radius:6px; display:flex; align-items:center; justify-content:center; font-family:'Arial',sans-serif; font-size:11px; font-weight:600; color:#888; text-transform:uppercase; letter-spacing:1px;" id="modalLogo">
             LOGO
           </div>
         </div>
         
         <!-- CENTER: PAYSLIP -->
         <div style="text-align:center; font-family:'Arial Black','Arial',sans-serif;">
-          <div style="font-size:30px; font-weight:900; color:#000000; letter-spacing:4px;">PAYSLIP</div>
+          <div style="font-size:26px; font-weight:900; color:#000000; letter-spacing:4px;">PAYSLIP</div>
         </div>
         
         <!-- RIGHT: Pay Period -->
-        <div style="text-align:right; background:#e8e8e8; padding:8px 18px; border-radius:6px; border-left:4px solid #000000;">
-          <div style="font-size:10px; text-transform:uppercase; color:#666; font-weight:700; letter-spacing:0.5px;">Pay Period</div>
-          <div style="font-size:18px; font-weight:800; color:#000000; font-family:'Arial Black','Arial',sans-serif;" id="modalPayPeriod">--</div>
+        <div style="text-align:right; background:#e8e8e8; padding:6px 16px; border-radius:6px; border-left:4px solid #000000;">
+          <div style="font-size:9px; text-transform:uppercase; color:#666; font-weight:700; letter-spacing:0.5px;">Pay Period</div>
+          <div style="font-size:16px; font-weight:800; color:#000000; font-family:'Arial Black','Arial',sans-serif;" id="modalPayPeriod">--</div>
         </div>
       </div>
       
-      <!-- EMPLOYEE DETAILS -->
-      <div style="background:#f0f0f0; border-radius:8px; padding:14px 20px; display:grid; grid-template-columns:1fr 1fr; gap:4px 30px; margin-bottom:22px; border:1px solid #d0d0d0; font-family:'Arial','Segoe UI',sans-serif; font-size:13px;">
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Employee ID:</span><span style="color:#000000; font-weight:500;" id="modalEmpId">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">SSNIT No.:</span><span style="color:#000000; font-weight:500;" id="modalSSNIT">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Name:</span><span style="color:#000000; font-weight:500;" id="modalName">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">GH Card No.:</span><span style="color:#000000; font-weight:500;" id="modalGhanaCard">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Department:</span><span style="color:#000000; font-weight:500;" id="modalDept">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Email:</span><span style="color:#000000; font-weight:500;" id="modalEmail">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Designation:</span><span style="color:#000000; font-weight:500;" id="modalDesignation">--</span></div>
-        <div style="display:flex; padding:3px 0;"><span style="font-weight:700; color:#555; min-width:110px;">Bank:</span><span style="color:#000000; font-weight:500;" id="modalBank">--</span></div>
+      <!-- EMPLOYEE DETAILS - Compact -->
+      <div style="background:#f0f0f0; border-radius:6px; padding:10px 16px; display:grid; grid-template-columns:1fr 1fr; gap:2px 25px; margin-bottom:16px; border:1px solid #d0d0d0; font-family:'Arial','Segoe UI',sans-serif; font-size:12px;">
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Employee ID:</span><span style="color:#000000; font-weight:500;" id="modalEmpId">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">SSNIT No.:</span><span style="color:#000000; font-weight:500;" id="modalSSNIT">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Name:</span><span style="color:#000000; font-weight:500;" id="modalName">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">GH Card No.:</span><span style="color:#000000; font-weight:500;" id="modalGhanaCard">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Department:</span><span style="color:#000000; font-weight:500;" id="modalDept">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Email:</span><span style="color:#000000; font-weight:500;" id="modalEmail">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Designation:</span><span style="color:#000000; font-weight:500;" id="modalDesignation">--</span></div>
+        <div style="display:flex; padding:2px 0;"><span style="font-weight:700; color:#555; min-width:100px;">Bank:</span><span style="color:#000000; font-weight:500;" id="modalBank">--</span></div>
       </div>
       
       <!-- PAYROLL TABLE -->
-      <div id="modalPayrollTableArea" style="margin-bottom:16px;"></div>
+      <div id="modalPayrollTableArea" style="margin-bottom:14px;"></div>
       
       <!-- FOOTER -->
-      <div style="margin-top:16px; padding-top:14px; border-top:2px solid #d0d0d0; display:flex; justify-content:space-between; align-items:center; font-size:11px; color:#888; font-family:'Arial','Segoe UI',sans-serif;">
-        <div style="font-weight:600; color:#333; font-size:12px;">GAP MICROFINANCE LTD</div>
-        <div style="font-style:italic; color:#999;">* This is a computer-generated payslip. No signature required.</div>
+      <div style="margin-top:14px; padding-top:12px; border-top:2px solid #d0d0d0; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#888; font-family:'Arial','Segoe UI',sans-serif;">
+        <div style="font-weight:600; color:#333; font-size:11px;">GAP MICROFINANCE LTD</div>
+        <div style="font-style:italic; color:#999;">* Computer-generated payslip</div>
         <div style="color:#aaa;" id="modalGenerated">Generated: --</div>
       </div>
       
@@ -86,18 +103,67 @@
     <!-- ===== END PAYSLIP CONTAINER ===== -->
     
     <!-- Modal Actions -->
-    <div style="display:flex; justify-content:flex-end; gap:10px; padding:14px 35px 20px 35px; background:#f8f8f8; border-top:1px solid #e0e0e0; border-radius:0 0 12px 12px;">
-      <button id="modalPrintBtn" class="btn-outline" style="padding:8px 16px; background:white; border:1px solid #555; border-radius:6px; color:#333; cursor:pointer; font-weight:600;">
+    <div style="display:flex; justify-content:flex-end; gap:8px; padding:12px 30px 16px 30px; background:#f8f8f8; border-top:1px solid #e0e0e0; border-radius:0 0 12px 12px;">
+      <button id="modalPrintBtn" style="padding:6px 14px; background:white; border:1px solid #555; border-radius:6px; color:#333; cursor:pointer; font-weight:600; font-size:12px;">
         <i class="fas fa-print"></i> Print
       </button>
-      <button id="modalSendBtn" class="btn-primary" style="padding:8px 16px; background:#1a5c2a; border:none; border-radius:6px; color:white; cursor:pointer; font-weight:600;">
+      <button id="modalSendBtn" style="padding:6px 14px; background:#1a5c2a; border:none; border-radius:6px; color:white; cursor:pointer; font-weight:600; font-size:12px; position:relative;">
         <i class="fas fa-envelope"></i> Send
+        <span id="modalSendSpinner" style="display:none; position:absolute; right:8px; top:50%; transform:translateY(-50%);">
+          <i class="fas fa-spinner fa-spin"></i>
+        </span>
       </button>
-      <button id="modalCloseBtn" class="btn-secondary" style="padding:8px 16px; background:#e0e0e0; border:none; border-radius:6px; color:#333; cursor:pointer; font-weight:600;">
+      <button id="modalCloseBtn" style="padding:6px 14px; background:#e0e0e0; border:none; border-radius:6px; color:#333; cursor:pointer; font-weight:600; font-size:12px;">
         <i class="fas fa-times"></i> Close
       </button>
     </div>
     
   </div>
 </div>
+
 <!-- ============================================================ -->
+<!-- Loading Toast Overlay for Send All -->
+<!-- ============================================================ -->
+<div id="sendAllLoadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:4000; align-items:center; justify-content:center;">
+  <div style="background:white; padding:30px 40px; border-radius:12px; text-align:center; box-shadow:0 20px 60px rgba(0,0,0,0.3); min-width:280px;">
+    <div style="width:50px; height:50px; border:4px solid #e0e0e0; border-top-color:#1a5c2a; border-radius:50%; animation:spin 0.8s linear infinite; margin:0 auto;"></div>
+    <div style="margin-top:16px; font-size:16px; font-weight:600; color:#333;">Sending Payslips...</div>
+    <div id="sendAllProgress" style="margin-top:8px; font-size:13px; color:#666;">Please wait</div>
+  </div>
+</div>
+
+<style>
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  #payslipModal {
+    align-items: center;
+    justify-content: center;
+  }
+  #payslipModalContent {
+    position: relative;
+  }
+  #modalLoadingOverlay {
+    display: none;
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.85);
+    z-index: 10;
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+  #modalLoadingOverlay.active {
+    display: flex;
+  }
+  #sendAllLoadingOverlay.active {
+    display: flex;
+  }
+  .payslip-table-compact td {
+    padding: 6px 12px;
+  }
+  .payslip-table-compact th {
+    padding: 6px 12px;
+  }
+</style>
