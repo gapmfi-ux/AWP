@@ -42,10 +42,10 @@
 </div>
 
 <!-- ============================================================ -->
-<!-- PAYSLIP MODAL - Full Payslip Structure (NO SCROLLING)        -->
+<!-- PAYSLIP MODAL - Full Payslip Structure (scrolls with page)   -->
 <!-- ============================================================ -->
-<div id="payslipModal" style="display:none; position:fixed; inset:0; align-items:center; justify-content:center; z-index:3000; background:rgba(0,0,0,0.6); padding:20px;">
-  <div id="payslipModalContent" style="max-width:920px; width:100%; background:#ffffff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative;">
+<div id="payslipModal" style="display:none; position:fixed; inset:0; align-items:flex-start; justify-content:center; z-index:3000; background:rgba(0,0,0,0.6); padding:30px 20px; overflow-y:auto;">
+  <div id="payslipModalContent" style="max-width:920px; width:100%; background:#ffffff; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.3); position:relative; margin:auto;">
     
     <!-- Loading Overlay inside Modal -->
     <div id="modalLoadingOverlay" style="display:none; position:absolute; inset:0; background:rgba(255,255,255,0.85); z-index:10; border-radius:12px; align-items:center; justify-content:center; flex-direction:column;">
@@ -54,7 +54,7 @@
     </div>
     
     <!-- ===== PAYSLIP CONTAINER ===== -->
-    <div style="padding:25px 30px 18px 30px; background:#ffffff; position:relative; overflow:visible;">
+    <div style="padding:25px 30px 18px 30px; background:#ffffff; position:relative;">
       
       <!-- HEADER -->
       <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid #000000; padding-bottom:14px; margin-bottom:16px;">
@@ -90,7 +90,7 @@
       </div>
       
       <!-- PAYROLL TABLE -->
-      <div id="modalPayrollTableArea" style="margin-bottom:14px; overflow:visible;"></div>
+      <div id="modalPayrollTableArea" style="margin-bottom:14px;"></div>
       
       <!-- FOOTER -->
       <div style="margin-top:14px; padding-top:12px; border-top:2px solid #d0d0d0; display:flex; justify-content:space-between; align-items:center; font-size:10px; color:#888; font-family:'Arial','Segoe UI',sans-serif;">
@@ -137,13 +137,14 @@
     to { transform: rotate(360deg); }
   }
   #payslipModal {
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
+    overflow-y: auto;
+    padding: 30px 20px;
   }
   #payslipModalContent {
     position: relative;
-    max-height: 90vh;
-    overflow: visible;
+    margin: auto;
   }
   #modalLoadingOverlay {
     display: none;
