@@ -6,6 +6,18 @@
   let _currentStaffNumber = null;
   let _isGenerating = false;
 
+  // =============================================================
+  // CLOSE ACTION DROPDOWN - Exposed globally
+  // =============================================================
+  window.closeActionDropdown = function() {
+    const portal = document.getElementById('payslipActionPortal');
+    if (portal) {
+      portal.innerHTML = '';
+      portal.style.display = 'none';
+    }
+    _actionPortalOpen = false;
+  };
+
   function initPayslipModule() {
     // set default period to current month (YYYY-MM)
     const monthInput = document.getElementById('payslipPeriod');
@@ -39,10 +51,9 @@
       });
     }
 
-    // Period change - auto refresh when changed
+    // Period change
     monthInput.addEventListener('change', function() {
       _currentPeriod = monthInput.value;
-      // Don't auto-load, wait for Generate button
     });
 
     // Modal close handlers
@@ -67,7 +78,7 @@
     if (sendBtn) {
       sendBtn.addEventListener('click', function() {
         if (_currentStaffNumber) {
-          sendPayslip(_currentStaffNumber);
+          window.sendPayslip(_currentStaffNumber);
         }
       });
     }
@@ -85,13 +96,13 @@
     document.addEventListener('keydown', function(e) {
       if (e.key === 'Escape') {
         if (modal) modal.style.display = 'none';
-        closeActionDropdown();
+        window.closeActionDropdown();
       }
     });
 
     // global click to close portal
     document.addEventListener('click', function(e) {
-      if (_actionPortalOpen) closeActionDropdown();
+      if (_actionPortalOpen) window.closeActionDropdown();
     });
 
     // Show empty state initially
@@ -160,10 +171,10 @@
           <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(staffNumber)}</td>
           <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(fullName)}</td>
           <td style="padding:6px 14px; text-align:center;">
-            <button class="action-btn" onclick="viewPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#0057a3; padding:4px 8px; margin:0 2px;" title="View Payslip">
+            <button class="action-btn" onclick="window.viewPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#0057a3; padding:4px 8px; margin:0 2px;" title="View Payslip">
               <i class="fas fa-eye"></i>
             </button>
-            <button class="action-btn" onclick="sendPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#1a5c2a; padding:4px 8px; margin:0 2px;" title="Send Payslip">
+            <button class="action-btn" onclick="window.sendPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#1a5c2a; padding:4px 8px; margin:0 2px;" title="Send Payslip">
               <i class="fas fa-envelope"></i>
             </button>
           </td>
@@ -194,10 +205,10 @@
   }
 
   // =============================================================
-  // VIEW PAYSLIP
+  // VIEW PAYSLIP - Exposed globally
   // =============================================================
   window.viewPayslip = async function(staffNumber) {
-    closeActionDropdown();
+    window.closeActionDropdown();
     _currentStaffNumber = staffNumber;
 
     const period = _currentPeriod;
@@ -285,10 +296,10 @@
   };
 
   // =============================================================
-  // SEND PAYSLIP
+  // SEND PAYSLIP - Exposed globally
   // =============================================================
   window.sendPayslip = async function(staffNumber) {
-    closeActionDropdown();
+    window.closeActionDropdown();
     const period = _currentPeriod;
 
     if (!period) {
@@ -545,8 +556,20 @@
     return String(s || '').replace(/'/g, "\\'");
   }
 
-  // Expose functions globally
+  // =============================================================
+  // INITIALIZE - Auto-run when page loads
+  // =============================================================
+  // Check if DOM is ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initPayslipModule);
+  } else {
+    initPayslipModule();
+  }
+
+  // Expose functions globally for inline onclick handlers
   window.initPayslipModule = initPayslipModule;
-  window.viewPayslip = viewPayslip;
-  window.sendPayslip = sendPayslip;
+  window.viewPayslip = window.viewPayslip;
+  window.sendPayslip = window.sendPayslip;
+  window.closeActionDropdown = window.closeActionDropdown;
+
 })();
