@@ -4,6 +4,7 @@
   let _actionPortalOpen = false;
   let _currentPeriod = null;
   let _currentStaffNumber = null;
+  let _isGenerating = false;
 
   function initPayslipModule() {
     // set default period to current month (YYYY-MM)
@@ -15,19 +16,34 @@
         monthInput.value = `${now.getFullYear()}-${mm}`;
       }
       _currentPeriod = monthInput.value;
-      monthInput.addEventListener('change', function() {
-        _currentPeriod = monthInput.value;
-        loadPayslipList(_currentPeriod);
+    }
+
+    // Generate Button
+    const generateBtn = document.getElementById('generatePayslipBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', function() {
+        generatePayslipList();
       });
     }
 
+    // Send All Button
     const sendAllBtn = document.getElementById('sendAllPayslipsBtn');
     if (sendAllBtn) {
       sendAllBtn.addEventListener('click', function() {
-        if (!confirm('Send payslips for ' + (_currentPeriod || 'selected period') + ' to all employees?')) return;
+        if (!_currentPeriod) {
+          showToast('Please select a period first', 'warning');
+          return;
+        }
+        if (!confirm('Send payslips for ' + _currentPeriod + ' to all employees?')) return;
         sendAllPayslips(_currentPeriod);
       });
     }
+
+    // Period change - auto refresh when changed
+    monthInput.addEventListener('change', function() {
+      _currentPeriod = monthInput.value;
+      // Don't auto-load, wait for Generate button
+    });
 
     // Modal close handlers
     const modal = document.getElementById('payslipModal');
@@ -78,16 +94,41 @@
       if (_actionPortalOpen) closeActionDropdown();
     });
 
-    loadPayslipList(_currentPeriod);
+    // Show empty state initially
+    const tbody = document.getElementById('payslipListBody');
+    if (tbody) {
+      tbody.innerHTML = `<tr>
+        <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
+          <i class="fas fa-file-invoice" style="font-size:20px; display:block; margin-bottom:6px; color:#ccc;"></i>
+          Click "Generate" to load payslip data
+        </td>
+      </tr>`;
+    }
   }
 
   // =============================================================
-  // LOAD PAYSLIP LIST
+  // GENERATE PAYSLIP LIST
   // =============================================================
-  async function loadPayslipList(period) {
+  async function generatePayslipList() {
+    if (_isGenerating) return;
+    _isGenerating = true;
+
+    const generateBtn = document.getElementById('generatePayslipBtn');
+    const originalText = generateBtn ? generateBtn.innerHTML : 'Generate';
+
+    if (generateBtn) {
+      generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
+      generateBtn.disabled = true;
+    }
+
     const tbody = document.getElementById('payslipListBody');
-    if (!tbody) return;
-    tbody.innerHTML = `<tr><td colspan="3" style="padding:20px; text-align:center; color:#999;"><i class="fas fa-spinner fa-spin"></i> Loading...</td></tr>`;
+    if (tbody) {
+      tbody.innerHTML = `<tr>
+        <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
+          <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Loading employees...
+        </td>
+      </tr>`;
+    }
 
     try {
       let employees = [];
@@ -97,74 +138,59 @@
       } else {
         // fallback demo
         employees = [
-          { 'Staff Number': 'EMP001', 'Full Name': 'Alice Doe' },
-          { 'Staff Number': 'EMP002', 'Full Name': 'Bob Smith' },
-          { 'Staff Number': 'EMP003', 'Full Name': 'Carol Jones' }
+          { 'Staff Number': 'GAP0011', 'Full Name': 'John Mark' },
+          { 'Staff Number': 'GAP0012', 'Full Name': 'Bright' }
         ];
       }
 
       if (!employees || employees.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" style="padding:20px; text-align:center; color:#999;">No employees found</td></tr>`;
+        tbody.innerHTML = `<tr>
+          <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
+            <i class="fas fa-users" style="font-size:18px; display:block; margin-bottom:6px; color:#ccc;"></i>
+            No employees found
+          </td>
+        </tr>`;
         return;
       }
 
       const rows = employees.map(emp => {
         const staffNumber = emp['Staff Number'] || emp.staff || emp.staffNumber || '';
         const fullName = emp['Full Name'] || emp.name || emp.fullName || '';
-        return `<tr data-staff="${escapeHtml(staffNumber)}">
-          <td style="padding:10px 16px;">${escapeHtml(staffNumber)}</td>
-          <td style="padding:10px 16px;">${escapeHtml(fullName)}</td>
-          <td style="padding:10px 16px; text-align:right;">
-            <button class="action-btn" onclick="openPayslipActionDropdown(event, '${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:16px; color:#666; padding:4px 8px;">
-              <i class="fas fa-ellipsis-v"></i>
+        return `<tr style="border-bottom:1px solid #eee;" data-staff="${escapeHtml(staffNumber)}">
+          <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(staffNumber)}</td>
+          <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(fullName)}</td>
+          <td style="padding:6px 14px; text-align:center;">
+            <button class="action-btn" onclick="viewPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#0057a3; padding:4px 8px; margin:0 2px;" title="View Payslip">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" onclick="sendPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#1a5c2a; padding:4px 8px; margin:0 2px;" title="Send Payslip">
+              <i class="fas fa-envelope"></i>
             </button>
           </td>
         </tr>`;
       }).join('');
 
       tbody.innerHTML = rows;
+      showToast('Payslip data loaded successfully', 'success');
+
     } catch (err) {
       console.error('Error loading payslip list', err);
-      tbody.innerHTML = `<tr><td colspan="3" style="padding:20px; text-align:center; color:#c00;">Failed to load employees</td></tr>`;
+      if (tbody) {
+        tbody.innerHTML = `<tr>
+          <td colspan="3" style="padding:20px; text-align:center; color:#c00; font-size:13px;">
+            <i class="fas fa-exclamation-circle" style="font-size:18px; display:block; margin-bottom:6px;"></i>
+            Failed to load employees: ${escapeHtml(err.message || 'Unknown error')}
+          </td>
+        </tr>`;
+      }
+      showToast('Failed to load employees', 'error');
+    } finally {
+      _isGenerating = false;
+      if (generateBtn) {
+        generateBtn.innerHTML = originalText;
+        generateBtn.disabled = false;
+      }
     }
-  }
-
-  // =============================================================
-  // ACTION DROPDOWN
-  // =============================================================
-  window.openPayslipActionDropdown = function(event, staffNumber) {
-    event.stopPropagation();
-    closeActionDropdown();
-
-    const btn = event.currentTarget;
-    const rect = btn.getBoundingClientRect();
-    const portal = document.getElementById('payslipActionPortal');
-    if (!portal) return;
-
-    portal.innerHTML = `
-      <div style="background:white; border-radius:8px; box-shadow:0 8px 24px rgba(0,0,0,0.15); overflow:hidden; min-width:140px; border:1px solid #e0e0e0;">
-        <button class="dropdown-item" onclick="viewPayslip('${escapeJs(staffNumber)}')" style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:13px;font-weight:500;color:#333;border-bottom:1px solid #f0f0f0;">
-          <i class="fas fa-eye" style="margin-right:8px;color:#555;"></i> View
-        </button>
-        <button class="dropdown-item" onclick="sendPayslip('${escapeJs(staffNumber)}')" style="display:block;width:100%;padding:10px 16px;border:none;background:none;text-align:left;cursor:pointer;font-size:13px;font-weight:500;color:#333;">
-          <i class="fas fa-envelope" style="margin-right:8px;color:#1a5c2a;"></i> Send
-        </button>
-      </div>
-    `;
-
-    portal.style.display = 'block';
-    portal.style.top = (rect.bottom + window.scrollY + 6) + 'px';
-    portal.style.left = (rect.left + window.scrollX - 20) + 'px';
-    _actionPortalOpen = true;
-  };
-
-  function closeActionDropdown() {
-    const portal = document.getElementById('payslipActionPortal');
-    if (portal) {
-      portal.innerHTML = '';
-      portal.style.display = 'none';
-    }
-    _actionPortalOpen = false;
   }
 
   // =============================================================
@@ -184,11 +210,11 @@
     const modalArea = document.getElementById('modalPayrollTableArea');
     const modalPayPeriod = document.getElementById('modalPayPeriod');
     const modalGenerated = document.getElementById('modalGenerated');
+    const loadingOverlay = document.getElementById('modalLoadingOverlay');
 
-    // Show loading
-    if (modalArea) {
-      modalArea.innerHTML = '<div style="padding:30px; text-align:center; color:#999;"><i class="fas fa-spinner fa-spin"></i> Loading payslip...</div>';
-    }
+    // Show loading overlay
+    if (loadingOverlay) loadingOverlay.className = 'active';
+
     if (modalPayPeriod) modalPayPeriod.textContent = period || '--';
 
     // Set generated timestamp
@@ -231,8 +257,8 @@
       } else {
         if (modalArea) {
           modalArea.innerHTML = `
-            <div style="padding:30px; text-align:center; color:#c00;">
-              <i class="fas fa-exclamation-circle" style="font-size:24px; display:block; margin-bottom:10px;"></i>
+            <div style="padding:24px; text-align:center; color:#c00; font-size:13px;">
+              <i class="fas fa-exclamation-circle" style="font-size:20px; display:block; margin-bottom:8px;"></i>
               Payslip data not found for ${escapeHtml(staffNumber)} in ${escapeHtml(period)}
             </div>
           `;
@@ -243,12 +269,15 @@
       console.error('Error viewing payslip:', err);
       if (modalArea) {
         modalArea.innerHTML = `
-          <div style="padding:30px; text-align:center; color:#c00;">
-            <i class="fas fa-exclamation-circle" style="font-size:24px; display:block; margin-bottom:10px;"></i>
+          <div style="padding:24px; text-align:center; color:#c00; font-size:13px;">
+            <i class="fas fa-exclamation-circle" style="font-size:20px; display:block; margin-bottom:8px;"></i>
             Error loading payslip: ${escapeHtml(err.message || 'Unknown error')}
           </div>
         `;
       }
+    } finally {
+      // Hide loading overlay
+      if (loadingOverlay) loadingOverlay.className = '';
     }
 
     // Show modal
@@ -272,9 +301,19 @@
       return;
     }
 
+    // Show loading on send button if in modal
+    const sendBtn = document.getElementById('modalSendBtn');
+    const sendSpinner = document.getElementById('modalSendSpinner');
+    let originalSendText = '';
+
+    if (sendBtn) {
+      originalSendText = sendBtn.innerHTML;
+      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+      sendBtn.disabled = true;
+    }
+
     try {
       if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
-        showToast('Sending payslip to ' + staffNumber + '...', 'info');
         const res = await API.sendPayslip(staffNumber, period);
         if (res && res.success !== false) {
           showToast('Payslip sent to ' + staffNumber, 'success');
@@ -285,11 +324,17 @@
           showToast('Failed to send payslip: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
         }
       } else {
-        showToast('Send feature not configured on server. (Simulated send)', 'info');
+        showToast('Send feature not configured. (Simulated)', 'info');
       }
     } catch (err) {
       console.error('sendPayslip error', err);
       showToast('Failed to send payslip', 'error');
+    } finally {
+      if (sendBtn) {
+        sendBtn.innerHTML = originalSendText || '<i class="fas fa-envelope"></i> Send';
+        sendBtn.disabled = false;
+      }
+      if (sendSpinner) sendSpinner.style.display = 'none';
     }
   };
 
@@ -306,13 +351,19 @@
       return;
     }
 
-    showToast('Sending payslips... This may take a moment.', 'info');
+    const overlay = document.getElementById('sendAllLoadingOverlay');
+    const progressEl = document.getElementById('sendAllProgress');
+
+    if (overlay) overlay.className = 'active';
+    if (progressEl) progressEl.textContent = 'Preparing to send...';
 
     let successCount = 0;
     let failCount = 0;
 
     for (let i = 0; i < rows.length; i++) {
       const staff = rows[i].getAttribute('data-staff');
+      if (progressEl) progressEl.textContent = `Sending ${i + 1}/${rows.length}... (${staff})`;
+
       try {
         if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
           const res = await API.sendPayslip(staff, period);
@@ -325,15 +376,12 @@
           // Simulate
           successCount++;
         }
-        // Update progress every 5
-        if (i % 5 === 0 || i === rows.length - 1) {
-          showToast(`Sending payslips... ${i + 1}/${rows.length}`, 'info');
-        }
       } catch (e) {
         failCount++;
       }
     }
 
+    if (overlay) overlay.className = '';
     showToast(`Payslips sent: ${successCount} successful, ${failCount} failed`, successCount > 0 ? 'success' : 'error');
   }
 
@@ -345,7 +393,7 @@
     if (!modalContent) return;
 
     // Get the payslip content (the inner part without the modal actions)
-    const payslipInner = modalContent.querySelector('div[style*="padding:30px 35px"]');
+    const payslipInner = modalContent.querySelector('div[style*="padding:25px 30px 18px 30px"]');
     if (!payslipInner) return;
 
     // Create print window
@@ -367,6 +415,7 @@
           body { background: white; padding: 0; margin: 0; }
           .payslip-print { max-width: 900px; margin: 0 auto; padding: 20px; }
           .modal-actions { display: none !important; }
+          #modalLoadingOverlay { display: none !important; }
         </style>
       </head>
       <body>
@@ -433,35 +482,35 @@
     const loan = format(payroll?.['Monthly Loan'] || 0);
 
     return `
-      <div style="padding:10px 0;">
-        <table style="width:100%; border-collapse:collapse; font-size:13px; font-family:'Arial',sans-serif;">
+      <div style="padding:6px 0;">
+        <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Arial',sans-serif;">
           <thead>
-            <tr><th style="text-align:left; padding:8px 12px; background:#000; color:white;">Description</th>
-                <th style="text-align:right; padding:8px 12px; background:#000; color:white;">This Period (GHS)</th>
-                <th style="text-align:right; padding:8px 12px; background:#000; color:white;">YTD (GHS)</th></tr>
+            <tr><th style="text-align:left; padding:5px 10px; background:#000; color:white; font-size:11px;">Description</th>
+                <th style="text-align:right; padding:5px 10px; background:#000; color:white; font-size:11px;">This Period (GHS)</th>
+                <th style="text-align:right; padding:5px 10px; background:#000; color:white; font-size:11px;">YTD (GHS)</th></tr>
           </thead>
           <tbody>
-            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:8px; text-transform:uppercase; color:#333;">EARNINGS</td></tr>
-            <tr><td style="padding:6px 12px;">Basic Salary</td><td style="padding:6px 12px; text-align:right;">${basic}</td><td style="padding:6px 12px; text-align:right;">--</td></tr>
-            <tr><td style="padding:6px 12px;">Allowances</td><td style="padding:6px 12px; text-align:right;">${allowances}</td><td style="padding:6px 12px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:8px 12px;">Gross Pay</td><td style="padding:8px 12px; text-align:right;">${gross}</td><td style="padding:8px 12px; text-align:right;">--</td></tr>
+            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EARNINGS</td></tr>
+            <tr><td style="padding:4px 10px;">Basic Salary</td><td style="padding:4px 10px; text-align:right;">${basic}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px;">Allowances</td><td style="padding:4px 10px; text-align:right;">${allowances}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Gross Pay</td><td style="padding:5px 10px; text-align:right;">${gross}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
 
-            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:8px; text-transform:uppercase; color:#333;">DEDUCTIONS</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:600; color:#444;">Statutory</td><td></td><td></td></tr>
-            <tr style="padding-left:20px;"><td style="padding:4px 12px 4px 30px;">PAYE</td><td style="padding:4px 12px; text-align:right;">${paye}</td><td style="padding:4px 12px; text-align:right;">--</td></tr>
-            <tr style="padding-left:20px;"><td style="padding:4px 12px 4px 30px;">Employee Pension (5.5%)</td><td style="padding:4px 12px; text-align:right;">${empPension}</td><td style="padding:4px 12px; text-align:right;">--</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:600; color:#444;">Other Deductions</td><td></td><td></td></tr>
-            <tr style="padding-left:20px;"><td style="padding:4px 12px 4px 30px;">Employee PF (10%)</td><td style="padding:4px 12px; text-align:right;">${empPF}</td><td style="padding:4px 12px; text-align:right;">--</td></tr>
-            <tr style="padding-left:20px;"><td style="padding:4px 12px 4px 30px;">Monthly Loan Deduction</td><td style="padding:4px 12px; text-align:right;">${loan}</td><td style="padding:4px 12px; text-align:right;">--</td></tr>
-            <tr><td style="padding:6px 12px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:6px 12px; text-align:right;">${taxRelief}</td><td style="padding:6px 12px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:8px 12px;">Total Deductions</td><td style="padding:8px 12px; text-align:right;">${totalDed}</td><td style="padding:8px 12px; text-align:right;">--</td></tr>
+            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">DEDUCTIONS</td></tr>
+            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Statutory</td><td></td><td></td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">PAYE</td><td style="padding:3px 10px; text-align:right;">${paye}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Employee Pension (5.5%)</td><td style="padding:3px 10px; text-align:right;">${empPension}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Other Deductions</td><td></td><td></td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Employee PF (10%)</td><td style="padding:3px 10px; text-align:right;">${empPF}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Monthly Loan</td><td style="padding:3px 10px; text-align:right;">${loan}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
 
-            <tr style="background:#333; color:white;"><td style="padding:10px 12px; font-weight:700;">Net Pay (Take Home)</td><td style="padding:10px 12px; text-align:right;"></td><td style="padding:10px 12px; text-align:right; font-size:18px; font-weight:900;">${netPay}</td></tr>
+            <tr style="background:#333; color:white;"><td style="padding:6px 10px; font-weight:700; font-size:13px;">Net Pay</td><td style="padding:6px 10px; text-align:right;"></td><td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td></tr>
 
-            <tr style="background:#e8e8e8;"><td colspan="3" style="text-align:center; font-weight:700; padding:8px; text-transform:uppercase; color:#333;">EMPLOYER CONTRIBUTIONS</td></tr>
-            <tr><td style="padding:6px 12px;">Employer Pension (13%)</td><td style="padding:6px 12px; text-align:right;">${empPension13}</td><td style="padding:6px 12px; text-align:right;">--</td></tr>
-            <tr><td style="padding:6px 12px;">Employer PF (5%)</td><td style="padding:6px 12px; text-align:right;">${empPF5}</td><td style="padding:6px 12px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:8px 12px;">Total Employer Contribution</td><td style="padding:8px 12px; text-align:right;">${format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0))}</td><td style="padding:8px 12px; text-align:right;">--</td></tr>
+            <tr style="background:#e8e8e8;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EMPLOYER CONTRIBUTIONS</td></tr>
+            <tr><td style="padding:4px 10px;">Employer Pension (13%)</td><td style="padding:4px 10px; text-align:right;">${empPension13}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px;">Employer PF (5%)</td><td style="padding:4px 10px; text-align:right;">${empPF5}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Employer Contribution</td><td style="padding:5px 10px; text-align:right;">${format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0))}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
           </tbody>
         </table>
       </div>
@@ -496,6 +545,8 @@
     return String(s || '').replace(/'/g, "\\'");
   }
 
-  // Expose init
+  // Expose functions globally
   window.initPayslipModule = initPayslipModule;
+  window.viewPayslip = viewPayslip;
+  window.sendPayslip = sendPayslip;
 })();
