@@ -247,7 +247,7 @@
   }
 
   // =============================================================
-  // GET YTD TOTALS FOR A STAFF
+  // GET YTD TOTALS FOR A STAFF (includes current month)
   // =============================================================
   async function getYTDTotals(staffNumber, currentPeriod) {
     try {
@@ -258,7 +258,7 @@
       const runsResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
       const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
       
-      // Filter runs for the current year and up to the current period
+      // Filter runs for the current year and up to AND INCLUDING the current period
       const yearRuns = runs.filter(r => {
         const payPeriod = r['Pay Period'] || r.payPeriod || r['period'] || '';
         return payPeriod.startsWith(year) && payPeriod <= currentPeriod;
@@ -399,7 +399,7 @@
         }
       }
 
-      // 5) Get YTD totals for this staff
+      // 5) Get YTD totals for this staff (includes current month)
       let ytdData = await getYTDTotals(staffNumber, period);
 
       // 6) Build payroll data for payslip display
@@ -647,7 +647,7 @@
   }
 
   // =============================================================
-  // BUILD PAYSLIP HTML with YTD
+  // BUILD PAYSLIP HTML with YTD and proper alignment
   // =============================================================
   function buildPayslipHTML(employee, payroll, period) {
     const format = (n) => {
@@ -709,7 +709,12 @@
             <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">${ytdTaxRelief}</td></tr>
             <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">${ytdTotalDed}</td></tr>
 
-            <tr style="background:#333; color:white;"><td style="padding:6px 10px; font-weight:700; font-size:13px;">Net Pay</td><td style="padding:6px 10px; text-align:right;"></td><td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td></tr>
+            <!-- NET PAY - aligned properly under This Period column -->
+            <tr style="background:#333; color:white;">
+              <td style="padding:6px 10px; font-weight:700; font-size:13px; text-align:left;">Net Pay</td>
+              <td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td>
+              <td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${ytdNetPay}</td>
+            </tr>
 
             <tr style="background:#e8e8e8;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EMPLOYER CONTRIBUTIONS</td></tr>
             <tr><td style="padding:4px 10px;">Employer Pension (13%)</td><td style="padding:4px 10px; text-align:right;">${empPension13}</td><td style="padding:4px 10px; text-align:right;">${ytdEmpPension13}</td></tr>
