@@ -264,6 +264,13 @@
         return payPeriod.startsWith(year) && payPeriod <= currentPeriod;
       });
 
+      // Sort by period to ensure correct order
+      yearRuns.sort((a, b) => {
+        const periodA = a['Pay Period'] || a.payPeriod || a['period'] || '';
+        const periodB = b['Pay Period'] || b.payPeriod || b['period'] || '';
+        return periodA.localeCompare(periodB);
+      });
+
       // Sum up all the values
       const ytd = {
         basicSalary: 0,
@@ -709,7 +716,7 @@
             <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">${ytdTaxRelief}</td></tr>
             <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">${ytdTotalDed}</td></tr>
 
-            <!-- NET PAY - aligned properly under This Period column -->
+            <!-- NET PAY - aligned properly under both columns -->
             <tr style="background:#333; color:white;">
               <td style="padding:6px 10px; font-weight:700; font-size:13px; text-align:left;">Net Pay</td>
               <td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td>
