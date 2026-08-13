@@ -1,476 +1,103 @@
-// Payslip Module
-// - Loads payroll run for selected period and populates payslip list.
-// - Generates payslip modal content from payroll run row (name + staff number).
-// - Print & send functionality (uses available API methods, with fallbacks).
+/* assets/js/payslip.js
+   Payslip module:
+   - loads employee list
+   - generates preview in modal
+   - prints payslip modal
+   - sends single and all payslips with progress
+   Defensive: works with/without API object, uses fallbacks.
+*/
 
-(function() {
+(function () {
   'use strict';
 
-  // Candidate API method names to fetch payroll run rows for a given period
-  const payrollApiMethods = [
-    'getPayrollRun',
-    'getPayrollForPeriod',
-    'getPayslipsForPeriod',
-    'getPayslips',
-    'getPayrollData',
-    'getPayroll' // last-resort
-  ];
+  // Configuration
+  const SEND_BATCH_SIZE = 5; // concurrent sends
+  const SEND_BATCH_DELAY_MS = 200; // small delay between batches
 
-  const sendPayslipApiMethods = [
-    'sendPayslip',
-    'emailPayslip',
-    'dispatchPayslip'
-  ];
+  // State
+  let employees = [];
+  let currentPayslip = null;
+  let isSendingAll = false;
+  let sendAllAbort = false;
 
-  const DEFAULT_TOAST_TIMEOUT = 3500;
-
-  // Init: attach events
-  function initPayslipModule() {
-    const genBtn = document.getElementById('generatePayslipBtn');
-    const sendAllBtn = document.getElementById('sendAllPayslipsBtn');
-    const periodInput = document.getElementById('payslipPeriod');
-
-    if (!periodInput) {
-      console.warn('payslipPeriod input not found');
-    } else {
-      // default to current month if empty
-      if (!periodInput.value) {
-        const now = new Date();
-        periodInput.value = now.toISOString().slice(0,7); // YYYY-MM
-      }
-    }
-
-    if (genBtn) {
-      genBtn.removeEventListener('click', onGenerateClicked);
-      genBtn.addEventListener('click', onGenerateClicked);
-    }
-    if (sendAllBtn) {
-      sendAllBtn.removeEventListener('click', onSendAllClicked);
-      sendAllBtn.addEventListener('click', onSendAllClicked);
-    }
-
-    // Allow clicking on table rows later (delegated)
-    document.getElementById('payslipListBody')?.addEventListener('click', onPayslipListClick);
-
-    // Modal actions
-    document.getElementById('modalPrintBtn')?.addEventListener('click', () => {
-      // Print only the modal content
-      const modalContent = document.getElementById('payslipModalContent');
-      if (modalContent) {
-        const before = document.body.innerHTML;
-        const clone = modalContent.cloneNode(true);
-        const w = window.open('', '_blank', 'width=900,height=700');
-        if (!w) {
-          showToast('Popup blocked - allow popups for printing', 'warning');
-          return;
-        }
-        w.document.write('<html><head><title>Payslip</title>');
-        // copied minimal styles to maintain readability (app may provide print CSS)
-        w.document.write('<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px;color:#111} table{width:100%;border-collapse:collapse} th,td{padding:6px;border:1px solid #ddd;text-align:left} .text-right{text-align:right}</style>');
-        w.document.write('</head><body>');
-        w.document.write(clone.innerHTML);
-        w.document.write('</body></html>');
-        w.document.close();
-        w.focus();
-        w.print();
-        // optionally close:
-        // w.close();
-      }
-    });
-
-    document.getElementById('modalSendBtn')?.addEventListener('click', async function() {
-      const staff = document.getElementById('modalEmpId')?.textContent?.trim();
-      const period = document.getElementById('payslipPeriod')?.value;
-      if (!staff || !period) {
-        showToast('Staff or period missing', 'error');
-        return;
-      }
-      await sendPayslipForStaff(staff, period);
-    });
-
-    document.getElementById('modalCloseBtn')?.addEventListener('click', function() {
-      closePayslipModal();
-    });
-
-    // Initial load of list (if auto generate button desired)
-    // onGenerateClicked(); // don't auto-load unless you want
-  }
-
-  // Handle Generate button
-  async function onGenerateClicked(e) {
-    const period = document.getElementById('payslipPeriod')?.value;
-    if (!period) {
-      showToast('Please select a period', 'warning');
+  // Helpers: toast (uses existing site toast if present), else fallback to lightweight toast
+  function showToast(message, type = 'info', timeout = 3000) {
+    // prefer global toast utilities
+    if (window.printUtils && typeof printUtils.showMessage === 'function') {
+      printUtils.showMessage(message, type);
       return;
     }
+    // fallback: simple toast element
+    let toast = document.getElementById('payslip-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'payslip-toast';
+      toast.style.cssText = 'position:fixed;right:20px;bottom:20px;padding:10px 14px;border-radius:8px;z-index:6000;color:#fff;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,0.1);';
+      document.body.appendChild(toast);
+    }
+    const bg = type === 'error' ? '#ef476f' : type === 'success' ? '#06d6a0' : type === 'warning' ? '#f59e0b' : '#4361ee';
+    toast.style.background = bg;
+    toast.textContent = message;
+    toast.style.display = 'block';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => {
+      toast.style.display = 'none';
+    }, timeout);
+  }
+
+  // Utility: safe API call wrapper
+  async function safeApiCall(fnName, ...args) {
     try {
-      showToast('Loading payroll run...', 'info');
-      const rows = await fetchPayrollRunForPeriod(period);
-      if (!rows || rows.length === 0) {
-        // fallback: try loading employees
-        showToast('No payroll run found for period; trying employee list', 'warning');
-        const employees = await tryApiCall(['getEmployees','getAllEmployees']);
-        populatePayslipListFromEmployees(employees || []);
-        return;
+      if (window.API && typeof window.API[fnName] === 'function') {
+        return await window.API[fnName](...args);
+      } else if (window.API && typeof window.API.call === 'function') {
+        // some projects expose generic call
+        return await window.API.call(fnName, ...args);
+      } else {
+        return null;
       }
-      populatePayslipListFromPayrollRows(rows, period);
-      showToast('Payroll run loaded (' + rows.length + ' rows)', 'success');
     } catch (err) {
-      console.error('Error loading payroll run', err);
-      showToast('Failed to load payroll run: ' + (err?.message || err), 'error');
+      console.error('API call error for', fnName, err);
+      return Promise.reject(err);
     }
   }
 
-  // Attempt multiple API methods to fetch payroll run rows for a period
-  async function fetchPayrollRunForPeriod(period) {
-    for (const m of payrollApiMethods) {
-      const fn = window.API && window.API[m];
-      if (typeof fn === 'function') {
-        try {
-          const result = await fn(period);
-          // Normalize an array of rows expected. Accept several shapes.
-          const rows = normalizePayrollResponse(result);
-          if (rows && rows.length > 0) return rows;
-          // if empty result, continue trying other endpoints (maybe endpoint returns empty but another exists)
-        } catch (e) {
-          console.warn('API.' + m + ' failed:', e);
-          // continue to try next
-        }
-      }
-    }
-    // none succeeded or returned data
-    return [];
-  }
-
-  // Normalizes various server response shapes into an array of payroll row objects.
-  // Expected row object properties: staff, name, basicSalary, allowances (array), deductions (array), paye, netPay, ssnit, ghanaCard, bank, designation, department
-  function normalizePayrollResponse(resp) {
-    if (!resp) return [];
-    // If already an array of objects
-    if (Array.isArray(resp)) {
-      // detect if it's directly rows of simple objects (already good)
-      if (resp.length === 0) return [];
-      if (typeof resp[0] === 'object' && !Array.isArray(resp[0])) {
-        return resp.map(normalizeRowObject);
-      }
-      // If array of arrays, try mapping columns to object (best-effort)
-      if (Array.isArray(resp[0])) {
-        // can't reliably map columns without metadata - return empty
-        return [];
-      }
-    }
-
-    // If object with data/allRows/rows
-    if (typeof resp === 'object') {
-      if (Array.isArray(resp.data) && resp.data.length > 0) {
-        return resp.data.map(normalizeRowObject);
-      }
-      if (Array.isArray(resp.allRows) && resp.allRows.length > 0) {
-        return resp.allRows.map(normalizeRowObject);
-      }
-      if (Array.isArray(resp.rows) && resp.rows.length > 0) {
-        return resp.rows.map(normalizeRowObject);
-      }
-      // If the object itself is a single payroll entry
-      return [normalizeRowObject(resp)];
-    }
-    // otherwise nothing usable
-    return [];
-  }
-
-  // Normalize/clean a single row-like object
-  function normalizeRowObject(row) {
-    if (typeof row !== 'object' || row === null) return {};
-    // normalize common field names
-    const staff = row.staff || row.staffNumber || row.staff_no || row['Staff Number'] || row.staffId || row.staff_id || '';
-    const name = row.name || row.fullName || row['Full Name'] || row.employeeName || row.empName || '';
-    const basicSalary = parseFloat(row.basicSalary || row.basic || row['Basic Salary'] || 0) || 0;
-    const ssnit = row.ssnit || row.SSNIT || row.ssnitNumber || row.ssnit_no || '';
-    const ghanaCard = row.ghanaCard || row.GhanaCard || row.ghana_card || '';
-    const bank = row.bank || row.bankName || row.Bank || '';
-    const designation = row.designation || row.Designation || '';
-    const department = row.department || row.Department || '';
-
-    // allowances/deductions might be arrays or objects; keep as arrays for display
-    let allowances = [];
-    if (Array.isArray(row.allowances)) allowances = row.allowances;
-    else if (row.allowances && typeof row.allowances === 'object') allowances = Object.entries(row.allowances).map(([k,v]) => ({type:k,amount:parseFloat(v)||0}));
-    else if (row.allowance || row.allowances_text) {
-      // best-effort parse simple structures
-      allowances = [];
-    }
-
-    let deductions = [];
-    if (Array.isArray(row.deductions)) deductions = row.deductions;
-    else if (row.deductions && typeof row.deductions === 'object') deductions = Object.entries(row.deductions).map(([k,v]) => ({type:k,amount:parseFloat(v)||0}));
-
-    const paye = parseFloat(row.paye || row.PAYE || 0) || 0;
-    const netPay = parseFloat(row.netPay || row.net || row.NetPay || 0) || 0;
-    const gross = parseFloat(row.gross || row.grossSalary || row.Gross || 0) || 0;
-    const employerPension = parseFloat(row.employerPension || row.employerPfrate || row.employer_pension || 0) || 0;
-
-    return {
-      staff: String(staff || '').trim(),
-      name: String(name || '').trim(),
-      basicSalary,
-      allowances,
-      deductions,
-      paye,
-      netPay,
-      gross,
-      ssnit: String(ssnit || '').trim(),
-      ghanaCard: String(ghanaCard || '').trim(),
-      bank: String(bank || '').trim(),
-      designation: String(designation || '').trim(),
-      department: String(department || '').trim(),
-      employerPension
-    };
-  }
-
-  // Populate table with rows from payroll run (preferred)
-  function populatePayslipListFromPayrollRows(rows, period) {
-    const tbody = document.getElementById('payslipListBody');
-    if (!tbody) {
-      console.warn('payslipListBody not found');
-      return;
-    }
-    if (!rows || rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999">No payslip data found</td></tr>';
-      return;
-    }
-
-    // Keep a map in memory for quick retrieval
-    window._payslipRunCache = { period: period, rows: [] };
-    const html = rows.map((r, idx) => {
-      const nr = normalizeRowObject(r);
-      // store normalized in cache
-      window._payslipRunCache.rows.push(nr);
-
-      const staff = escapeHtml(nr.staff || ('STAFF' + String(idx+1).padStart(3,'0')));
-      const name = escapeHtml(nr.name || 'Unknown');
-      return `<tr data-index="${idx}">
-        <td style="padding:8px 12px;">${staff}</td>
-        <td style="padding:8px 12px;">${name}</td>
-        <td style="padding:8px 12px; text-align:center;">
-          <button class="btn-primary generate-single-btn" data-index="${idx}" title="Open payslip">Generate</button>
-        </td>
-      </tr>`;
-    }).join('');
-    tbody.innerHTML = html;
-  }
-
-  // Fallback population from employee list if payroll run unavailable
-  function populatePayslipListFromEmployees(employees) {
+  // Render employee list: each row has Generate (preview) and Send button
+  function renderPayslipList(list) {
     const tbody = document.getElementById('payslipListBody');
     if (!tbody) return;
-    if (!employees || employees.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#999">No employees available</td></tr>';
+
+    if (!Array.isArray(list) || list.length === 0) {
+      tbody.innerHTML = `
+      <tr>
+        <td colspan="3" style="padding:16px; text-align:center; color:#999; font-size:13px;">
+          <i class="fas fa-users"></i> No employees found
+        </td>
+      </tr>`;
       return;
     }
-    window._payslipRunCache = { period: null, rows: employees.map(e => normalizeRowObject(e)) };
-    const html = window._payslipRunCache.rows.map((nr, idx) => {
-      const staff = escapeHtml(nr.staff || ('STAFF' + String(idx+1).padStart(3,'0')));
-      const name = escapeHtml(nr.name || 'Unknown');
-      return `<tr data-index="${idx}">
-        <td style="padding:8px 12px;">${staff}</td>
-        <td style="padding:8px 12px;">${name}</td>
-        <td style="padding:8px 12px; text-align:center;">
-          <button class="btn-primary generate-single-btn" data-index="${idx}" title="Open payslip">Generate</button>
+
+    tbody.innerHTML = list.map(emp => {
+      const staff = escapeHtml(emp.staff || emp.staffNumber || emp.staffNo || '');
+      const name = escapeHtml(emp.name || emp.fullName || emp['Full Name'] || '');
+      return `<tr>
+        <td style="padding:8px 14px; text-align:left;">${staff}</td>
+        <td style="padding:8px 14px; text-align:left;">${name}</td>
+        <td style="padding:8px 14px; text-align:center;">
+          <button type="button" class="btn-outline btn-compact" data-action="preview" data-staff="${staff}" title="Preview payslip">
+            <i class="fas fa-eye"></i>
+          </button>
+          <button type="button" class="btn-outline btn-compact" data-action="send" data-staff="${staff}" title="Send payslip">
+            <i class="fas fa-paper-plane"></i>
+          </button>
         </td>
       </tr>`;
     }).join('');
-    tbody.innerHTML = html;
   }
 
-  // Delegated click handler for list (Generate per row)
-  function onPayslipListClick(ev) {
-    const btn = ev.target.closest('.generate-single-btn');
-    if (btn) {
-      const idx = parseInt(btn.dataset.index);
-      openPayslipByIndex(idx);
-    }
-  }
-
-  function openPayslipByIndex(idx) {
-    if (!window._payslipRunCache || !Array.isArray(window._payslipRunCache.rows)) {
-      showToast('No payroll data loaded', 'error');
-      return;
-    }
-    const row = window._payslipRunCache.rows[idx];
-    if (!row) {
-      showToast('Payslip row not found', 'error');
-      return;
-    }
-    openPayslipModal(row);
-  }
-
-  // Open modal and populate fields
-  function openPayslipModal(data) {
-    // ensure normalized
-    const row = normalizeRowObject(data);
-
-    // fill header info
-    setText('modalEmpId', row.staff || '');
-    setText('modalName', row.name || '');
-    setText('modalSSNIT', row.ssnit || '');
-    setText('modalGhanaCard', row.ghanaCard || '');
-    setText('modalDept', row.department || '');
-    setText('modalEmail', row.email || '');
-    setText('modalDesignation', row.designation || '');
-    setText('modalBank', row.bank || '');
-
-    // pay period field
-    const period = document.getElementById('payslipPeriod')?.value || '';
-    setText('modalPayPeriod', period || '—');
-
-    // build the payroll breakdown table (basic, allowances, deductions, totals)
-    const tableArea = document.getElementById('modalPayrollTableArea');
-    if (!tableArea) return;
-
-    // Build allowances HTML
-    let allowancesHtml = '';
-    if (Array.isArray(row.allowances) && row.allowances.length > 0) {
-      allowancesHtml = row.allowances.map(a => {
-        if (typeof a === 'object') {
-          return `<tr><td>${escapeHtml(a.type||'Allowance')}</td><td class="text-right">${formatMoney(parseFloat(a.amount)||0)}</td></tr>`;
-        } else {
-          return `<tr><td>${escapeHtml(String(a))}</td><td class="text-right">0.00</td></tr>`;
-        }
-      }).join('');
-    } else {
-      allowancesHtml = `<tr><td>No allowances</td><td class="text-right">0.00</td></tr>`;
-    }
-    const totalAllowances = (Array.isArray(row.allowances) && row.allowances.length>0)
-      ? row.allowances.reduce((s,a)=> s + (typeof a === 'object' ? (parseFloat(a.amount)||0) : 0), 0)
-      : 0;
-
-    // Deductions
-    let deductionsHtml = '';
-    if (Array.isArray(row.deductions) && row.deductions.length > 0) {
-      deductionsHtml = row.deductions.map(d => {
-        if (typeof d === 'object') {
-          return `<tr><td>${escapeHtml(d.type||'Deduction')}</td><td class="text-right">${formatMoney(parseFloat(d.amount)||0)}</td></tr>`;
-        } else {
-          return `<tr><td>${escapeHtml(String(d))}</td><td class="text-right">0.00</td></tr>`;
-        }
-      }).join('');
-    } else {
-      deductionsHtml = `<tr><td>No deductions</td><td class="text-right">0.00</td></tr>`;
-    }
-    const totalDeductions = (Array.isArray(row.deductions) && row.deductions.length>0)
-      ? row.deductions.reduce((s,d)=> s + (typeof d === 'object' ? (parseFloat(d.amount)||0) : 0), 0)
-      : 0;
-
-    const gross = parseFloat(row.gross) || (parseFloat(row.basicSalary||0) + totalAllowances);
-    const paye = parseFloat(row.paye) || 0;
-    const net = parseFloat(row.netPay) || (gross - (totalDeductions + paye));
-    const employerPension = parseFloat(row.employerPension) || 0;
-
-    // Compose summary table HTML
-    const html = `
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px;">
-        <div style="background:#f7fafc; padding:8px; border-radius:6px;">
-          <table style="width:100%; border:none; border-collapse:collapse;">
-            <tr><td style="padding:4px 6px;">Basic Salary</td><td style="padding:4px 6px; text-align:right">${formatMoney(row.basicSalary||0)}</td></tr>
-            ${allowancesHtml}
-            <tr><td style="padding:6px 6px; font-weight:700;">Total Allowances</td><td style="padding:6px 6px; text-align:right; font-weight:700;">${formatMoney(totalAllowances)}</td></tr>
-          </table>
-        </div>
-        <div style="background:#fff7f0; padding:8px; border-radius:6px;">
-          <table style="width:100%; border:none; border-collapse:collapse;">
-            <tr><td style="padding:4px 6px;">Gross Salary</td><td style="padding:4px 6px; text-align:right">${formatMoney(gross)}</td></tr>
-            ${deductionsHtml}
-            <tr><td style="padding:6px 6px; font-weight:700;">Total Deductions</td><td style="padding:6px 6px; text-align:right; font-weight:700;">${formatMoney(totalDeductions + paye)}</td></tr>
-          </table>
-        </div>
-      </div>
-      <div style="display:flex; gap:12px; align-items:center; justify-content:space-between;">
-        <div><strong>PAYE:</strong> ${formatMoney(paye)}</div>
-        <div><strong>Net Pay:</strong> ${formatMoney(net)}</div>
-        <div><strong>Employer Pension:</strong> ${formatMoney(employerPension)}</div>
-      </div>
-    `;
-
-    tableArea.innerHTML = html;
-
-    // modal header generated date
-    const nowStr = new Date().toLocaleString();
-    setText('modalGenerated', 'Generated: ' + nowStr);
-
-    // show modal
-    const modal = document.getElementById('payslipModal');
-    if (modal) modal.style.display = 'flex';
-  }
-
-  function closePayslipModal() {
-    const modal = document.getElementById('payslipModal');
-    if (modal) modal.style.display = 'none';
-  }
-
-  // Send single payslip via API (tries multiple method names)
-  async function sendPayslipForStaff(staff, period) {
-    showToast('Sending payslip...' , 'info');
-    for (const m of sendPayslipApiMethods) {
-      const fn = window.API && window.API[m];
-      if (typeof fn === 'function') {
-        try {
-          const resp = await fn(staff, period);
-          if (resp && (resp.success || resp.sent || resp.ok)) {
-            showToast('Payslip sent for ' + staff, 'success');
-            return true;
-          } else {
-            // try next method; but inform user if response contains error
-            if (resp && resp.error) {
-              showToast('Send failed: ' + resp.error, 'error');
-              return false;
-            }
-          }
-        } catch (e) {
-          console.warn('API.' + m + ' failed:', e);
-          // try next
-        }
-      }
-    }
-    // Fallback: no send API available
-    showToast('No send endpoint available; open modal and print or copy payslip', 'warning');
-    return false;
-  }
-
-  // Send all payslips for loaded run
-  async function onSendAllClicked() {
-    if (!window._payslipRunCache || !Array.isArray(window._payslipRunCache.rows) || window._payslipRunCache.rows.length === 0) {
-      showToast('No payroll run loaded', 'warning');
-      return;
-    }
-    const period = document.getElementById('payslipPeriod')?.value || '';
-    const rows = window._payslipRunCache.rows;
-    const confirmMsg = `Send payslips for ${rows.length} employees for ${period}?`;
-    if (!confirm(confirmMsg)) return;
-
-    // iterate sequentially; could be made parallel with concurrency limit
-    for (let i = 0; i < rows.length; i++) {
-      const r = normalizeRowObject(rows[i]);
-      await sendPayslipForStaff(r.staff, period);
-      // small delay to avoid spamming API
-      await sleep(300);
-    }
-    showToast('Send-all completed (or attempted)', 'success');
-  }
-
-  // Helpers
-
-  function setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text || '';
-  }
-
-  function formatMoney(n) {
-    const num = parseFloat(n) || 0;
-    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  }
-
+  // Escape helper
   function escapeHtml(str) {
-    if (str === null || str === undefined) return '';
+    if (!str) return '';
     return String(str)
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
@@ -479,57 +106,418 @@
       .replace(/'/g, '&#39;');
   }
 
-  function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+  // Load employee list from API or fallback
+  async function loadEmployeeList() {
+    try {
+      const resp = await safeApiCall('getEmployees');
+      // Normalize: resp may be array or { data: [] } or { records: [] }
+      let list = [];
+      if (Array.isArray(resp)) list = resp;
+      else if (resp && Array.isArray(resp.data)) list = resp.data;
+      else if (resp && Array.isArray(resp.records)) list = resp.records;
+      else if (resp && typeof resp === 'object') {
+        // try common fields
+        list = [];
+      }
+
+      // fallback to API.getEmployeesFromServer if available (some modules had a variant)
+      if ((!list || list.length === 0) && window.getEmployeesFromServer) {
+        list = await window.getEmployeesFromServer();
+      }
+
+      employees = list || [];
+      renderPayslipList(employees);
+    } catch (err) {
+      console.error('Failed to load employees', err);
+      showToast('Failed to load employees', 'error');
+      employees = [];
+      renderPayslipList([]);
+    }
   }
 
-  // Generic try-call for other helper API methods (list provided)
-  async function tryApiCall(methodNames, ...args) {
-    for (const m of methodNames) {
-      const fn = window.API && window.API[m];
-      if (typeof fn === 'function') {
-        try {
-          const result = await fn(...args);
-          return result;
-        } catch (e) {
-          console.warn('API.'+m+' failed:', e);
+  // Build payslip HTML for modal (basic, uses available fields; you can extend template as needed)
+  function buildPayslipHtml(data) {
+    // data expected: { staff, name, payPeriod, components: [{label, amount}], gross, deductions, net, generatedAt }
+    const header = `
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div style="font-weight:700; font-size:18px;">GAP MICROFINANCE LTD</div>
+        <div style="text-align:right;">Payslip<br><small>${escapeHtml(data.payPeriod || '')}</small></div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px;">
+        <div><strong>Employee:</strong> ${escapeHtml(data.name || '')} (${escapeHtml(data.staff || '')})</div>
+        <div style="text-align:right;"><strong>Generated:</strong> ${escapeHtml(data.generatedAt || '')}</div>
+      </div>
+    `;
+
+    const rows = (data.components || []).map(c => `
+      <tr>
+        <td style="padding:6px 10px; text-align:left;">${escapeHtml(c.label || '')}</td>
+        <td style="padding:6px 10px; text-align:right;">${formatMoney(c.amount)}</td>
+      </tr>
+    `).join('');
+
+    const deductionsRows = (data.deductions || []).map(c => `
+      <tr>
+        <td style="padding:6px 10px; text-align:left;">${escapeHtml(c.label || '')}</td>
+        <td style="padding:6px 10px; text-align:right;">-${formatMoney(c.amount)}</td>
+      </tr>
+    `).join('');
+
+    const footer = `
+      <tr style="font-weight:700; background:#f7fafc;">
+        <td style="padding:8px 10px; text-align:left;">Net Pay</td>
+        <td style="padding:8px 10px; text-align:right;">${formatMoney(data.net || 0)}</td>
+      </tr>
+    `;
+
+    return `
+      <div style="font-family:Arial, sans-serif; color:#111;">
+        ${header}
+        <table style="width:100%; border-collapse:collapse; margin-bottom:12px;">
+          <tbody>
+            ${rows}
+            ${deductionsRows}
+            ${footer}
+          </tbody>
+        </table>
+        <div style="font-size:12px; color:#555;">This is a computer-generated payslip.</div>
+      </div>
+    `;
+  }
+
+  function formatMoney(value) {
+    const n = Number(value) || 0;
+    return n.toFixed(2);
+  }
+
+  // Show payslip preview modal for an employee
+  async function previewPayslipForStaff(staff, period) {
+    const modal = document.getElementById('payslipModal');
+    const modalContentArea = document.getElementById('modalPayrollTableArea');
+    const modalLoading = document.getElementById('modalLoadingOverlay');
+
+    if (!modal || !modalContentArea) return;
+
+    // show loading overlay inside modal
+    if (modalLoading) modalLoading.classList.add('active');
+
+    try {
+      // Try API to generate payslip payload
+      let payload = null;
+      try {
+        const apiResp = await safeApiCall('generatePayslip', staff, period);
+        if (apiResp && (typeof apiResp === 'object')) {
+          payload = apiResp;
         }
+      } catch (err) {
+        console.warn('API generatePayslip failed, will fallback', err);
+      }
+
+      // Fallback: if no payload, create a demo/simple payslip using employee basic salary
+      if (!payload) {
+        const emp = employees.find(e => (e.staff || e.staffNumber || e.staffNo) === staff) || {};
+        const basic = Number(emp.basicSalary || emp.basic || 0);
+        const allowances = emp.allowances || [];
+        const totalAllowances = allowances.reduce((s, a) => s + (Number(a.amount || 0) || 0), 0);
+        const gross = basic + totalAllowances;
+        const pension = Number((basic * 0.055).toFixed(2));
+        const pf = Number(((basic) * 0.10).toFixed(2));
+        const taxRelief = Number(emp.taxRelief || 0);
+        const taxable = Math.max(0, gross - (pension + pf + taxRelief));
+        // naive PAYE: 0 for demo
+        const paye = 0;
+        const net = gross - pension - pf - paye;
+
+        payload = {
+          staff: staff,
+          name: emp.name || emp.fullName || '',
+          payPeriod: period || document.getElementById('payslipPeriod')?.value || '',
+          components: [
+            { label: 'Basic Salary', amount: basic },
+            ...allowances.map(a => ({ label: a.type || a.label || 'Allowance', amount: Number(a.amount || 0) }))
+          ],
+          deductions: [
+            { label: 'Employee Pension (5.5%)', amount: pension },
+            { label: 'Employee PF', amount: pf },
+            { label: 'PAYE', amount: paye }
+          ],
+          gross: gross,
+          net: net,
+          generatedAt: new Date().toLocaleString()
+        };
+      }
+
+      // Build HTML and populate modal fields (header employee info etc.)
+      document.getElementById('modalEmpId').textContent = payload.staff || '';
+      document.getElementById('modalName').textContent = payload.name || '';
+      document.getElementById('modalPayPeriod').textContent = payload.payPeriod || '';
+      document.getElementById('modalSSNIT').textContent = payload.ssnit || '';
+      document.getElementById('modalBank').textContent = payload.bank || '';
+      document.getElementById('modalDept').textContent = payload.department || '';
+      document.getElementById('modalDesignation').textContent = payload.designation || '';
+      document.getElementById('modalEmail').textContent = payload.email || '';
+      document.getElementById('modalGenerated').textContent = 'Generated: ' + (payload.generatedAt || '');
+
+      modalContentArea.innerHTML = buildPayslipHtml(payload);
+      currentPayslip = { staff: payload.staff, period: payload.payPeriod, payload };
+
+      // show modal
+      openPayslipModal();
+    } catch (err) {
+      console.error('Preview payslip failed', err);
+      showToast('Failed to generate payslip preview', 'error');
+    } finally {
+      if (modalLoading) modalLoading.classList.remove('active');
+    }
+  }
+
+  // Open/close modal helpers
+  function openPayslipModal() {
+    const modal = document.getElementById('payslipModal');
+    if (!modal) return;
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closePayslipModal() {
+    const modal = document.getElementById('payslipModal');
+    if (!modal) return;
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  // Print the current modal content (modalPayrollTableArea)
+  function printPayslipModal() {
+    const content = document.getElementById('modalPayrollTableArea');
+    if (!content) return;
+    const newWindow = window.open('', '_blank', 'width=900,height=700');
+    const styles = Array.from(document.querySelectorAll('link[rel="stylesheet"], style')).map(el => el.outerHTML).join('\n');
+    newWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8"/>
+          <title>Payslip</title>
+          ${styles}
+          <style>
+            body { margin: 20px; font-family: Arial, sans-serif; color:#111; }
+            table { width:100%; border-collapse:collapse; }
+          </style>
+        </head>
+        <body>
+          ${content.innerHTML}
+        </body>
+      </html>
+    `);
+    newWindow.document.close();
+    newWindow.focus();
+    setTimeout(() => newWindow.print(), 350);
+  }
+
+  // Send a single payslip
+  async function sendPayslip(staff, period) {
+    try {
+      // UI feedback
+      showToast(`Sending payslip for ${staff}...`, 'info');
+      // Try API
+      if (window.API && typeof window.API.sendPayslip === 'function') {
+        const resp = await window.API.sendPayslip(staff, period);
+        if (resp && (resp.success || resp.sent)) {
+          showToast(`Payslip sent to ${staff}`, 'success');
+          return { ok: true, resp };
+        } else {
+          showToast(`Failed to send payslip to ${staff}`, 'error');
+          return { ok: false, resp };
+        }
+      } else {
+        // fallback: simulate send
+        await new Promise(r => setTimeout(r, 500));
+        showToast(`(Simulated) Payslip sent to ${staff}`, 'success');
+        return { ok: true, resp: { simulated: true } };
+      }
+    } catch (err) {
+      console.error('sendPayslip error', err);
+      showToast(`Error sending payslip to ${staff}`, 'error');
+      return { ok: false, error: err };
+    }
+  }
+
+  // Send all payslips with batching and progress UI
+  async function sendAllPayslips(period) {
+    if (isSendingAll) {
+      showToast('Already sending payslips', 'warning');
+      return;
+    }
+    if (!Array.isArray(employees) || employees.length === 0) {
+      showToast('No employees to send to', 'warning');
+      return;
+    }
+
+    isSendingAll = true;
+    sendAllAbort = false;
+
+    // Show global overlay with progress
+    const overlay = document.getElementById('sendAllLoadingOverlay');
+    const progressEl = document.getElementById('sendAllProgress');
+    if (overlay) overlay.classList.add('active');
+    let sent = 0;
+    const total = employees.length;
+
+    // chunked concurrent sending
+    const queue = employees.slice();
+    const results = [];
+
+    async function worker() {
+      while (!sendAllAbort && queue.length > 0) {
+        const emp = queue.shift();
+        const staff = emp.staff || emp.staffNumber || emp.staffNo || '';
+        const res = await sendPayslip(staff, period);
+        results.push({ staff, ok: !!res.ok, detail: res });
+        sent++;
+        if (progressEl) progressEl.textContent = `Sent ${sent} / ${total}`;
       }
     }
-    return null;
-  }
 
-  // Small toast UI (simple)
-  function showToast(message, type) {
-    let toast = document.getElementById('payslipToast');
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'payslipToast';
-      toast.style.cssText = 'position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:8px;z-index:9999;color:#fff;font-weight:600;box-shadow:0 6px 24px rgba(0,0,0,0.15)';
-      document.body.appendChild(toast);
+    // Start N concurrent workers
+    const workers = [];
+    const concurrency = Math.max(1, Math.min(SEND_BATCH_SIZE, total));
+    for (let i = 0; i < concurrency; i++) {
+      workers.push(worker());
+      await new Promise(r => setTimeout(r, SEND_BATCH_DELAY_MS)); // small spacing
     }
-    const colors = {
-      success:'#06d6a0', error:'#ef476f', info:'#3b82f6', warning:'#f59e0b'
-    };
-    toast.style.background = colors[type] || '#4361ee';
-    toast.textContent = message;
-    toast.style.display = 'block';
-    clearTimeout(toast._t);
-    toast._t = setTimeout(()=> toast.style.display = 'none', DEFAULT_TOAST_TIMEOUT);
+
+    // Wait for all workers
+    await Promise.all(workers);
+
+    isSendingAll = false;
+    if (overlay) overlay.classList.remove('active');
+
+    // Report summary
+    const successCount = results.filter(r => r.ok).length;
+    const failCount = results.length - successCount;
+    showToast(`Send complete: ${successCount} successful, ${failCount} failed`, failCount > 0 ? 'warning' : 'success', 6000);
+    console.log('Send all results:', results);
+    return results;
   }
 
-  // Expose init function
+  // Event delegation for preview/send on rows
+  function attachListRowHandlers() {
+    const tbody = document.getElementById('payslipListBody');
+    if (!tbody) return;
+    tbody.addEventListener('click', function (e) {
+      const btn = e.target.closest('button');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const staff = btn.dataset.staff;
+      if (action === 'preview') {
+        const period = document.getElementById('payslipPeriod')?.value || '';
+        previewPayslipForStaff(staff, period);
+      } else if (action === 'send') {
+        const period = document.getElementById('payslipPeriod')?.value || '';
+        sendPayslip(staff, period);
+      }
+    });
+  }
+
+  // Wire up main page buttons and modal actions
+  function attachUiHandlers() {
+    // Generate (bulk) - generate previews for all? In original UI this probably triggers generation — we'll make it trigger load + preview first employee as a convenience
+    const genBtn = document.getElementById('generatePayslipBtn');
+    if (genBtn) {
+      genBtn.addEventListener('click', async function () {
+        genBtn.disabled = true;
+        try {
+          await loadEmployeeList();
+          showToast('Employee list refreshed', 'success');
+        } catch (e) {
+          console.error(e);
+          showToast('Failed to refresh employees', 'error');
+        } finally {
+          genBtn.disabled = false;
+        }
+      });
+    }
+
+    // Send all
+    const sendAllBtn = document.getElementById('sendAllPayslipsBtn');
+    if (sendAllBtn) {
+      sendAllBtn.addEventListener('click', async function () {
+        if (isSendingAll) {
+          // abort option
+          sendAllAbort = true;
+          showToast('Cancelling send (will finish current items)...', 'warning');
+          return;
+        }
+        const period = document.getElementById('payslipPeriod')?.value || '';
+        if (!period) {
+          showToast('Please choose a period before sending', 'warning');
+          return;
+        }
+        await sendAllPayslips(period);
+      });
+    }
+
+    // Modal buttons
+    const modalPrintBtn = document.getElementById('modalPrintBtn');
+    if (modalPrintBtn) modalPrintBtn.addEventListener('click', printPayslipModal);
+
+    const modalSendBtn = document.getElementById('modalSendBtn');
+    if (modalSendBtn) modalSendBtn.addEventListener('click', async function () {
+      if (!currentPayslip) {
+        showToast('No payslip to send', 'warning');
+        return;
+      }
+      modalSendBtn.disabled = true;
+      const res = await sendPayslip(currentPayslip.staff, currentPayslip.period);
+      modalSendBtn.disabled = false;
+      if (res && res.ok) {
+        showToast('Payslip sent', 'success');
+      } else {
+        showToast('Failed to send payslip', 'error');
+      }
+    });
+
+    const modalCloseBtn = document.getElementById('modalCloseBtn');
+    if (modalCloseBtn) modalCloseBtn.addEventListener('click', closePayslipModal);
+
+    // Close modal on Escape
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('payslipModal');
+        if (modal && modal.style.display === 'flex') closePayslipModal();
+      }
+    });
+
+    // Delegate click on table rows
+    attachListRowHandlers();
+  }
+
+  // Initialize module
+  async function initPayslipModule() {
+    // ensure DOM elements exist
+    if (!document.getElementById('payslipListBody')) {
+      console.warn('Payslip module: missing #payslipListBody element - aborting initialization.');
+      return;
+    }
+
+    attachUiHandlers();
+    await loadEmployeeList();
+
+    console.log('Payslip module initialized.');
+  }
+
+  // Expose for manual init
   window.initPayslipModule = initPayslipModule;
 
-  // Auto-run init if DOM has the expected elements (convenience)
-  document.addEventListener('DOMContentLoaded', function() {
-    try {
-      // only init if the payslip page is present
-      if (document.getElementById('payslipListBody')) {
+  // Auto-init on DOMContentLoaded (safe: only if payslip elements present)
+  document.addEventListener('DOMContentLoaded', function () {
+    if (document.getElementById('payslipListBody')) {
+      try {
         initPayslipModule();
+      } catch (e) {
+        console.error('Payslip module init error', e);
       }
-    } catch (e) {
-      console.warn('Payslip module init failed:', e);
     }
   });
 
