@@ -247,6 +247,69 @@
   }
 
   // =============================================================
+  // GET YTD TOTALS FOR A STAFF
+  // =============================================================
+  async function getYTDTotals(staffNumber, currentPeriod) {
+    try {
+      // Extract year from current period (YYYY-MM)
+      const year = currentPeriod.substring(0, 4);
+      
+      // Get all payroll runs for this staff
+      const runsResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
+      const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
+      
+      // Filter runs for the current year and up to the current period
+      const yearRuns = runs.filter(r => {
+        const payPeriod = r['Pay Period'] || r.payPeriod || r['period'] || '';
+        return payPeriod.startsWith(year) && payPeriod <= currentPeriod;
+      });
+
+      // Sum up all the values
+      const ytd = {
+        basicSalary: 0,
+        totalAllowances: 0,
+        grossSalary: 0,
+        employeePension: 0,
+        employeePF: 0,
+        taxRelief: 0,
+        taxableIncome: 0,
+        paye: 0,
+        totalDeduction: 0,
+        netPay: 0,
+        employerPension: 0,
+        employerPF: 0,
+        monthlyLoan: 0
+      };
+
+      yearRuns.forEach(r => {
+        ytd.basicSalary += parseFloat(r['Basic Salary'] || r.basicSalary || 0) || 0;
+        ytd.totalAllowances += parseFloat(r['Total Allowances'] || r.totalAllowances || 0) || 0;
+        ytd.grossSalary += parseFloat(r['Gross Salary'] || r.grossSalary || 0) || 0;
+        ytd.employeePension += parseFloat(r['Employee Pension'] || r.employeePension || 0) || 0;
+        ytd.employeePF += parseFloat(r['Employee PF'] || r.employeePf || r['PF 10% Amount'] || 0) || 0;
+        ytd.taxRelief += parseFloat(r['Tax Relief'] || r.taxRelief || 0) || 0;
+        ytd.taxableIncome += parseFloat(r['Taxable Income'] || r.taxableIncome || r['Taxable Amount'] || 0) || 0;
+        ytd.paye += parseFloat(r['PAYE'] || r.paye || 0) || 0;
+        ytd.totalDeduction += parseFloat(r['Total Deduction'] || r.totalDeduction || 0) || 0;
+        ytd.netPay += parseFloat(r['Net Pay'] || r.netPay || 0) || 0;
+        ytd.employerPension += parseFloat(r['Employer Pension'] || r.employerPension || r['Employer 13% Amount'] || 0) || 0;
+        ytd.employerPF += parseFloat(r['Employer PF'] || r.employerPf || r['Employer PF Amount'] || 0) || 0;
+        ytd.monthlyLoan += parseFloat(r['Monthly Loan'] || r.loanMonthly || 0) || 0;
+      });
+
+      // Round all values to 2 decimal places
+      Object.keys(ytd).forEach(key => {
+        ytd[key] = roundToTwo(ytd[key]);
+      });
+
+      return ytd;
+    } catch (err) {
+      console.warn('Error calculating YTD:', err);
+      return null;
+    }
+  }
+
+  // =============================================================
   // VIEW PAYSLIP - Exposed globally
   // =============================================================
   window.viewPayslip = async function(staffNumber) {
@@ -336,28 +399,31 @@
         }
       }
 
-      // 5) Build payroll data for payslip display
-      // Use payrollRecord if available, otherwise compute from employee data
+      // 5) Get YTD totals for this staff
+      let ytdData = await getYTDTotals(staffNumber, period);
+
+      // 6) Build payroll data for payslip display
       let payrollForView = null;
       
       if (payrollRecord) {
         // Map payroll record fields to expected names
         payrollForView = {
-          'Basic Salary': payrollRecord['Basic Salary'] || payrollRecord.basicSalary || 0,
-          'Total Allowances': payrollRecord['Total Allowances'] || payrollRecord.totalAllowances || 
-                              (allowances.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0)),
-          'Gross Salary': payrollRecord['Gross Salary'] || payrollRecord.grossSalary || 0,
-          'Employee Pension': payrollRecord['Employee Pension'] || payrollRecord.employeePension || 0,
-          'Employee PF': payrollRecord['Employee PF'] || payrollRecord.employeePf || payrollRecord['PF 10% Amount'] || 0,
-          'Tax Relief': payrollRecord['Tax Relief'] || payrollRecord.taxRelief || 0,
-          'Taxable Income': payrollRecord['Taxable Income'] || payrollRecord.taxableIncome || payrollRecord['Taxable Amount'] || 0,
-          'PAYE': payrollRecord['PAYE'] || payrollRecord.paye || 0,
-          'Total Deduction': payrollRecord['Total Deduction'] || payrollRecord.totalDeduction || 0,
-          'Net Pay': payrollRecord['Net Pay'] || payrollRecord.netPay || 0,
-          'Employer Pension': payrollRecord['Employer Pension'] || payrollRecord.employerPension || payrollRecord['Employer 13% Amount'] || 0,
-          'Employer PF': payrollRecord['Employer PF'] || payrollRecord.employerPf || payrollRecord['Employer PF Amount'] || 0,
-          'Monthly Loan': payrollRecord['Monthly Loan'] || payrollRecord.loanMonthly || 0,
-          'Allowances': allowances
+          'Basic Salary': parseFloat(payrollRecord['Basic Salary'] || payrollRecord.basicSalary || 0) || 0,
+          'Total Allowances': parseFloat(payrollRecord['Total Allowances'] || payrollRecord.totalAllowances || 
+                              (allowances.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0))) || 0,
+          'Gross Salary': parseFloat(payrollRecord['Gross Salary'] || payrollRecord.grossSalary || 0) || 0,
+          'Employee Pension': parseFloat(payrollRecord['Employee Pension'] || payrollRecord.employeePension || 0) || 0,
+          'Employee PF': parseFloat(payrollRecord['Employee PF'] || payrollRecord.employeePf || payrollRecord['PF 10% Amount'] || 0) || 0,
+          'Tax Relief': parseFloat(payrollRecord['Tax Relief'] || payrollRecord.taxRelief || 0) || 0,
+          'Taxable Income': parseFloat(payrollRecord['Taxable Income'] || payrollRecord.taxableIncome || payrollRecord['Taxable Amount'] || 0) || 0,
+          'PAYE': parseFloat(payrollRecord['PAYE'] || payrollRecord.paye || 0) || 0,
+          'Total Deduction': parseFloat(payrollRecord['Total Deduction'] || payrollRecord.totalDeduction || 0) || 0,
+          'Net Pay': parseFloat(payrollRecord['Net Pay'] || payrollRecord.netPay || 0) || 0,
+          'Employer Pension': parseFloat(payrollRecord['Employer Pension'] || payrollRecord.employerPension || payrollRecord['Employer 13% Amount'] || 0) || 0,
+          'Employer PF': parseFloat(payrollRecord['Employer PF'] || payrollRecord.employerPf || payrollRecord['Employer PF Amount'] || 0) || 0,
+          'Monthly Loan': parseFloat(payrollRecord['Monthly Loan'] || payrollRecord.loanMonthly || 0) || 0,
+          'Allowances': allowances,
+          'YTD': ytdData || null
         };
       } else {
         // Compute from employee data if no payroll record exists
@@ -391,11 +457,12 @@
           'Employer Pension': calc.employerPension,
           'Employer PF': calc.employerPf,
           'Monthly Loan': calc.loanMonthly,
-          'Allowances': allowances
+          'Allowances': allowances,
+          'YTD': ytdData || null
         };
       }
 
-      // 6) Build payslip HTML
+      // 7) Build payslip HTML with YTD data
       const built = buildPayslipHTML(employee, payrollForView, period);
       if (modalArea) {
         modalArea.innerHTML = built;
@@ -580,7 +647,7 @@
   }
 
   // =============================================================
-  // BUILD PAYSLIP HTML
+  // BUILD PAYSLIP HTML with YTD
   // =============================================================
   function buildPayslipHTML(employee, payroll, period) {
     const format = (n) => {
@@ -588,6 +655,7 @@
       return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     };
 
+    // Current period values
     const basic = format(payroll?.['Basic Salary'] || 0);
     const allowances = format(payroll?.['Total Allowances'] || 0);
     const gross = format(payroll?.['Gross Salary'] || 0);
@@ -601,6 +669,22 @@
     const empPF5 = format(payroll?.['Employer PF'] || 0);
     const loan = format(payroll?.['Monthly Loan'] || 0);
 
+    // YTD values
+    const ytd = payroll?.YTD || null;
+    const ytdBasic = ytd ? format(ytd.basicSalary) : '--';
+    const ytdAllowances = ytd ? format(ytd.totalAllowances) : '--';
+    const ytdGross = ytd ? format(ytd.grossSalary) : '--';
+    const ytdPaye = ytd ? format(ytd.paye) : '--';
+    const ytdEmpPension = ytd ? format(ytd.employeePension) : '--';
+    const ytdEmpPF = ytd ? format(ytd.employeePF) : '--';
+    const ytdTaxRelief = ytd ? format(ytd.taxRelief) : '--';
+    const ytdTotalDed = ytd ? format(ytd.totalDeduction) : '--';
+    const ytdNetPay = ytd ? format(ytd.netPay) : '--';
+    const ytdEmpPension13 = ytd ? format(ytd.employerPension) : '--';
+    const ytdEmpPF5 = ytd ? format(ytd.employerPF) : '--';
+    const ytdLoan = ytd ? format(ytd.monthlyLoan) : '--';
+    const ytdTotalEmployer = ytd ? format((ytd.employerPension || 0) + (ytd.employerPF || 0)) : '--';
+
     return `
       <div style="padding:6px 0;">
         <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Arial',sans-serif;">
@@ -611,26 +695,26 @@
           </thead>
           <tbody>
             <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EARNINGS</td></tr>
-            <tr><td style="padding:4px 10px;">Basic Salary</td><td style="padding:4px 10px; text-align:right;">${basic}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px;">Allowances</td><td style="padding:4px 10px; text-align:right;">${allowances}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Gross Pay</td><td style="padding:5px 10px; text-align:right;">${gross}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px;">Basic Salary</td><td style="padding:4px 10px; text-align:right;">${basic}</td><td style="padding:4px 10px; text-align:right;">${ytdBasic}</td></tr>
+            <tr><td style="padding:4px 10px;">Allowances</td><td style="padding:4px 10px; text-align:right;">${allowances}</td><td style="padding:4px 10px; text-align:right;">${ytdAllowances}</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Gross Pay</td><td style="padding:5px 10px; text-align:right;">${gross}</td><td style="padding:5px 10px; text-align:right;">${ytdGross}</td></tr>
 
             <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">DEDUCTIONS</td></tr>
             <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Statutory</td><td></td><td></td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">PAYE</td><td style="padding:3px 10px; text-align:right;">${paye}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Employee Pension (5.5%)</td><td style="padding:3px 10px; text-align:right;">${empPension}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">PAYE</td><td style="padding:3px 10px; text-align:right;">${paye}</td><td style="padding:3px 10px; text-align:right;">${ytdPaye}</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Employee Pension (5.5%)</td><td style="padding:3px 10px; text-align:right;">${empPension}</td><td style="padding:3px 10px; text-align:right;">${ytdEmpPension}</td></tr>
             <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Other Deductions</td><td></td><td></td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Employee PF (10%)</td><td style="padding:3px 10px; text-align:right;">${empPF}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Monthly Loan</td><td style="padding:3px 10px; text-align:right;">${loan}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Employee PF (10%)</td><td style="padding:3px 10px; text-align:right;">${empPF}</td><td style="padding:3px 10px; text-align:right;">${ytdEmpPF}</td></tr>
+            <tr><td style="padding:3px 10px 3px 28px;">Monthly Loan</td><td style="padding:3px 10px; text-align:right;">${loan}</td><td style="padding:3px 10px; text-align:right;">${ytdLoan}</td></tr>
+            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">${ytdTaxRelief}</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">${ytdTotalDed}</td></tr>
 
             <tr style="background:#333; color:white;"><td style="padding:6px 10px; font-weight:700; font-size:13px;">Net Pay</td><td style="padding:6px 10px; text-align:right;"></td><td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td></tr>
 
             <tr style="background:#e8e8e8;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EMPLOYER CONTRIBUTIONS</td></tr>
-            <tr><td style="padding:4px 10px;">Employer Pension (13%)</td><td style="padding:4px 10px; text-align:right;">${empPension13}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px;">Employer PF (5%)</td><td style="padding:4px 10px; text-align:right;">${empPF5}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Employer Contribution</td><td style="padding:5px 10px; text-align:right;">${format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0))}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:4px 10px;">Employer Pension (13%)</td><td style="padding:4px 10px; text-align:right;">${empPension13}</td><td style="padding:4px 10px; text-align:right;">${ytdEmpPension13}</td></tr>
+            <tr><td style="padding:4px 10px;">Employer PF (5%)</td><td style="padding:4px 10px; text-align:right;">${empPF5}</td><td style="padding:4px 10px; text-align:right;">${ytdEmpPF5}</td></tr>
+            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Employer Contribution</td><td style="padding:5px 10px; text-align:right;">${format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0))}</td><td style="padding:5px 10px; text-align:right;">${ytdTotalEmployer}</td></tr>
           </tbody>
         </table>
       </div>
