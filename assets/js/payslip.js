@@ -1,698 +1,608 @@
-// assets/js/payslip.js
+// Payslip Module - client-side
+// - Loads employee list
+// - Generates payslip preview modal
+// - Prints payslip
+// - Sends payslip (single / bulk) with progress
+// - Defensive fallbacks when API isn't available
+
 (function() {
-  // state
-  let _actionPortalOpen = false;
-  let _currentPeriod = null;
-  let _currentStaffNumber = null;
-  let _isGenerating = false;
+  'use strict';
 
-  // =============================================================
-  // CLOSE ACTION DROPDOWN - Exposed globally
-  // =============================================================
-  window.closeActionDropdown = function() {
-    const portal = document.getElementById('payslipActionPortal');
-    if (portal) {
-      portal.innerHTML = '';
-      portal.style.display = 'none';
-    }
-    _actionPortalOpen = false;
-  };
+  // Local cache
+  let _employees = [];
+  let _currentPayslip = null; // { staff, record, period, calc, html }
+  let _sendAllAbort = { aborted: false };
 
-  function initPayslipModule() {
-    // set default period to current month (YYYY-MM)
-    const monthInput = document.getElementById('payslipPeriod');
-    if (monthInput) {
-      if (!monthInput.value) {
-        const now = new Date();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        monthInput.value = `${now.getFullYear()}-${mm}`;
-      }
-      _currentPeriod = monthInput.value;
-    }
-
-    // Generate Button
-    const generateBtn = document.getElementById('generatePayslipBtn');
-    if (generateBtn) {
-      generateBtn.addEventListener('click', function() {
-        generatePayslipList();
-      });
-    }
-
-    // Send All Button
-    const sendAllBtn = document.getElementById('sendAllPayslipsBtn');
-    if (sendAllBtn) {
-      sendAllBtn.addEventListener('click', function() {
-        if (!_currentPeriod) {
-          showToast('Please select a period first', 'warning');
-          return;
-        }
-        if (!confirm('Send payslips for ' + _currentPeriod + ' to all employees?')) return;
-        sendAllPayslips(_currentPeriod);
-      });
-    }
-
-    // Period change
-    monthInput.addEventListener('change', function() {
-      _currentPeriod = monthInput.value;
-    });
-
-    // Modal close handlers
-    const modal = document.getElementById('payslipModal');
-    const closeBtn = document.getElementById('modalCloseBtn');
-    if (closeBtn) {
-      closeBtn.addEventListener('click', function() {
-        if (modal) modal.style.display = 'none';
-      });
-    }
-
-    // Print button
-    const printBtn = document.getElementById('modalPrintBtn');
-    if (printBtn) {
-      printBtn.addEventListener('click', function() {
-        printPayslip();
-      });
-    }
-
-    // Send button in modal
-    const sendBtn = document.getElementById('modalSendBtn');
-    if (sendBtn) {
-      sendBtn.addEventListener('click', function() {
-        if (_currentStaffNumber) {
-          window.sendPayslip(_currentStaffNumber);
-        }
-      });
-    }
-
-    // Close modal on overlay click
-    if (modal) {
-      modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-          modal.style.display = 'none';
-        }
-      });
-    }
-
-    // Close on Escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        if (modal) modal.style.display = 'none';
-        window.closeActionDropdown();
-      }
-    });
-
-    // global click to close portal
-    document.addEventListener('click', function(e) {
-      if (_actionPortalOpen) window.closeActionDropdown();
-    });
-
-    // Show empty state initially
-    const tbody = document.getElementById('payslipListBody');
-    if (tbody) {
-      tbody.innerHTML = `<tr>
-        <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
-          <i class="fas fa-file-invoice" style="font-size:20px; display:block; margin-bottom:6px; color:#ccc;"></i>
-          Click "Generate" to load payslip data
-        </td>
-      </tr>`;
-    }
+  // ---------- Utilities (Payroll math, formatting) ----------
+  function roundToTwo(n) {
+    return Math.round((n + Number.EPSILON) * 100) / 100;
   }
 
-  // =============================================================
-  // GENERATE PAYSLIP LIST
-  // =============================================================
-  async function generatePayslipList() {
-  if (_isGenerating) return;
-  _isGenerating = true;
-
-  const generateBtn = document.getElementById('generatePayslipBtn');
-  const originalText = generateBtn ? generateBtn.innerHTML : 'Generate';
-
-  if (generateBtn) {
-    generateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Loading...';
-    generateBtn.disabled = true;
+  function formatMoney(n) {
+    if (typeof n !== 'number' || isNaN(n)) return '0.00';
+    return n.toFixed(2);
   }
 
-  const tbody = document.getElementById('payslipListBody');
-  if (tbody) {
-    tbody.innerHTML = `<tr>
-      <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
-        <i class="fas fa-spinner fa-spin" style="margin-right:8px;"></i> Loading employees...
-      </td>
-    </tr>`;
+  function formatCurrencyLocal(v) {
+    if (v === null || v === undefined || v === '') return '0.00';
+    const n = parseFloat(v) || 0;
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  try {
-    let employees = [];
+  function escapeHtml(s) {
+    if (!s) return '';
+    return String(s).replace(/[&<>"'`]/g, ch => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;',
+      '`': '&#96;'
+    }[ch]));
+  }
 
-    // Primary: load all employees from Employees sheet via API
-    try {
-      const resp = await API.getEmployees().catch(err => { throw err; });
-      // Normalise response shapes
-      employees = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : (resp && resp.data) ? resp.data : [];
-    } catch (err) {
-      console.warn('API.getEmployees failed:', err);
+  function getTaxBrackets() {
+    // same brackets as other modules in repo
+    return [
+      { amount: 490, rate: 0 },
+      { amount: 110, rate: 0.05 },
+      { amount: 130, rate: 0.10 },
+      { amount: 3166.67, rate: 0.175 },
+      { amount: 16000, rate: 0.25 },
+      { amount: 30520, rate: 0.30 },
+      { amount: Infinity, rate: 0.35 }
+    ];
+  }
 
-      // Fallback: try to derive employee list from payroll runs for selected period
-      try {
-        if (_currentPeriod) {
-          const runsResp = await API.getPayrollRunsByPeriod(_currentPeriod).catch(() => []);
-          const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
-          const seen = {};
-          employees = runs.reduce((acc, r) => {
-            const staff = r['Staff Number'] || r.staff || r.staffNumber || '';
-            const name = r['Full Name'] || r.name || r.fullName || '';
-            if (staff && !seen[staff]) {
-              seen[staff] = true;
-              acc.push({ 'Staff Number': staff, 'Full Name': name });
-            }
-            return acc;
-          }, []);
-        }
-      } catch (e2) {
-        console.warn('Fallback payroll-run derivation failed:', e2);
-        employees = [];
-      }
+  function calculatePAYE(taxableIncome) {
+    let remaining = taxableIncome;
+    let totalTax = 0;
+    const brackets = getTaxBrackets();
+    for (let i = 0; i < brackets.length && remaining > 0; i++) {
+      const b = brackets[i];
+      const amount = Math.min(b.amount, remaining);
+      totalTax += amount * b.rate;
+      remaining -= amount;
     }
+    return roundToTwo(totalTax);
+  }
 
-    // Filter to active employees only (if 'Status' exists)
-    employees = (employees || []).filter(emp => {
-      const status = (emp['Status'] || emp.status || '').toString().trim().toLowerCase();
-      // treat empty status as active
-      return !status || status === 'active';
-    });
+  function computePayroll({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
+    const totalAllowances = roundToTwo(allowances.reduce((s, a) => s + (parseFloat(a.amount) || 0), 0));
+    const grossSalary = roundToTwo((parseFloat(basicSalary) || 0) + totalAllowances);
 
-    if (!employees || employees.length === 0) {
-      tbody.innerHTML = `<tr>
-        <td colspan="3" style="padding:20px; text-align:center; color:#999; font-size:13px;">
-          <i class="fas fa-users" style="font-size:18px; display:block; margin-bottom:6px; color:#ccc;"></i>
-          No employees found
-        </td>
-      </tr>`;
+    const employeePension = roundToTwo((parseFloat(basicSalary) || 0) * 0.055);
+    const employeePf = pfChecked ? roundToTwo((parseFloat(basicSalary) || 0) * (employeePFpct / 100)) : 0;
+    const taxRelief = roundToTwo(reliefAmount || 0);
+    const totalDeductionsBeforeTax = roundToTwo(employeePension + employeePf + taxRelief);
+
+    const taxableAmount = Math.max(0, roundToTwo(grossSalary - totalDeductionsBeforeTax));
+    const paye = calculatePAYE(taxableAmount);
+    const netPay = roundToTwo(taxableAmount - paye);
+    const loanMonthlyAmount = roundToTwo(loanMonthly || 0);
+    const takeHome = roundToTwo(netPay - loanMonthlyAmount);
+
+    const employerPension = roundToTwo((parseFloat(basicSalary) || 0) * 0.13);
+    const employerPf = pfChecked ? roundToTwo((parseFloat(basicSalary) || 0) * (employerPFpct / 100)) : 0;
+
+    return {
+      totalAllowances,
+      grossSalary,
+      employeePension,
+      employeePf,
+      taxRelief,
+      totalDeductionsBeforeTax,
+      taxableAmount,
+      paye,
+      netPay,
+      loanMonthly: loanMonthlyAmount,
+      takeHome,
+      employerPension,
+      employerPf
+    };
+  }
+
+  // ---------- DOM helpers ----------
+  function byId(id) { return document.getElementById(id); }
+
+  function showToast(message, type) {
+    // Reuse existing UI if available, else fallback to alert
+    if (window.printUtils && typeof printUtils.showMessage === 'function') {
+      printUtils.showMessage(message, type || 'info');
       return;
     }
-
-    const rows = employees.map(emp => {
-      const staffNumber = emp['Staff Number'] || emp.staff || emp.staffNumber || '';
-      const fullName = emp['Full Name'] || emp.name || emp.fullName || '';
-      return `<tr style="border-bottom:1px solid #eee;" data-staff="${escapeHtml(staffNumber)}">
-        <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(staffNumber)}</td>
-        <td style="padding:6px 14px; font-size:13px; color:#333;">${escapeHtml(fullName)}</td>
-        <td style="padding:6px 14px; text-align:center;">
-          <button class="action-btn" onclick="window.viewPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#0057a3; padding:4px 8px; margin:0 2px;" title="View Payslip">
-            <i class="fas fa-eye"></i>
-          </button>
-          <button class="action-btn" onclick="window.sendPayslip('${escapeJs(staffNumber)}')" style="background:none; border:none; cursor:pointer; font-size:14px; color:#1a5c2a; padding:4px 8px; margin:0 2px;" title="Send Payslip">
-            <i class="fas fa-envelope"></i>
-          </button>
-        </td>
-      </tr>`;
-    }).join('');
-
-    tbody.innerHTML = rows;
-    showToast('Payslip list loaded', 'success');
-
-  } catch (err) {
-    console.error('Error loading payslip list', err);
-    if (tbody) {
-      tbody.innerHTML = `<tr>
-        <td colspan="3" style="padding:20px; text-align:center; color:#c00; font-size:13px;">
-          <i class="fas fa-exclamation-circle" style="font-size:18px; display:block; margin-bottom:6px;"></i>
-          Failed to load employees: ${escapeHtml(err.message || 'Unknown error')}
-        </td>
-      </tr>`;
+    // lightweight toast
+    const toastId = 'payslip-toast';
+    let t = document.getElementById(toastId);
+    if (!t) {
+      t = document.createElement('div');
+      t.id = toastId;
+      t.style.cssText = 'position:fixed;right:20px;bottom:20px;padding:10px 14px;border-radius:8px;z-index:9999;color:#fff;font-weight:600;';
+      document.body.appendChild(t);
     }
-    showToast('Failed to load employees', 'error');
-  } finally {
-    _isGenerating = false;
-    if (generateBtn) {
-      generateBtn.innerHTML = originalText;
-      generateBtn.disabled = false;
-    }
-  }
-}
-  // =============================================================
-  // VIEW PAYSLIP - Exposed globally
-  // =============================================================
-  window.viewPayslip = async function(staffNumber) {
-  window.closeActionDropdown();
-  _currentStaffNumber = staffNumber;
-
-  const period = _currentPeriod;
-  if (!period) {
-    showToast('Please select a period first', 'warning');
-    return;
+    t.style.background = type === 'error' ? '#ef476f' : (type === 'success' ? '#06d6a0' : '#4361ee');
+    t.textContent = message;
+    t.style.opacity = '1';
+    setTimeout(() => { t.style.opacity = '0'; }, 3000);
   }
 
-  // Show global loading modal and modal internal overlay
-  try { showLoadingModal && showLoadingModal('Loading payslip...'); } catch (e) {}
-  const modal = document.getElementById('payslipModal');
-  const modalArea = document.getElementById('modalPayrollTableArea');
-  const modalPayPeriod = document.getElementById('modalPayPeriod');
-  const modalGenerated = document.getElementById('modalGenerated');
-  const loadingOverlay = document.getElementById('modalLoadingOverlay');
-  if (modalPayPeriod) modalPayPeriod.textContent = period || '--';
-  const now = new Date();
-  const genStr = now.toLocaleString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-  if (modalGenerated) modalGenerated.textContent = 'Generated: ' + genStr;
-  if (loadingOverlay) loadingOverlay.classList.add('active');
-
-  try {
-    // 1) Prefer server-built payslip
-    try {
-      if (typeof API !== 'undefined' && API && typeof API.getPayslipData === 'function') {
-        const resp = await API.getPayslipData(staffNumber, period);
-        if (resp && resp.success && resp.html) {
-          // Server returned full HTML + employee + payroll
-          if (modalArea) modalArea.innerHTML = resp.html;
-          const emp = resp.employee || {};
-          document.getElementById('modalEmpId').textContent = staffNumber || '--';
-          document.getElementById('modalName').textContent = emp['Full Name'] || emp.name || staffNumber || '--';
-          document.getElementById('modalSSNIT').textContent = emp['SSNIT'] || emp.ssnit || '--';
-          document.getElementById('modalGhanaCard').textContent = emp['Ghana Card'] || emp.ghanaCard || '--';
-          document.getElementById('modalDept').textContent = emp['Department'] || emp.department || '--';
-          document.getElementById('modalEmail').textContent = emp['Email'] || emp.email || '--';
-          document.getElementById('modalDesignation').textContent = emp['Designation'] || emp.designation || '--';
-          document.getElementById('modalBank').textContent = emp['Bank'] || emp.bank || '--';
-          return;
-        } else if (resp && typeof resp === 'string') {
-          // If server returned plain HTML string
-          modalArea && (modalArea.innerHTML = resp);
-          return;
-        } else {
-          // fallthrough to client-side assembly
-          console.warn('getPayslipData returned no HTML, falling back');
-          throw new Error(resp && resp.error ? resp.error : 'No payslip HTML returned');
-        }
-      } else {
-        throw new Error('API.getPayslipData not available');
-      }
-    } catch (apiErr) {
-      console.warn('Server payslip retrieval failed, falling back to sheet data:', apiErr);
-    }
-
-    // 2) Fetch employee record (Employees sheet)
-    let employee = { 'Staff Number': staffNumber, 'Full Name': staffNumber };
-    try {
-      const empResp = await API.getEmployeeByStaffNumber(staffNumber).catch(() => null);
-      if (empResp) employee = empResp;
-    } catch (e) {
-      console.warn('Failed to fetch employee record:', e);
-    }
-
-    // 3) Fetch payroll record from Payroll Runs sheet (prefer exact staff+period)
-    let payrollRecord = null;
-    try {
-      const runsResp = await API.getPayrollRunsByPeriod(period).catch(() => []);
-      const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
-      payrollRecord = runs.find(r => {
-        const staff = r['Staff Number'] || r.staff || r.staffNumber || '';
-        return String(staff) === String(staffNumber);
-      }) || null;
-
-      // If not found, try getPayrollRunsByStaff and match period
-      if (!payrollRecord && typeof API.getPayrollRunsByStaff === 'function') {
-        const byStaffResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
-        const byStaff = Array.isArray(byStaffResp) ? byStaffResp : (byStaffResp && byStaffResp.records) ? byStaffResp.records : (byStaffResp && byStaffResp.data) ? byStaffResp.data : [];
-        payrollRecord = byStaff.find(r => String((r['Pay Period'] || r['Pay Period'] || r.payPeriod || r['Pay Period'] || r['Period'])) === String(period)) || payrollRecord;
-      }
-    } catch (e) {
-      console.warn('Failed to fetch payroll runs:', e);
-    }
-
-    // 4) Fetch allowances from Allowances sheet
-    let allowances = [];
-    try {
-      const allowResp = await API.getAllowancesByStaff(staffNumber).catch(() => []);
-      allowances = Array.isArray(allowResp) ? allowResp : (allowResp && allowResp.records) ? allowResp.records : (allowResp && allowResp.data) ? allowResp.data : [];
-    } catch (e) {
-      console.warn('Failed to fetch allowances:', e);
-      allowances = [];
-    }
-
-    // 5) If payrollRecord exists, ensure it has allowance values (if it stored allowances as JSON)
-    if (payrollRecord) {
-      // If server saved allowances as JSON string in 'Allowances' column, try to parse and override allowances list
-      const rawAllowances = payrollRecord['Allowances'] || payrollRecord.allowances || payrollRecord['ALLOWANCES'];
-      if (rawAllowances && typeof rawAllowances === 'string') {
-        try {
-          const parsed = JSON.parse(rawAllowances);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            allowances = parsed;
-          }
-        } catch (e) { /* ignore parse failure */ }
-      }
-    }
-
-    // 6) If no payrollRecord, compute payroll client-side using computePayrollRow()
-    let payrollForView = null;
-    if (payrollRecord) {
-      payrollForView = payrollRecord;
-      // ensure fields are present for buildPayslipHTML: map keys to expected
-    } else {
-      // Attempt to compute from employee basic salary and allowances
-      const basicSalary = parseFloat(employee['Basic Salary'] || employee.basicSalary || 0) || 0;
-      const employeePFrate = parseFloat(employee['Employee PF Rate (%)'] || employee.employeePFrate || employee['Employee PF Rate'] || 0) || 0;
-      const employerPFrate = parseFloat(employee['Employer PF Rate (%)'] || employee.employerPfrate || employee['Employer PF Rate'] || 0) || 0;
-      const taxRelief = parseFloat(employee['Tax Relief'] || employee.taxRelief || 0) || 0;
-      const loanMonthly = parseFloat(employee['Monthly Loan'] || employee.loanMonthly || 0) || 0;
-
-      const calc = computePayrollRow({
-        basicSalary: basicSalary,
-        allowances: allowances,
-        employeePFpct: employeePFrate || 5.5,
-        employerPFpct: employerPFrate || 5,
-        reliefAmount: taxRelief,
-        loanMonthly: loanMonthly,
-        pfChecked: (employeePFrate > 0)
-      });
-
-      payrollForView = {
-        'Basic Salary': basicSalary,
-        'Total Allowances': calc.totalAllowances,
-        'Gross Salary': calc.grossSalary,
-        'Employee Pension': calc.employeePension,
-        'Employee PF': calc.employeePf,
-        'Tax Relief': calc.taxRelief,
-        'Taxable Income': calc.taxableAmount,
-        'PAYE': calc.paye,
-        'Total Deduction': calc.totalDeductionsBeforeTax,
-        'Net Pay': calc.netPay,
-        'Employer Pension': calc.employerPension,
-        'Employer PF': calc.employerPf,
-        'Monthly Loan': calc.loanMonthly,
-        'Allowances': allowances
-      };
-    }
-
-    // 7) Build HTML using existing builder and render
-    const built = buildPayslipHTML(employee, payrollForView, period);
-    if (modalArea) {
-      modalArea.innerHTML = built;
-    }
-    // Update header details
-    document.getElementById('modalEmpId').textContent = staffNumber || '--';
-    document.getElementById('modalName').textContent = employee['Full Name'] || employee.name || staffNumber || '--';
-    document.getElementById('modalSSNIT').textContent = employee['SSNIT'] || employee.ssnit || '--';
-    document.getElementById('modalGhanaCard').textContent = employee['Ghana Card'] || employee.ghanaCard || '--';
-    document.getElementById('modalDept').textContent = employee['Department'] || employee.department || '--';
-    document.getElementById('modalEmail').textContent = employee['Email'] || employee.email || '--';
-    document.getElementById('modalDesignation').textContent = employee['Designation'] || employee.designation || '--';
-    document.getElementById('modalBank').textContent = employee['Bank'] || employee.bank || '--';
-
-  } catch (err) {
-    console.error('Error viewing payslip:', err);
-    if (modalArea) {
-      modalArea.innerHTML = `
-        <div style="padding:24px; text-align:center; color:#c00; font-size:13px;">
-          <i class="fas fa-exclamation-circle" style="font-size:20px; display:block; margin-bottom:8px;"></i>
-          Error loading payslip: ${escapeHtml(err.message || 'Unknown error')}
-        </div>
-      `;
-    }
-  } finally {
-    // Hide overlays
-    if (loadingOverlay) loadingOverlay.classList.remove('active');
-    try { hideLoadingModal && hideLoadingModal(); } catch (e) {}
-  }
-
-  // Show modal
-  if (modal) modal.style.display = 'flex';
-};
-  // =============================================================
-  // SEND PAYSLIP - Exposed globally
-  // =============================================================
-  window.sendPayslip = async function(staffNumber) {
-    window.closeActionDropdown();
-    const period = _currentPeriod;
-
-    if (!period) {
-      showToast('Please select a period first', 'warning');
-      return;
-    }
-
-    if (!staffNumber) {
-      showToast('No employee selected', 'warning');
-      return;
-    }
-
-    // Show loading on send button if in modal
-    const sendBtn = document.getElementById('modalSendBtn');
-    const sendSpinner = document.getElementById('modalSendSpinner');
-    let originalSendText = '';
-
-    if (sendBtn) {
-      originalSendText = sendBtn.innerHTML;
-      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-      sendBtn.disabled = true;
-    }
-
-    try {
-      if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
-        const res = await API.sendPayslip(staffNumber, period);
-        if (res && res.success !== false) {
-          showToast('Payslip sent to ' + staffNumber, 'success');
-          // Close modal if open
-          const modal = document.getElementById('payslipModal');
-          if (modal) modal.style.display = 'none';
-        } else {
-          showToast('Failed to send payslip: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
-        }
-      } else {
-        showToast('Send feature not configured. (Simulated)', 'info');
-      }
-    } catch (err) {
-      console.error('sendPayslip error', err);
-      showToast('Failed to send payslip', 'error');
-    } finally {
-      if (sendBtn) {
-        sendBtn.innerHTML = originalSendText || '<i class="fas fa-envelope"></i> Send';
-        sendBtn.disabled = false;
-      }
-      if (sendSpinner) sendSpinner.style.display = 'none';
-    }
-  };
-
-  // =============================================================
-  // SEND ALL PAYSLIPS
-  // =============================================================
-  async function sendAllPayslips(period) {
-    const tbody = document.getElementById('payslipListBody');
+  // ---------- Employee list and UI ----------
+  async function loadEmployeeList() {
+    const tbody = byId('payslipListBody');
     if (!tbody) return;
 
-    const rows = Array.from(tbody.querySelectorAll('tr[data-staff]'));
-    if (rows.length === 0) {
-      showToast('No employees to send', 'warning');
-      return;
-    }
+    tbody.innerHTML = `<tr><td colspan="3" style="padding:20px;text-align:center;color:#999"><i class="fas fa-spinner fa-spin"></i> Loading employees...</td></tr>`;
 
-    const overlay = document.getElementById('sendAllLoadingOverlay');
-    const progressEl = document.getElementById('sendAllProgress');
-
-    if (overlay) overlay.className = 'active';
-    if (progressEl) progressEl.textContent = 'Preparing to send...';
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (let i = 0; i < rows.length; i++) {
-      const staff = rows[i].getAttribute('data-staff');
-      if (progressEl) progressEl.textContent = `Sending ${i + 1}/${rows.length}... (${staff})`;
-
-      try {
-        if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
-          const res = await API.sendPayslip(staff, period);
-          if (res && res.success !== false) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        } else {
-          // Simulate
-          successCount++;
+    try {
+      let employees = [];
+      if (typeof API !== 'undefined' && API) {
+        // prefer cache option if supported
+        if (typeof API.getEmployees === 'function') {
+          employees = await API.getEmployees({ useCache: true }).catch(() => API.getEmployees().catch(() => []));
+        } else if (typeof API.getAllEmployees === 'function') {
+          employees = await API.getAllEmployees().catch(() => []);
         }
-      } catch (e) {
-        failCount++;
       }
-    }
+      if (!Array.isArray(employees) || employees.length === 0) {
+        // try local fallback (some modules expose getEmployeesFromServer)
+        if (typeof window.getEmployeesFromServer === 'function') {
+          employees = await window.getEmployeesFromServer();
+        }
+      }
+      if (!Array.isArray(employees)) employees = [];
 
-    if (overlay) overlay.className = '';
-    showToast(`Payslips sent: ${successCount} successful, ${failCount} failed`, successCount > 0 ? 'success' : 'error');
+      _employees = employees.map(e => {
+        return {
+          staff: e.staff || e.staffNumber || e.staff_no || e.staffNo || e.staffcode || e.code || e.staffNumber,
+          name: e.name || e.fullName || e['Full Name'] || e['fullName'] || e.full_name || '',
+          designation: e.designation || e.design || '',
+          email: e.email || e.Email || '',
+          ssnit: e.ssnit || e.SSNIT || '',
+          basicSalary: parseFloat(e.basicSalary || e['Basic Salary'] || e.basic || 0) || 0
+        };
+      });
+
+      renderEmployeeListTable(_employees);
+    } catch (err) {
+      console.error('Failed to load employees', err);
+      tbody.innerHTML = `<tr><td colspan="3" style="padding:20px;text-align:center;color:#999">Error loading employees</td></tr>`;
+      showToast('Error loading employees: ' + (err.message || err), 'error');
+    }
   }
 
-  // =============================================================
-  // PRINT PAYSLIP
-  // =============================================================
-  function printPayslip() {
-    const modalContent = document.getElementById('payslipModalContent');
-    if (!modalContent) return;
+  function renderEmployeeListTable(list) {
+    const tbody = byId('payslipListBody');
+    if (!tbody) return;
 
-    // Get the payslip content (the inner part without the modal actions)
-    const payslipInner = modalContent.querySelector('div[style*="padding:25px 30px 18px 30px"]');
-    if (!payslipInner) return;
-
-    // Create print window
-    const printWindow = window.open('', '_blank', 'width=900,height=700');
-    if (!printWindow) {
-      showToast('Please allow popups for printing', 'warning');
+    if (!list || list.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="3" style="text-align:center;padding:18px;color:#999">
+            <i class="fas fa-users"></i>
+            <div>No employees found</div>
+            <div style="font-size:12px;color:#bbb">Add employees in Payroll → Employee List</div>
+          </td>
+        </tr>
+      `;
       return;
     }
 
-    const styles = document.querySelector('style') ? document.querySelector('style').innerHTML : '';
+    tbody.innerHTML = list.map(emp => {
+      const staffEsc = escapeHtml(emp.staff || '');
+      const nameEsc = escapeHtml(emp.name || '');
+      const emailEsc = escapeHtml(emp.email || '');
+      return `
+        <tr data-staff="${staffEsc}">
+          <td style="padding:10px 12px;">${staffEsc}</td>
+          <td style="padding:10px 12px;">
+            <div style="font-weight:700">${nameEsc}</div>
+            <div style="font-size:12px;color:#6b7280">${escapeHtml(emp.designation || '')} ${emailEsc ? ' • ' + emailEsc : ''}</div>
+          </td>
+          <td style="padding:10px 12px;text-align:center;">
+            <button class="btn-outline" data-action="preview" data-staff="${staffEsc}" title="Preview Payslip" style="margin-right:8px;">Preview</button>
+            <button class="btn-primary" data-action="send" data-staff="${staffEsc}" title="Send Payslip">Send</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Payslip</title>
-        <style>
-          ${styles}
-          body { background: white; padding: 0; margin: 0; }
-          .payslip-print { max-width: 900px; margin: 0 auto; padding: 20px; }
-          .modal-actions { display: none !important; }
-          #modalLoadingOverlay { display: none !important; }
-        </style>
-      </head>
-      <body>
-        <div class="payslip-print">
-          ${payslipInner.innerHTML}
-        </div>
-        <script>
-          window.onload = function() { window.print(); }
-        <\/script>
-      </body>
-      </html>
-    `);
-
-    printWindow.document.close();
+    // Delegate clicks
+    tbody.querySelectorAll('button[data-action="preview"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const staff = e.currentTarget.dataset.staff;
+        openPayslipModal(staff);
+      });
+    });
+    tbody.querySelectorAll('button[data-action="send"]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const staff = e.currentTarget.dataset.staff;
+        sendPayslipForStaff(staff);
+      });
+    });
   }
 
-  // =============================================================
-  // LOCAL FALLBACK DATA
-  // =============================================================
-  async function getLocalPayslipData(staffNumber, period) {
-    // Try to get from payroll runs
-    let payrollData = null;
-    if (typeof API !== 'undefined' && API && typeof API.getPayrollRunsByPeriod === 'function') {
-      try {
-        const runs = await API.getPayrollRunsByPeriod(period);
-        const records = Array.isArray(runs) ? runs : (runs && runs.records) ? runs.records : [];
-        payrollData = records.find(r => {
-          const staff = r['Staff Number'] || r.staff || r.staffNumber || r['staffNumber'];
-          return String(staff) === String(staffNumber);
-        });
-      } catch (e) {
-        payrollData = null;
+  // ---------- Payslip generation & modal ----------
+  async function openPayslipModal(staff) {
+    try {
+      // find employee in cache
+      let emp = _employees.find(x => String(x.staff) === String(staff));
+      if (!emp && typeof API !== 'undefined' && API && typeof API.getEmployeeByStaffNumber === 'function') {
+        const resp = await API.getEmployeeByStaffNumber(staff).catch(() => null);
+        if (resp) {
+          emp = {
+            staff: resp.staff || resp.staffNumber || staff,
+            name: resp.name || resp['Full Name'] || '',
+            email: resp.email || resp.Email || '',
+            ssnit: resp.ssnit || resp.SSNIT || '',
+            basicSalary: parseFloat(resp.basicSalary || resp['Basic Salary'] || 0) || 0,
+            designation: resp.designation || resp.Designation || ''
+          };
+        }
       }
-    }
+      if (!emp) {
+        showToast('Employee not found: ' + staff, 'error');
+        return;
+      }
 
-    // Build employee object
-    let employee = { 'Staff Number': staffNumber, 'Full Name': staffNumber };
-    if (typeof API !== 'undefined' && API && typeof API.getEmployeeByStaffNumber === 'function') {
-      try {
-        const emp = await API.getEmployeeByStaffNumber(staffNumber);
-        if (emp) employee = emp;
-      } catch (e) {}
-    }
+      // allowances: try API.getAllowancesByStaff
+      let allowances = [];
+      if (typeof API !== 'undefined' && API && typeof API.getAllowancesByStaff === 'function') {
+        allowances = await API.getAllowancesByStaff(emp.staff).catch(() => []);
+        // Normalize fallback structure
+        if (!Array.isArray(allowances) && allowances && Array.isArray(allowances.data)) allowances = allowances.data;
+      }
 
-    // Build HTML from data
-    const html = buildPayslipHTML(employee, payrollData, period);
-    return { success: true, html: html, employee: employee, payroll: payrollData };
-  }
+      // payroll metrics
+      const pfChecked = true;
+      const employeePFpct = (emp.employeePFrate !== undefined) ? parseFloat(emp.employeePFrate) : 5.5;
+      const employerPFpct = (emp.employerPFrate !== undefined) ? parseFloat(emp.employerPFrate) : 5;
+      const taxRelief = parseFloat(emp.taxRelief || 0) || 0;
+      const loanMonthly = parseFloat(emp.loanMonthly || 0) || 0;
 
-  function buildPayslipHTML(employee, payroll, period) {
-    const format = (n) => (parseFloat(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const calc = computePayroll({
+        basicSalary: parseFloat(emp.basicSalary || 0),
+        allowances: allowances.map(a => ({ type: a.type || a.name || '', amount: parseFloat(a.amount || a.value || 0) || 0 })),
+        employeePFpct,
+        employerPFpct,
+        reliefAmount: taxRelief,
+        loanMonthly,
+        pfChecked
+      });
 
-    const basic = format(payroll?.['Basic Salary'] || 0);
-    const allowances = format(payroll?.['Total Allowances'] || 0);
-    const gross = format(payroll?.['Gross Salary'] || 0);
-    const paye = format(payroll?.['PAYE'] || 0);
-    const empPension = format(payroll?.['Employee Pension'] || 0);
-    const empPF = format(payroll?.['Employee PF'] || 0);
-    const taxRelief = format(payroll?.['Tax Relief'] || 0);
-    const totalDed = format(payroll?.['Total Deduction'] || 0);
-    const netPay = format(payroll?.['Net Pay'] || 0);
-    const empPension13 = format(payroll?.['Employer Pension'] || 0);
-    const empPF5 = format(payroll?.['Employer PF'] || 0);
-    const loan = format(payroll?.['Monthly Loan'] || 0);
-
-    return `
-      <div style="padding:6px 0;">
-        <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Arial',sans-serif;">
+      // build payroll table HTML (compact)
+      const payrollTableHtml = `
+        <table class="payslip-table-compact" style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px;">
           <thead>
-            <tr><th style="text-align:left; padding:5px 10px; background:#000; color:white; font-size:11px;">Description</th>
-                <th style="text-align:right; padding:5px 10px; background:#000; color:white; font-size:11px;">This Period (GHS)</th>
-                <th style="text-align:right; padding:5px 10px; background:#000; color:white; font-size:11px;">YTD (GHS)</th></tr>
+            <tr style="background:#f7f7f7">
+              <th style="text-align:left;padding:8px">Description</th>
+              <th style="text-align:right;padding:8px;width:150px">Amount (GHS)</th>
+            </tr>
           </thead>
           <tbody>
-            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EARNINGS</td></tr>
-            <tr><td style="padding:4px 10px;">Basic Salary</td><td style="padding:4px 10px; text-align:right;">${basic}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px;">Allowances</td><td style="padding:4px 10px; text-align:right;">${allowances}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Gross Pay</td><td style="padding:5px 10px; text-align:right;">${gross}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
-
-            <tr style="background:#f5f5f5;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">DEDUCTIONS</td></tr>
-            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Statutory</td><td></td><td></td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">PAYE</td><td style="padding:3px 10px; text-align:right;">${paye}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Employee Pension (5.5%)</td><td style="padding:3px 10px; text-align:right;">${empPension}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Other Deductions</td><td></td><td></td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Employee PF (10%)</td><td style="padding:3px 10px; text-align:right;">${empPF}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:3px 10px 3px 28px;">Monthly Loan</td><td style="padding:3px 10px; text-align:right;">${loan}</td><td style="padding:3px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px; font-weight:600; color:#444;">Tax Reliefs</td><td style="padding:4px 10px; text-align:right;">${taxRelief}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Deductions</td><td style="padding:5px 10px; text-align:right;">${totalDed}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
-
-            <tr style="background:#333; color:white;"><td style="padding:6px 10px; font-weight:700; font-size:13px;">Net Pay</td><td style="padding:6px 10px; text-align:right;"></td><td style="padding:6px 10px; text-align:right; font-size:17px; font-weight:900;">${netPay}</td></tr>
-
-            <tr style="background:#e8e8e8;"><td colspan="3" style="text-align:center; font-weight:700; padding:5px; text-transform:uppercase; color:#333; font-size:12px;">EMPLOYER CONTRIBUTIONS</td></tr>
-            <tr><td style="padding:4px 10px;">Employer Pension (13%)</td><td style="padding:4px 10px; text-align:right;">${empPension13}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr><td style="padding:4px 10px;">Employer PF (5%)</td><td style="padding:4px 10px; text-align:right;">${empPF5}</td><td style="padding:4px 10px; text-align:right;">--</td></tr>
-            <tr style="font-weight:700; border-top:2px solid #000;"><td style="padding:5px 10px;">Total Employer Contribution</td><td style="padding:5px 10px; text-align:right;">${format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0))}</td><td style="padding:5px 10px; text-align:right;">--</td></tr>
+            <tr><td style="padding:8px">Basic Salary</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(parseFloat(emp.basicSalary || 0))}</td></tr>
+            <tr><td style="padding:8px">Total Allowances</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.totalAllowances)}</td></tr>
+            <tr><td style="padding:8px">Gross Salary</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.grossSalary)}</td></tr>
+            <tr><td style="padding:8px">Employee Pension</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.employeePension)}</td></tr>
+            <tr><td style="padding:8px">Employee PF</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.employeePf)}</td></tr>
+            <tr><td style="padding:8px">Tax Relief</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.taxRelief)}</td></tr>
+            <tr><td style="padding:8px">Taxable Income</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.taxableAmount)}</td></tr>
+            <tr><td style="padding:8px">PAYE</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.paye)}</td></tr>
+            <tr><td style="padding:8px">Net Pay</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.netPay)}</td></tr>
+            <tr><td style="padding:8px">Loan Monthly</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.loanMonthly)}</td></tr>
+            <tr style="font-weight:700"><td style="padding:8px">Take Home</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.takeHome)}</td></tr>
           </tbody>
         </table>
+      `;
+
+      // fill modal fields (IDs exist in payslip.html)
+      byId('modalEmpId').textContent = emp.staff || '';
+      byId('modalSSNIT').textContent = emp.ssnit || '';
+      byId('modalName').textContent = emp.name || '';
+      byId('modalGhanaCard').textContent = emp.ghanaCard || '';
+      byId('modalDept').textContent = emp.department || '';
+      byId('modalEmail').textContent = emp.email || '';
+      byId('modalDesignation').textContent = emp.designation || '';
+      // Set pay period to currently selected payslipPeriod input
+      const period = byId('payslipPeriod')?.value || (new Date()).toISOString().slice(0,7);
+      byId('modalPayPeriod').textContent = period;
+
+      // payroll table area
+      const area = byId('modalPayrollTableArea');
+      if (area) {
+        area.innerHTML = payrollTableHtml;
+      }
+
+      // Generated timestamp
+      const gen = byId('modalGenerated');
+      if (gen) gen.textContent = 'Generated: ' + (new Date()).toLocaleString();
+
+      // store current
+      _currentPayslip = {
+        staff: emp.staff,
+        record: emp,
+        period,
+        calc,
+        html: buildPayslipPrintHtml(emp, calc, allowances, period)
+      };
+
+      // show modal (existing DOM)
+      const modal = byId('payslipModal');
+      if (modal) {
+        modal.style.display = 'flex';
+        // set focus to print button
+        setTimeout(() => byId('modalPrintBtn')?.focus(), 100);
+      }
+    } catch (err) {
+      console.error('Error opening payslip modal', err);
+      showToast('Error preparing payslip: ' + (err.message || err), 'error');
+    }
+  }
+
+  function buildPayslipPrintHtml(emp, calc, allowances, period) {
+    // Minimal, clean print HTML for payslip
+    const rowsAllowances = (allowances || []).map(a => `
+      <tr>
+        <td style="padding:6px 8px">${escapeHtml(a.type || a.name || '')}</td>
+        <td style="padding:6px 8px;text-align:right">${formatCurrencyLocal(parseFloat(a.amount || a.value || 0))}</td>
+      </tr>
+    `).join('');
+
+    return `
+      <div style="font-family: Arial, Helvetica, sans-serif; color:#111;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div style="font-weight:800;font-size:20px">GAP MICROFINANCE LTD</div>
+          <div style="text-align:right">
+            <div style="font-size:12px;color:#666">Payslip</div>
+            <div style="font-weight:700">${escapeHtml(period)}</div>
+          </div>
+        </div>
+
+        <div style="margin-bottom:12px;">
+          <div><strong>Name:</strong> ${escapeHtml(emp.name)}</div>
+          <div><strong>Staff No:</strong> ${escapeHtml(emp.staff)}</div>
+          <div><strong>Designation:</strong> ${escapeHtml(emp.designation || '')}</div>
+        </div>
+
+        <table style="width:100%;border-collapse:collapse;margin-bottom:12px;font-size:13px;">
+          <thead>
+            <tr style="background:#f7f7f7;">
+              <th style="text-align:left;padding:8px">Earnings / Deductions</th>
+              <th style="text-align:right;padding:8px;width:160px">Amount (GHS)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td style="padding:8px">Basic Salary</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(parseFloat(emp.basicSalary || 0))}</td></tr>
+            <tr><td style="padding:8px">Total Allowances</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.totalAllowances)}</td></tr>
+            <tr><td style="padding:8px">Gross Salary</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.grossSalary)}</td></tr>
+            <tr><td style="padding:8px">Employee Pension</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.employeePension)}</td></tr>
+            <tr><td style="padding:8px">Employee PF</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.employeePf)}</td></tr>
+            <tr><td style="padding:8px">PAYE</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.paye)}</td></tr>
+            <tr style="font-weight:700"><td style="padding:8px">Net Pay</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.netPay)}</td></tr>
+            <tr><td style="padding:8px">Loan</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.loanMonthly)}</td></tr>
+            <tr style="font-weight:700"><td style="padding:8px">Take Home</td><td style="padding:8px;text-align:right">${formatCurrencyLocal(calc.takeHome)}</td></tr>
+          </tbody>
+        </table>
+
+        ${ (allowances && allowances.length > 0) ? `
+        <div style="margin-bottom:12px;">
+          <div style="font-weight:700;margin-bottom:6px">Allowances</div>
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead><tr style="background:#f7f7f7"><th style="text-align:left;padding:6px">Type</th><th style="text-align:right;padding:6px;width:160px">Amount</th></tr></thead>
+            <tbody>${rowsAllowances}</tbody>
+          </table>
+        </div>` : '' }
+
+        <div style="margin-top:18px;font-size:12px;color:#777">* Computer generated payslip</div>
       </div>
     `;
   }
 
-  // =============================================================
-  // HELPERS
-  // =============================================================
-  function showToast(msg, type) {
-    type = type || 'info';
-    const g = document.getElementById('global-toast');
-    if (g) {
-      g.textContent = msg;
-      g.className = type;
-      g.style.display = 'block';
-      clearTimeout(g._t);
-      g._t = setTimeout(() => { g.style.display = 'none'; }, 4000);
-    } else {
-      alert(msg);
+  // ---------- Print & send ----------
+  function printPayslip() {
+    if (!_currentPayslip || !_currentPayslip.html) {
+      showToast('No payslip to print', 'warning');
+      return;
+    }
+
+    const w = window.open('', '_blank', 'width=900,height=700');
+    if (!w) {
+      showToast('Popup blocked. Allow popups and try again.', 'error');
+      return;
+    }
+    const html = `
+      <html>
+        <head>
+          <title>Payslip - ${escapeHtml(_currentPayslip.record?.name || _currentPayslip.staff)}</title>
+          <meta charset="utf-8"/>
+          <style>
+            body { font-family: Arial, Helvetica, sans-serif; margin: 18px; color: #111; }
+            @media print { button { display:none } }
+          </style>
+        </head>
+        <body>
+          ${_currentPayslip.html}
+          <div style="margin-top:16px;"><button onclick="window.print();">Print</button></div>
+        </body>
+      </html>
+    `;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    // focus window
+    w.focus();
+  }
+
+  async function sendPayslipForStaff(staff) {
+    try {
+      // generate (if not loaded)
+      if (!_currentPayslip || String(_currentPayslip.staff) !== String(staff)) {
+        await openPayslipModal(staff);
+      }
+      if (!_currentPayslip) { showToast('Could not prepare payslip', 'error'); return; }
+
+      // payload: use current html (server can accept HTML or structured data)
+      const payload = {
+        staff: _currentPayslip.staff,
+        period: _currentPayslip.period,
+        payslipHtml: _currentPayslip.html,
+        summary: _currentPayslip.calc
+      };
+
+      // show sending UI
+      const sendBtn = byId('modalSendBtn');
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Sending...'; }
+
+      if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
+        const resp = await API.sendPayslip(staff, _currentPayslip.period, payload).catch(err => { throw err; });
+        if (resp && resp.success) {
+          showToast('Payslip sent to ' + staff, 'success');
+        } else {
+          showToast('Error sending payslip: ' + (resp && resp.error ? resp.error : 'unknown'), 'error');
+        }
+      } else if (typeof API !== 'undefined' && API && typeof API.sendEmail === 'function') {
+        // generic fallback to an email-sending endpoint
+        const to = _currentPayslip.record?.email;
+        if (!to) throw new Error('No email for employee');
+        const resp = await API.sendEmail(to, 'Payslip ' + _currentPayslip.period, _currentPayslip.html).catch(err => { throw err; });
+        showToast('Payslip queued for ' + to, 'success');
+      } else {
+        // no API available
+        showToast('No API configured to send payslips. Download or print instead.', 'warning');
+      }
+    } catch (err) {
+      console.error('Send payslip error', err);
+      showToast('Error sending payslip: ' + (err.message || err), 'error');
+    } finally {
+      const sendBtn = byId('modalSendBtn');
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
     }
   }
 
-  function escapeHtml(s) {
-    if (s === null || s === undefined) return '';
-    return String(s).replace(/[&<>"']/g, function(m) {
-      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[m];
+  // ---------- Send All with progress ----------
+  async function sendAllPayslips() {
+    if (!Array.isArray(_employees) || _employees.length === 0) {
+      showToast('No employees to send', 'warning');
+      return;
+    }
+
+    if (!confirm(`Send payslips to ${_employees.length} employee(s)? This will attempt to send one-by-one.`)) return;
+
+    _sendAllAbort = { aborted: false };
+
+    const overlay = byId('sendAllLoadingOverlay');
+    const progress = byId('sendAllProgress');
+    if (overlay) overlay.classList.add('active');
+    if (progress) progress.textContent = 'Preparing...';
+
+    let sent = 0, failed = 0;
+    for (let i = 0; i < _employees.length; i++) {
+      if (_sendAllAbort.aborted) break;
+      const emp = _employees[i];
+      if (!emp || !emp.staff) continue;
+      try {
+        if (progress) progress.textContent = `Sending ${i+1} of ${_employees.length} — ${emp.name || emp.staff}`;
+        // reuse send single function but avoid opening modal for every employee for speed:
+        // prepare payload server-side if possible: attempt API.sendPayslipDirect to support html generation server-side
+        // fallback: call openPayslipModal to build html and then call API
+        await openPayslipModal(emp.staff);
+        if (!_currentPayslip) { throw new Error('Failed to prepare payslip'); }
+        // try API.sendPayslip if available
+        if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
+          const payload = {
+            staff: _currentPayslip.staff,
+            period: _currentPayslip.period,
+            payslipHtml: _currentPayslip.html,
+            summary: _currentPayslip.calc
+          };
+          const resp = await API.sendPayslip(emp.staff, _currentPayslip.period, payload).catch(e => { throw e; });
+          if (!(resp && resp.success)) throw new Error(resp && resp.error ? resp.error : 'Send failed');
+        } else {
+          // cannot send: mark as failure
+          throw new Error('No send API available');
+        }
+        sent++;
+      } catch (err) {
+        console.warn('Failed to send payslip for', emp.staff, err);
+        failed++;
+      }
+    }
+
+    if (progress) progress.textContent = `Done. Sent ${sent}, Failed ${failed}`;
+    setTimeout(() => {
+      if (overlay) overlay.classList.remove('active');
+    }, 1200);
+
+    if (sent > 0) showToast(`Sent: ${sent}. Failed: ${failed}`, failed === 0 ? 'success' : 'warning');
+    else showToast('No payslips were sent', 'error');
+  }
+
+  function abortSendAll() {
+    _sendAllAbort.aborted = true;
+    const overlay = byId('sendAllLoadingOverlay');
+    if (overlay) overlay.classList.remove('active');
+  }
+
+  // ---------- Setup event listeners on the page ----------
+  function initPayslipModule() {
+    // Wire buttons
+    const generateBtn = byId('generatePayslipBtn');
+    if (generateBtn) {
+      generateBtn.addEventListener('click', async function() {
+        // naive generate all previews (creates currentPayslip for first employee)
+        await loadEmployeeList();
+        showToast('Employee list refreshed', 'success');
+      });
+    }
+
+    const sendAllBtn = byId('sendAllPayslipsBtn');
+    if (sendAllBtn) {
+      sendAllBtn.addEventListener('click', function() {
+        sendAllPayslips();
+      });
+    }
+
+    // modal buttons
+    const printBtn = byId('modalPrintBtn');
+    if (printBtn) printBtn.addEventListener('click', printPayslip);
+    const modalSend = byId('modalSendBtn');
+    if (modalSend) modalSend.addEventListener('click', function() {
+      if (_currentPayslip && _currentPayslip.staff) {
+        sendPayslipForStaff(_currentPayslip.staff);
+      } else {
+        showToast('No payslip ready', 'warning');
+      }
     });
+    const modalClose = byId('modalCloseBtn');
+    if (modalClose) modalClose.addEventListener('click', function() {
+      const modal = byId('payslipModal');
+      if (modal) modal.style.display = 'none';
+    });
+
+    // Close modal when clicking outside (improve accessibility)
+    const payslipModal = byId('payslipModal');
+    if (payslipModal) {
+      payslipModal.addEventListener('click', function(e) {
+        if (e.target === payslipModal) payslipModal.style.display = 'none';
+      });
+    }
+
+    // Initialize list
+    loadEmployeeList();
   }
 
-  function escapeJs(s) {
-    return String(s || '').replace(/'/g, "\\'");
-  }
-
-  // =============================================================
-  // INITIALIZE - Auto-run when page loads
-  // =============================================================
-  // Check if DOM is ready
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPayslipModule);
-  } else {
-    initPayslipModule();
-  }
-
-  // Expose functions globally for inline onclick handlers
+  // Expose entry point on window
   window.initPayslipModule = initPayslipModule;
-  window.viewPayslip = window.viewPayslip;
-  window.sendPayslip = window.sendPayslip;
-  window.closeActionDropdown = window.closeActionDropdown;
+  window.openPayslipModal = openPayslipModal;
+  window.printPayslip = printPayslip;
+  window.sendPayslipForStaff = sendPayslipForStaff;
+  window.sendAllPayslips = sendAllPayslips;
+  window.abortSendAllPayslips = abortSendAll;
+
+  // Auto-init if payslip page present
+  document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('payslipListTable')) {
+      try { initPayslipModule(); } catch (e) { console.error('initPayslipModule error', e); }
+    }
+  });
 
 })();
