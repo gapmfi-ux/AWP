@@ -142,3 +142,12 @@ API.generatePayslipHTML = async function(staffNumber, period, options = {}) {
   }
   return this.request('generatePayslipHTML', { staffNumber, period }, options);
 };
+
+// Add this method to API in api-payslip.js
+
+API.debugEmployeeEmail = async function(staffNumber, options = {}) {
+  if (!staffNumber) {
+    throw new Error('Staff number is required');
+  }
+  return this.request('debugEmployeeColumns', { staffNumber: staffNumber }, options);
+};
