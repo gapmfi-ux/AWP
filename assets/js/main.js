@@ -8,22 +8,30 @@ let sidebarCollapsed = false;
 let currentUser = null;
 let currentModule = 'dashboard';
 let pendingPayrollModule = null;
+let isProcessingAccess = false; // Prevent recursive calls
 
 // ============================================
 // PAYROLL ACCESS CODE
 // ============================================
 
-const PAYROLL_ACCESS_CODE = 'GAP2026'; // Default code
+const PAYROLL_ACCESS_CODE = 'GAP2026'; // Default code - you can change this
 
 function checkPayrollAccess(moduleName) {
+  // Prevent infinite recursion
+  if (isProcessingAccess) {
+    console.log('[Access] Already processing access request, skipping');
+    return;
+  }
+  
   // Check if access was already granted in this session
   if (sessionStorage.getItem('payrollAccessGranted') === 'true') {
-    // Access already granted, proceed
-    loadModule(moduleName);
+    // Access already granted, proceed directly
+    originalLoadModule(moduleName);
     return;
   }
   
   // Store the requested module and show access modal
+  isProcessingAccess = true;
   pendingPayrollModule = moduleName;
   showAccessModal();
 }
@@ -38,7 +46,7 @@ function showAccessModal() {
     modal.style.display = 'flex';
     if (input) {
       input.value = '';
-      input.focus();
+      setTimeout(() => input.focus(), 100);
     }
     if (error) {
       error.style.display = 'none';
@@ -58,8 +66,10 @@ function verifyAccessCode() {
     
     // Load the pending module
     if (pendingPayrollModule) {
-      loadModule(pendingPayrollModule);
+      const moduleToLoad = pendingPayrollModule;
       pendingPayrollModule = null;
+      isProcessingAccess = false;
+      originalLoadModule(moduleToLoad);
     }
   } else {
     // Invalid code
@@ -86,28 +96,19 @@ function closeAccessModal() {
   }
 }
 
-// Override the loadModule function to check for payroll modules
-const originalLoadModule = loadModule;
-loadModule = function(moduleName) {
-  const payrollModules = ['employeeList', 'payroll', 'payslip'];
-  
-  if (payrollModules.includes(moduleName)) {
-    checkPayrollAccess(moduleName);
-  } else {
-    originalLoadModule(moduleName);
-  }
-};
-
 // ============================================
-// COMPATIBILITY LAYER
+// COMPATIBILITY LAYER - For modules using google.script.run
 // ============================================
 
+// Create a wrapper that mimics google.script.run for compatibility
 window.google = {
   script: {
     run: (function() {
+      // Store the current success and failure handlers
       let currentSuccessHandler = null;
       let currentFailureHandler = null;
       
+      // Create the chainable object
       const chainable = {
         withSuccessHandler: function(callback) {
           currentSuccessHandler = callback;
@@ -119,6 +120,7 @@ window.google = {
         }
       };
       
+      // Add dynamic methods for all API actions
       const actions = [
         'getUserInfo',
         'processForm',
@@ -148,18 +150,50 @@ window.google = {
         'getAddAssetHTML',
         'getAssetRegisterHTML',
         'getInvestmentAddHTML',
-        'getInvestmentReportHTML'
+        'getInvestmentReportHTML',
+        // Payroll actions
+        'getEmployees',
+        'getEmployeeByStaffNumber',
+        'addEmployee',
+        'updateEmployee',
+        'deleteEmployee',
+        'getAllDepartments',
+        'getAllDesignations',
+        'processPayrollRun',
+        'getPayrollRunsByPeriod',
+        'getPayrollRunsByStaff',
+        'getPayrollRunsByRunId',
+        'getPayrollRunSummary',
+        'getAllPayPeriods',
+        'deletePayrollRun',
+        'savePayrollRun',
+        'updatePayrollRecord',
+        'getTaxRates',
+        'initializePayrollSheets',
+        'getAllowancesByStaff',
+        'getAllAllowanceTypes',
+        'saveAllowance',
+        'deleteAllowance',
+        'updateAllowance',
+        'initializeAllowanceSheet',
+        'initializeEmployeeSheet'
       ];
       
       actions.forEach(action => {
         chainable[action] = function(...args) {
+          // Map the action to API methods
           const actionMap = {
+            // User
             'getUserInfo': () => API.getUserInfo(),
+            
+            // Payment Voucher
             'processForm': () => API.processForm(args[0]),
             'getNextPVNumber': () => API.getNextPVNumber(args[0]),
             'getPVNumbersByType': () => API.getPVNumbersByType(),
             'getVoucherByNumber': () => API.getVoucherByNumber(args[0], args[1]),
             'updateVoucher': () => API.updateVoucher(args[0]),
+            
+            // Inventory
             'generateInventoryCategoryCode': () => API.generateInventoryCategoryCode(),
             'getInventoryCategories': () => API.getInventoryCategories(),
             'addNewInventory': () => API.addNewInventory(args[0]),
@@ -168,14 +202,20 @@ window.google = {
             'getInventoryListData': () => API.getInventoryListData(args[0]),
             'recordInventoryUsage': () => API.recordInventoryUsage(args[0]),
             'removeInventory': () => API.removeInventory(args[0]),
+            
+            // Fixed Assets
             'generateAssetCode': () => API.generateAssetCode(args[0]),
             'addNewAsset': () => API.addNewAsset(args[0]),
             'getDetailedRegister': () => API.getDetailedRegister(),
             'updateAssetStatus': () => API.updateAssetStatus(args[0], args[1]),
+            
+            // Investment
             'generateInvestmentCode': () => API.generateInvestmentCode(args[0]),
             'addNewInvestment': () => API.addNewInvestment(args[0]),
             'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(args[0], args[1]),
             'getMaturedInvestments': () => API.getMaturedInvestments(args[0]),
+            
+            // Subscription
             'getSubscriptionCategories': () => API.getSubscriptionCategories(),
             'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
             'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
@@ -186,13 +226,42 @@ window.google = {
             'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
             'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
             'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
+             
+            // HTML Module Loaders
             'getPVFormHTML': () => loadModuleFile('paymentVoucher'),
             'getAddInventoryHTML': () => loadModuleFile('inventoryAdd'),
             'getInventoryReportHTML': () => loadModuleFile('inventoryReport'),
             'getAddAssetHTML': () => loadModuleFile('addAsset'),
             'getAssetRegisterHTML': () => loadModuleFile('viewAssetRegister'),
             'getInvestmentAddHTML': () => loadModuleFile('investmentAdd'),
-            'getInvestmentReportHTML': () => loadModuleFile('investmentReport')
+            'getInvestmentReportHTML': () => loadModuleFile('investmentReport'),
+            
+            // Payroll
+            'getEmployees': () => API.getEmployees(),
+            'getEmployeeByStaffNumber': () => API.getEmployeeByStaffNumber(args[0]),
+            'addEmployee': () => API.addEmployee(args[0]),
+            'updateEmployee': () => API.updateEmployee(args[0]),
+            'deleteEmployee': () => API.deleteEmployee(args[0]),
+            'getAllDepartments': () => API.getAllDepartments(),
+            'getAllDesignations': () => API.getAllDesignations(),
+            'processPayrollRun': () => API.processPayrollRun(args[0]),
+            'getPayrollRunsByPeriod': () => API.getPayrollRunsByPeriod(args[0]),
+            'getPayrollRunsByStaff': () => API.getPayrollRunsByStaff(args[0]),
+            'getPayrollRunsByRunId': () => API.getPayrollRunsByRunId(args[0]),
+            'getPayrollRunSummary': () => API.getPayrollRunSummary(args[0]),
+            'getAllPayPeriods': () => API.getAllPayPeriods(),
+            'deletePayrollRun': () => API.deletePayrollRun(args[0]),
+            'savePayrollRun': () => API.savePayrollRun(args[0]),
+            'updatePayrollRecord': () => API.updatePayrollRecord(args[0], args[1], args[2]),
+            'getTaxRates': () => API.getTaxRates(),
+            'initializePayrollSheets': () => API.initializePayrollSheets(),
+            'getAllowancesByStaff': () => API.getAllowancesByStaff(args[0]),
+            'getAllAllowanceTypes': () => API.getAllAllowanceTypes(),
+            'saveAllowance': () => API.saveAllowance(args[0], args[1], args[2], args[3]),
+            'deleteAllowance': () => API.deleteAllowance(args[0], args[1], args[2]),
+            'updateAllowance': () => API.updateAllowance(args[0], args[1], args[2], args[3], args[4]),
+            'initializeAllowanceSheet': () => API.initializeAllowanceSheet(),
+            'initializeEmployeeSheet': () => API.initializeEmployeeSheet()
           };
           
           const apiCall = actionMap[action];
@@ -264,15 +333,18 @@ function initializeApp() {
   setupEventListeners();
   setupSidebarToggleOnResize();
   
+  // Load dashboard content directly (using dashboard.js function)
   if (typeof loadDashboardContent === 'function') {
     loadDashboardContent();
   } else {
+    // Fallback
     const mainContent = document.getElementById('mainContent');
     if (mainContent) {
       mainContent.innerHTML = '<div class="content-wrapper"><p>Loading dashboard...</p></div>';
     }
   }
   
+  // Check if sidebar should be collapsed based on screen size
   if (window.innerWidth <= 768) {
     sidebarCollapsed = true;
     const s = document.getElementById('sidebar');
@@ -281,6 +353,7 @@ function initializeApp() {
 }
 
 function setupEventListeners() {
+  // Close user dropdown when clicking outside
   document.addEventListener('click', function(event) {
     const userMenu = document.querySelector('.user-menu');
     const userDropdown = document.getElementById('userDropdown');
@@ -294,7 +367,7 @@ function setupEventListeners() {
 function setupSidebarToggleOnResize() {
   window.addEventListener('resize', function() {
     if (window.innerWidth > 768 && sidebarCollapsed) {
-      // Do nothing
+      // Do nothing, keep collapsed state
     } else if (window.innerWidth <= 768) {
       const s = document.getElementById('sidebar');
       if (s) s.classList.remove('show-mobile');
@@ -341,6 +414,7 @@ function toggleSidebar() {
     if (mainContent) mainContent.classList.toggle('expanded');
     sidebarCollapsed = sidebar && sidebar.classList.contains('collapsed');
     
+    // Close all submenus when sidebar is collapsed
     if (sidebarCollapsed) {
       document.querySelectorAll('.submenu').forEach(menu => {
         menu.classList.remove('show');
@@ -364,6 +438,7 @@ function toggleSubmenu(submenuId) {
   const submenu = document.getElementById(submenuId);
   const icon = document.getElementById(submenuId.replace('Submenu', 'Icon'));
   
+  // Close other submenus
   if (currentOpenSubmenu && currentOpenSubmenu !== submenu) {
     currentOpenSubmenu.classList.remove('show');
     const prevIcon = document.getElementById(currentOpenSubmenu.id.replace('Submenu', 'Icon'));
@@ -405,10 +480,25 @@ function hideLoadingModal() {
 }
 
 // ============================================
-// MODULE LOADING
+// MODULE LOADING - FIXED RECURSION
 // ============================================
 
+// Store original loadModule function
+const originalLoadModule = loadModule;
+
+// Override the loadModule function to check for payroll modules
 function loadModule(moduleName) {
+  const payrollModules = ['employeeList', 'payroll', 'payslip'];
+  
+  if (payrollModules.includes(moduleName)) {
+    checkPayrollAccess(moduleName);
+  } else {
+    originalLoadModule(moduleName);
+  }
+}
+
+// The actual module loading logic (renamed from original)
+function originalLoadModule(moduleName) {
   return new Promise((resolve, reject) => {
     if (currentModule === moduleName) {
       resolve();
@@ -417,6 +507,8 @@ function loadModule(moduleName) {
     
     showLoadingModal('Loading module...');
     currentModule = moduleName;
+    
+    // Update active state in sidebar
     updateActiveMenuItem(moduleName);
     
     const modules = {
@@ -436,6 +528,7 @@ function loadModule(moduleName) {
       'dashboard': null
     };
     
+    // Handle dashboard separately
     if (moduleName === 'dashboard') {
       if (typeof loadDashboardContent === 'function') {
         loadDashboardContent();
@@ -486,10 +579,12 @@ function loadModule(moduleName) {
 }
 
 function updateActiveMenuItem(moduleName) {
+  // Remove active class from all menu items
   document.querySelectorAll('.menu-item').forEach(item => {
     item.classList.remove('active');
   });
   
+  // Find and activate the corresponding menu item
   document.querySelectorAll('.menu-item').forEach(item => {
     const onclickAttr = item.getAttribute('onclick');
     if (onclickAttr && onclickAttr.includes(`'${moduleName}'`)) {
@@ -553,11 +648,13 @@ function initSubscriptionScheduleModule() {
 
 function initDailyLiquidityModule() {
   console.log('Daily Liquidity module loaded');
+  // The actual init is in dailyliquidity.js
   if (typeof window.initDailyLiquidityModule === 'function') {
     window.initDailyLiquidityModule();
   }
 }
 
+// New payroll/employee/payslip init wrappers
 function initEmployeeListModule() {
   console.log('Employee List module loaded');
   if (typeof window.initEmployeeList === 'function') window.initEmployeeList();
@@ -632,10 +729,11 @@ function formatDateForInput(date) {
 }
 
 // ============================================
-// EXPORT
+// EXPORT FOR MODULES
 // ============================================
 
 window.loadModule = loadModule;
+window.originalLoadModule = originalLoadModule;
 window.toggleSidebar = toggleSidebar;
 window.toggleUserMenu = toggleUserMenu;
 window.toggleSubmenu = toggleSubmenu;
