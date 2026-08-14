@@ -14,10 +14,6 @@ let currentPeriod = '';        // 'YYYY-MM'
 let currentRunId = null;       // populated if a saved run is loaded
 let monthModalMode = null;     // 'process' or 'view'
 
-/* ===========================
-   Initialization
-   =========================== */
-
 function initPayroll() {
   currentPayrollData = [];
   currentPeriod = '';
@@ -26,6 +22,25 @@ function initPayroll() {
 
   // Set heading period text
   updateHeaderPeriodLabel();
+
+  // Ensure Run Payroll button triggers the function reliably (fixes dynamic module load issues)
+  const runBtn = document.getElementById('btnRunPayroll');
+  if (runBtn) {
+    try {
+      runBtn.removeAttribute('onclick'); // avoid duplicate handlers
+    } catch (e) { /* ignore */ }
+    runBtn.addEventListener('click', function (e) {
+      e.preventDefault();
+      if (typeof window.processPayroll === 'function') {
+        window.processPayroll();
+      } else if (typeof processPayroll === 'function') {
+        processPayroll();
+      } else {
+        console.error('processPayroll not found');
+        try { showToast('Payroll function unavailable', 'error'); } catch (e) { /* ignore */ }
+      }
+    });
+  }
 
   // Default buttons: show Process/Run (no saved run)
   setButtonsForSavedRun(false);
