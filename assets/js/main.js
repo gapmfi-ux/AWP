@@ -26,7 +26,7 @@ function checkPayrollAccess(moduleName) {
   // Check if access was already granted in this session
   if (sessionStorage.getItem('payrollAccessGranted') === 'true') {
     // Access already granted, proceed directly
-    originalLoadModule(moduleName);
+    loadModuleDirect(moduleName);
     return;
   }
   
@@ -69,7 +69,7 @@ function verifyAccessCode() {
       const moduleToLoad = pendingPayrollModule;
       pendingPayrollModule = null;
       isProcessingAccess = false;
-      originalLoadModule(moduleToLoad);
+      loadModuleDirect(moduleToLoad);
     }
   } else {
     // Invalid code
@@ -483,22 +483,8 @@ function hideLoadingModal() {
 // MODULE LOADING - FIXED RECURSION
 // ============================================
 
-// Store original loadModule function
-const originalLoadModule = loadModule;
-
-// Override the loadModule function to check for payroll modules
-function loadModule(moduleName) {
-  const payrollModules = ['employeeList', 'payroll', 'payslip'];
-  
-  if (payrollModules.includes(moduleName)) {
-    checkPayrollAccess(moduleName);
-  } else {
-    originalLoadModule(moduleName);
-  }
-}
-
-// The actual module loading logic (renamed from original)
-function originalLoadModule(moduleName) {
+// The main module loading function
+function loadModuleDirect(moduleName) {
   return new Promise((resolve, reject) => {
     if (currentModule === moduleName) {
       resolve();
@@ -576,6 +562,17 @@ function originalLoadModule(moduleName) {
         reject(error);
       });
   });
+}
+
+// Wrapper function that checks for payroll access
+function loadModule(moduleName) {
+  const payrollModules = ['employeeList', 'payroll', 'payslip'];
+  
+  if (payrollModules.includes(moduleName)) {
+    checkPayrollAccess(moduleName);
+  } else {
+    loadModuleDirect(moduleName);
+  }
 }
 
 function updateActiveMenuItem(moduleName) {
@@ -733,6 +730,7 @@ function formatDateForInput(date) {
 // ============================================
 
 window.loadModule = loadModule;
+window.loadModuleDirect = loadModuleDirect;
 window.toggleSidebar = toggleSidebar;
 window.toggleUserMenu = toggleUserMenu;
 window.toggleSubmenu = toggleSubmenu;
