@@ -802,7 +802,14 @@ function computePayrollRow(opts = {}) {
    Confirm modal (local)
    =========================== */
 
+/* ===========================
+   Confirm modal (local) - FIXED VERSION
+   =========================== */
+
 function showConfirmModal(title, message, onConfirm, onCancel) {
+  // Close any existing confirm modal first
+  closeConfirmModal();
+  
   let modal = document.getElementById('confirmModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -822,24 +829,81 @@ function showConfirmModal(title, message, onConfirm, onCancel) {
       </div>
     `;
     document.body.appendChild(modal);
-
-    const close = () => { modal.classList.remove('show'); };
-    modal.querySelector('#confirmOkBtn').addEventListener('click', function(){ close(); if (typeof modal._onConfirm === 'function') modal._onConfirm(); });
-    modal.querySelector('#confirmCancelBtn').addEventListener('click', function(){ close(); if (typeof modal._onCancel === 'function') modal._onCancel(); });
-    modal.querySelector('#confirmModalClose').addEventListener('click', function(){ close(); if (typeof modal._onCancel === 'function') modal._onCancel(); });
-    modal.addEventListener('click', function(e){ if (e.target === modal) { close(); if (typeof modal._onCancel === 'function') modal._onCancel(); }});
+    
+    // Store the callbacks on the modal
+    modal._onConfirm = null;
+    modal._onCancel = null;
+    
+    // Set up event listeners
+    const close = function() {
+      modal.classList.remove('show');
+      // Call cancel callback when closed via X or backdrop
+      if (modal._onCancel && typeof modal._onCancel === 'function') {
+        try { modal._onCancel(); } catch(e) {}
+      }
+    };
+    
+    modal.querySelector('#confirmOkBtn').addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      modal.classList.remove('show');
+      if (modal._onConfirm && typeof modal._onConfirm === 'function') {
+        try { modal._onConfirm(); } catch(e) { console.error('Confirm callback error:', e); }
+      }
+    });
+    
+    modal.querySelector('#confirmCancelBtn').addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      modal.classList.remove('show');
+      if (modal._onCancel && typeof modal._onCancel === 'function') {
+        try { modal._onCancel(); } catch(e) {}
+      }
+    });
+    
+    modal.querySelector('#confirmModalClose').addEventListener('click', function(e){
+      e.preventDefault();
+      e.stopPropagation();
+      modal.classList.remove('show');
+      if (modal._onCancel && typeof modal._onCancel === 'function') {
+        try { modal._onCancel(); } catch(e) {}
+      }
+    });
+    
+    modal.addEventListener('click', function(e){
+      if (e.target === modal) {
+        modal.classList.remove('show');
+        if (modal._onCancel && typeof modal._onCancel === 'function') {
+          try { modal._onCancel(); } catch(e) {}
+        }
+      }
+    });
   }
 
-  modal.querySelector('#confirmModalTitle').textContent = title || 'Confirm';
-  modal.querySelector('#confirmModalBody').innerHTML = message || 'Are you sure?';
+  // Update the modal content
+  const titleEl = modal.querySelector('#confirmModalTitle');
+  const bodyEl = modal.querySelector('#confirmModalBody');
+  if (titleEl) titleEl.textContent = title || 'Confirm';
+  if (bodyEl) bodyEl.innerHTML = message || 'Are you sure?';
+  
+  // Store callbacks
   modal._onConfirm = onConfirm || function(){};
   modal._onCancel = onCancel || function(){};
+  
+  // Show the modal
   modal.classList.add('show');
+  
+  // Log for debugging
+  console.log('[payroll] Confirm modal shown:', title);
 }
-
 function closeConfirmModal() {
   const modal = document.getElementById('confirmModal');
-  if (modal) modal.classList.remove('show');
+  if (modal) {
+    modal.classList.remove('show');
+    // Clear callbacks to prevent stale references
+    modal._onConfirm = null;
+    modal._onCancel = null;
+  }
 }
 
 /* ===========================
