@@ -247,59 +247,67 @@
     }
   }
 
-// =============================================================
-// GET YTD TOTALS FOR A STAFF (includes current month) - FIXED
-// =============================================================
 async function getYTDTotals(staffNumber, currentPeriod) {
   try {
-    // Extract year from current period (YYYY-MM)
-    const year = currentPeriod.substring(0, 4);
-    
-    // Get all payroll runs for this staff
-    const runsResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
-    const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
-    
-    // If no runs found, return null (will be handled by caller)
-    if (!runs || runs.length === 0) {
-      console.log('No payroll runs found for staff:', staffNumber);
+    if (!staffNumber || !currentPeriod) return null;
+
+    // Normalize currentPeriod to { year, month } numbers (month: 1-12)
+    function parsePeriodToYMD(p) {
+      if (!p) return null;
+      p = String(p).trim();
+
+      // YYYY-MM or YYYY/MM or YYYYMM
+      let m = p.match(/^(\d{4})[-\/]?(\d{1,2})$/);
+      if (m) return { year: parseInt(m[1], 10), month: parseInt(m[2], 10) };
+
+      // MM/YYYY or M/YYYY or MM-YYYY
+      m = p.match(/^(\d{1,2})[\/\-](\d{4})$/);
+      if (m) return { year: parseInt(m[2], 10), month: parseInt(m[1], 10) };
+
+      // MonthName YYYY (e.g. Aug 2026, August 2026)
+      m = p.match(/^([A-Za-z]+)\s+(\d{4})$/);
+      if (m) {
+        const monNames = { jan:1, feb:2, mar:3, apr:4, may:5, jun:6, jul:7, aug:8, sep:9, oct:10, nov:11, dec:12 };
+        const key = m[1].toLowerCase().slice(0,3);
+        if (monNames[key]) return { year: parseInt(m[2],10), month: monNames[key] };
+      }
+
+      // Try Date parsing fallback
+      const d = new Date(p);
+      if (!isNaN(d.getTime())) {
+        return { year: d.getFullYear(), month: d.getMonth() + 1 };
+      }
+
       return null;
     }
 
-    // Filter runs for the current year and up to AND INCLUDING the current period
-    const yearRuns = runs.filter(r => {
-      const payPeriod = r['Pay Period'] || r.payPeriod || r['period'] || '';
-      // Check if period is from the current year
-      const isCurrentYear = payPeriod.startsWith(year);
-      // Check if period is less than or equal to the current period (includes current month)
-      const isUpToCurrent = payPeriod <= currentPeriod;
-      return isCurrentYear && isUpToCurrent;
-    });
+    const target = parsePeriodToYMD(currentPeriod);
+    if (!target) return null;
+    const targetKey = target.year * 100 + target.month; // e.g. 202608
 
-    // If no year runs found, the employee only has data from a different year
-    // or no data at all. Return null.
-    if (yearRuns.length === 0) {
-      console.log('No year runs found for staff:', staffNumber, 'year:', year);
-      // Try to find any runs for this staff and use those
-      const anyRuns = runs.filter(r => {
-        const payPeriod = r['Pay Period'] || r.payPeriod || r['period'] || '';
-        return payPeriod <= currentPeriod;
-      });
-      
-      if (anyRuns.length === 0) {
-        return null;
-      }
-      // Use any runs found (could be from previous year)
-      yearRuns.push(...anyRuns);
+    // Fetch all payroll runs for this staff
+    const runsResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
+    const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
+    if (!runs || runs.length === 0) return null;
+
+    // Helper to normalize a run's pay period into numeric key YYYYMM
+    function runPeriodKey(r) {
+      const raw = r['Pay Period'] || r.payPeriod || r['period'] || r['PayPeriod'] || '';
+      const parsed = parsePeriodToYMD(raw);
+      if (!parsed) return null;
+      return parsed.year * 100 + parsed.month;
     }
 
-    // Sort by period to ensure correct order
-    yearRuns.sort((a, b) => {
-      const periodA = a['Pay Period'] || a.payPeriod || a['period'] || '';
-      const periodB = b['Pay Period'] || b.payPeriod || b['period'] || '';
-      return periodA.localeCompare(periodB);
-    });
+    // Include all runs with period key <= targetKey (this ensures current/selected month is included)
+    const includedRuns = runs
+      .map(r => ({ rec: r, key: runPeriodKey(r) }))
+      .filter(x => x.key !== null && x.key <= targetKey)
+      .sort((a,b) => a.key - b.key) // earliest -> latest
+      .map(x => x.rec);
 
-    // Initialize YTD accumulator
+    if (includedRuns.length === 0) return null;
+
+    // YTD accumulator
     const ytd = {
       basicSalary: 0,
       totalAllowances: 0,
@@ -327,45 +335,29 @@ async function getYTDTotals(staffNumber, currentPeriod) {
       return 0;
     };
 
-    // Accumulate all values from each period
-    yearRuns.forEach((r) => {
-      const basicVal = getNumeric(r, ['Basic Salary', 'basicSalary', 'basic_salary']);
-      const allowancesVal = getNumeric(r, ['Total Allowances', 'totalAllowances', 'Allowances', 'allowances']);
-      const grossVal = getNumeric(r, ['Gross Salary', 'grossSalary', 'gross_salary']);
-      const empPensionVal = getNumeric(r, ['Employee Pension', 'employeePension', 'Employee Pension (5.5%)']);
-      const empPFVal = getNumeric(r, ['Employee PF', 'employeePf', 'PF 10% Amount']);
-      const taxReliefVal = getNumeric(r, ['Tax Relief', 'taxRelief', 'tax_relief']);
-      const taxableVal = getNumeric(r, ['Taxable Income', 'taxableIncome', 'Taxable Amount']);
-      const payeVal = getNumeric(r, ['PAYE', 'paye']);
-      const totalDedVal = getNumeric(r, ['Total Deduction', 'totalDeduction', 'total_deduction']);
-      const netPayVal = getNumeric(r, ['Net Pay', 'netPay', 'net_pay', 'Net Pay (GHS)']);
-      const empPension13Val = getNumeric(r, ['Employer Pension', 'employerPension', 'Employer 13% Amount']);
-      const empPF5Val = getNumeric(r, ['Employer PF', 'employerPf', 'Employer PF Amount']);
-      const loanVal = getNumeric(r, ['Monthly Loan', 'loanMonthly', 'monthly_loan']);
-
-      ytd.basicSalary += basicVal;
-      ytd.totalAllowances += allowancesVal;
-      ytd.grossSalary += grossVal;
-      ytd.employeePension += empPensionVal;
-      ytd.employeePF += empPFVal;
-      ytd.taxRelief += taxReliefVal;
-      ytd.taxableIncome += taxableVal;
-      ytd.paye += payeVal;
-      ytd.totalDeduction += totalDedVal;
-      ytd.netPay += netPayVal;
-      ytd.employerPension += empPension13Val;
-      ytd.employerPF += empPF5Val;
-      ytd.monthlyLoan += loanVal;
-
-      console.log(`Period ${r['Pay Period'] || r.payPeriod}: Net Pay = ${netPayVal}, Running YTD Net Pay = ${ytd.netPay}`);
+    // Accumulate values from each included run
+    includedRuns.forEach((r) => {
+      ytd.basicSalary += getNumeric(r, ['Basic Salary', 'basicSalary', 'basic_salary']);
+      ytd.totalAllowances += getNumeric(r, ['Total Allowances', 'totalAllowances', 'Allowances', 'allowances']);
+      ytd.grossSalary += getNumeric(r, ['Gross Salary', 'grossSalary', 'gross_salary']);
+      ytd.employeePension += getNumeric(r, ['Employee Pension', 'employeePension', 'Employee Pension (5.5%)']);
+      ytd.employeePF += getNumeric(r, ['Employee PF', 'employeePf', 'PF 10% Amount']);
+      ytd.taxRelief += getNumeric(r, ['Tax Relief', 'taxRelief', 'tax_relief']);
+      ytd.taxableIncome += getNumeric(r, ['Taxable Income', 'taxableIncome', 'Taxable Amount']);
+      ytd.paye += getNumeric(r, ['PAYE', 'paye']);
+      ytd.totalDeduction += getNumeric(r, ['Total Deduction', 'totalDeduction', 'total_deduction']);
+      ytd.netPay += getNumeric(r, ['Net Pay', 'netPay', 'net_pay', 'Net Pay (GHS)']);
+      ytd.employerPension += getNumeric(r, ['Employer Pension', 'employerPension', 'Employer 13% Amount']);
+      ytd.employerPF += getNumeric(r, ['Employer PF', 'employerPf', 'Employer PF Amount']);
+      ytd.monthlyLoan += getNumeric(r, ['Monthly Loan', 'loanMonthly', 'monthly_loan']);
     });
 
-    // Round all values to 2 decimal places
-    Object.keys(ytd).forEach(key => {
-      ytd[key] = roundToTwo(ytd[key]);
+    // Round to 2 decimals (roundToTwo is available in payslip.js scope)
+    Object.keys(ytd).forEach(k => {
+      if (typeof roundToTwo === 'function') ytd[k] = roundToTwo(ytd[k]);
+      else ytd[k] = Math.round((ytd[k] + Number.EPSILON) * 100) / 100;
     });
 
-    console.log('Final YTD for staff', staffNumber, ':', ytd);
     return ytd;
   } catch (err) {
     console.warn('Error calculating YTD:', err);
