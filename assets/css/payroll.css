@@ -959,3 +959,54 @@
 #accessCodeError.show {
   display: block !important;
 }
+/* Access Modal Input Group */
+.access-input-group {
+  display: flex !important;
+  gap: 10px !important;
+  align-items: center !important;
+  margin-top: 12px !important;
+}
+
+.access-input-group input {
+  flex: 1 !important;
+  padding: 8px 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  background: #ffffff !important;
+  height: 40px !important;
+}
+
+.access-input-group input:focus {
+  border-color: #4361ee !important;
+  outline: none !important;
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12) !important;
+}
+
+.access-input-group .btn-primary {
+  padding: 8px 20px !important;
+  background: #4361ee !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  height: 40px !important;
+  white-space: nowrap !important;
+}
+
+.access-input-group .btn-primary:hover {
+  background: #3651d4 !important;
+}
+
+#accessCodeError {
+  color: #e53e3e !important;
+  font-size: 13px !important;
+  margin-top: 10px !important;
+  display: none !important;
+}
+
+#accessCodeError.show {
+  display: block !important;
+}
