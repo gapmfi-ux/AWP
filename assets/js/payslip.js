@@ -68,6 +68,11 @@
         if (modal) modal.style.display = 'none';
       });
     }
+     // Set the logo from the COMPANY_LOGO constant
+  const logoImg = document.getElementById('payslipLogo');
+  if (logoImg && window.COMPANY_LOGO) {
+    logoImg.src = window.COMPANY_LOGO.base64;
+  }
 
     // Print button
     const printBtn = document.getElementById('modalPrintBtn');
