@@ -153,6 +153,33 @@
     <p>Loading...</p>
   </div>
 
+<!-- Access Code Modal -->
+<div id="accessCodeModal" class="access-modal" style="display:none;">
+  <div class="access-modal-content">
+    <div class="access-modal-header">
+      <h3><i class="fas fa-lock"></i> Payroll Access</h3>
+    </div>
+    <div class="access-modal-body">
+      <p>Please enter the access code to view payroll information.</p>
+      <div style="display:flex; gap:10px; align-items:center; margin-top:12px;">
+        <input 
+          type="password" 
+          id="accessCodeInput" 
+          placeholder="Enter access code..." 
+          style="flex:1; padding:8px 12px; border:1px solid #e2e8f0; border-radius:6px; font-size:14px;"
+          onkeydown="if(event.key==='Enter') verifyAccessCode()"
+        >
+        <button class="btn-primary" onclick="verifyAccessCode()" style="padding:8px 20px;">
+          <i class="fas fa-check"></i> Verify
+        </button>
+      </div>
+      <div id="accessCodeError" style="color:#e53e3e; font-size:13px; margin-top:8px; display:none;">
+        <i class="fas fa-exclamation-circle"></i> Invalid access code. Please try again.
+      </div>
+    </div>
+  </div>
+</div>
+  
   <!-- Global Toast Container -->
   <div id="global-toast" style="display: none;"></div>
 
