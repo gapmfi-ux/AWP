@@ -1,3 +1,8 @@
+/**
+ * API Core Service
+ * Handles all API requests to the Google Apps Script backend
+ */
+
 class ApiService {
   constructor() {
     // UPDATE THIS with your Google Apps Script Web App URL
@@ -5,7 +10,8 @@ class ApiService {
     this.cache = new Map();
     this.cacheTimeout = 5 * 60 * 1000; // 5 minutes cache
     this.pendingRequests = new Map(); // Deduplicate concurrent requests
-    this.debug = false; // Set to true for debugging
+    this.debug = true; // Set to true for debugging
+    this.requestTimeout = 60000; // 60 seconds timeout for PDF generation
   }
 
   log(...args) {
@@ -18,7 +24,9 @@ class ApiService {
     console.error('[API]', ...args);
   }
 
-  // Generic request method with caching and deduplication
+  /**
+   * Generic request method with caching and deduplication
+   */
   async request(action, data = {}, options = {}) {
     const cacheKey = `${action}_${JSON.stringify(data)}`;
     const useCache = options.useCache !== false;
@@ -34,7 +42,7 @@ class ApiService {
       }
     }
 
-    // Deduplicate concurrent requests for the same action
+    // Deduplicate concurrent requests
     if (this.pendingRequests.has(cacheKey)) {
       this.log(`Deduplicating request for ${action}`);
       return this.pendingRequests.get(cacheKey);
@@ -42,67 +50,86 @@ class ApiService {
 
     // Create the request promise
     const requestPromise = new Promise((resolve, reject) => {
+      // Store references to avoid closure issues
+      const _action = action;
+      const _data = data;
+      const _cacheKey = cacheKey;
+      const _self = this;
+      
       try {
         // Generate a unique callback name
         const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
         
-        // Build the URL with parameters
+        // Build URL with parameters
         const url = new URL(this.BASE_URL);
-        url.searchParams.append('action', action);
-        url.searchParams.append('data', JSON.stringify(data));
+        url.searchParams.append('action', _action);
+        url.searchParams.append('data', JSON.stringify(_data));
         url.searchParams.append('callback', callbackName);
         
         const fullUrl = url.toString();
-        this.log(`Requesting: ${action}`, data);
+        _self.log(`Requesting: ${_action}`, _data);
         
-        // Set timeout
+        // Set timeout (use longer timeout for PDF generation)
+        const timeoutDuration = _action === 'generatePayslipPDF' ? 90000 : 30000;
         const timeoutId = setTimeout(() => {
           if (window[callbackName]) {
             delete window[callbackName];
-            this.error(`Request timeout for ${action}`);
-            reject(new Error('Request timeout after 30 seconds'));
+            _self.error(`Request timeout for ${_action} (${timeoutDuration}ms)`);
+            reject(new Error(`Request timeout after ${timeoutDuration/1000} seconds`));
           }
-        }, 30000);
+        }, timeoutDuration);
         
-        // Create the callback function
-        window[callbackName] = (response) => {
+        // Create the callback function with better error handling
+        window[callbackName] = function(response) {
           clearTimeout(timeoutId);
           delete window[callbackName];
           
-          if (script.parentNode) {
-            script.parentNode.removeChild(script);
+          if (script && script.parentNode) {
+            try { script.parentNode.removeChild(script); } catch(e) {}
           }
           
-          this.log(`Response for ${action}:`, response);
+          _self.log(`Response for ${_action}:`, response);
           
+          // Check if response is a string (might be HTML error page)
+          if (typeof response === 'string') {
+            _self.error(`Response is string, not JSON: ${response.substring(0, 200)}`);
+            reject(new Error('Server returned HTML instead of JSON'));
+            return;
+          }
+          
+          // Check for success
           if (response && response.success !== false) {
-            // Cache the response
-            this.cache.set(cacheKey, {
+            _self.cache.set(_cacheKey, {
               data: response,
               timestamp: Date.now()
             });
             resolve(response);
           } else {
-            reject(new Error((response && response.error) || 'API request failed'));
+            var errorMsg = (response && response.error) || 'API request failed';
+            _self.error(`Request failed: ${errorMsg}`);
+            reject(new Error(errorMsg));
           }
         };
         
         // Create and add the script tag
         const script = document.createElement('script');
         script.src = fullUrl;
-        script.onerror = () => {
+        script.onerror = function() {
           clearTimeout(timeoutId);
           delete window[callbackName];
-          if (script.parentNode) script.parentNode.removeChild(script);
-          this.error(`Script error for ${action}`);
-          reject(new Error('Network error - failed to connect to server'));
+          if (script.parentNode) {
+            try { script.parentNode.removeChild(script); } catch(e) {}
+          }
+          _self.error(`Script error for ${_action}`);
+          reject(new Error(`Script error - server may be down or returned invalid response`));
         };
         
+        // Add to head
         document.head.appendChild(script);
-        this.log(`Script tag added for ${action}`);
+        _self.log(`Script tag added for ${_action}`);
         
       } catch (error) {
-        this.error(`Request error for ${action}:`, error);
+        _self.error(`Request error for ${_action}:`, error);
         reject(error);
       }
     });
@@ -118,7 +145,9 @@ class ApiService {
     }
   }
 
-  // Batch load multiple requests
+  /**
+   * Batch load multiple requests
+   */
   async batchRequest(requests) {
     const results = {};
     const promises = [];
@@ -135,7 +164,9 @@ class ApiService {
     return results;
   }
 
-  // Clear cache for specific action or all
+  /**
+   * Clear cache for specific action or all
+   */
   clearCache(action = null) {
     if (action) {
       const keysToDelete = [];
@@ -152,7 +183,9 @@ class ApiService {
     }
   }
 
-  // TEST CONNECTION (kept in core)
+  /**
+   * Test connection to server
+   */
   async testConnection(options = {}) {
     try {
       const response = await this.request('test', {}, options);
@@ -167,7 +200,20 @@ class ApiService {
       };
     }
   }
+
+  /**
+   * Debug method to check employee email
+   */
+  async debugEmployeeEmail(staffNumber, options = {}) {
+    if (!staffNumber) {
+      throw new Error('Staff number is required');
+    }
+    return this.request('debugEmployeeEmail', { staffNumber: staffNumber }, options);
+  }
 }
 
 // Create global API instance
 window.API = new ApiService();
+
+// Log that API is ready
+console.log('[API] API Service initialized with debug mode:', window.API.debug);
