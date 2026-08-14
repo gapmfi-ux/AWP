@@ -323,76 +323,134 @@ async function processPayrollPreviewForPeriod(period) {
    =========================== */
 
 async function processPayroll() {
-  if (!currentPeriod) {
-    showToast('No period selected — click Process to choose a month', 'warning');
-    return;
-  }
+  try {
+    // Quick sanity
+    console.log('[payroll] processPayroll invoked. currentPeriod=', currentPeriod, 'currentPayrollDataCount=', (currentPayrollData && currentPayrollData.length) || 0);
 
-  if (!currentPayrollData || currentPayrollData.length === 0) {
-    showToast('No preview available — generating preview now', 'info');
-    await processPayrollPreviewForPeriod(currentPeriod);
-    if (!currentPayrollData || currentPayrollData.length === 0) {
-      showToast('No payroll records to save', 'warning');
+    if (!currentPeriod) {
+      showToast('No period selected — click Process to choose a month', 'warning');
       return;
     }
-  }
 
-  showConfirmModal(
-    'Confirm Payroll Processing',
-    `Save payroll for <strong>${formatDisplayMonth(currentPeriod)}</strong>?`,
-    async function onConfirm() {
+    // If preview isn't available, generate it automatically
+    if (!currentPayrollData || currentPayrollData.length === 0) {
+      showToast('No preview available — generating preview now', 'info');
       try {
-        showLoadingModal && showLoadingModal('Saving payroll...');
-        let savedCount = 0;
-        for (const record of currentPayrollData) {
-          const payrollData = {
-            staffNumber: record['Staff Number'] || record.staffNumber || '',
-            fullName: record['Full Name'] || record.fullName || '',
-            designation: record['Designation'] || record.designation || '',
-            payPeriod: currentPeriod,
-            basicSalary: parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0,
-            allowances: record['Allowances'] || [],
-            totalAllowances: parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0,
-            grossSalary: parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0,
-            employeePension: parseFloat(record['Employee Pension (5.5%)'] || record.employeePension || 0) || 0,
-            employeePf: parseFloat(record['Employee PF'] || record.employeePf || 0) || 0,
-            taxRelief: parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0,
-            taxableIncome: parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0,
-            paye: parseFloat(record['PAYE'] || record.paye || 0) || 0,
-            totalDeduction: parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0,
-            netPay: parseFloat(record['Net Pay'] || record.netPay || 0) || 0,
-            employerPension: parseFloat(record['Employer Pension (13%)'] || record.employerPension || 0) || 0,
-            employerPf: parseFloat(record['Employer PF'] || record.employerPf || 0) || 0,
-            loanMonthly: parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0
-          };
-
-          const response = await API.savePayrollRun(payrollData);
-          if (response && response.success !== false) {
-            savedCount++;
-            if (!currentRunId && response.runId) currentRunId = response.runId;
-          }
-        }
-
-        if (savedCount > 0) {
-          showToast(`Payroll saved for ${formatDisplayMonth(currentPeriod)} (${savedCount} records)`, 'success');
-          await loadSavedRunForPeriod(currentPeriod); // reload saved data & show Print/Delete if present
-        } else {
-          showToast('Failed to save payroll records', 'error');
-        }
+        await processPayrollPreviewForPeriod(currentPeriod);
       } catch (err) {
-        console.error('processPayroll save error', err);
-        showToast('Failed to save payroll: ' + (err.message || err), 'error');
-      } finally {
-        hideLoadingModal && hideLoadingModal();
-        closeConfirmModal();
+        console.error('[payroll] preview generation failed:', err);
       }
-    },
-    function onCancel(){
-      closeConfirmModal();
+      if (!currentPayrollData || currentPayrollData.length === 0) {
+        showToast('No payroll records to save', 'warning');
+        return;
+      }
     }
-  );
-}
 
+    // Prevent multiple confirm modals / multiple simultaneous runs
+    if (window._payrollConfirmShown) {
+      console.log('[payroll] Confirm modal already shown, ignoring duplicate call.');
+      return;
+    }
+    window._payrollConfirmShown = true;
+
+    showConfirmModal(
+      'Confirm Payroll Processing',
+      `Save payroll for <strong>${formatDisplayMonth(currentPeriod)}</strong>?`,
+      async function onConfirm() {
+        // user confirmed
+        window._payrollConfirmShown = false;
+
+        if (window._processingPayroll) {
+          console.log('[payroll] Payroll processing already in progress, aborting duplicate run.');
+          showToast('Payroll is already running', 'warning');
+          return;
+        }
+        window._processingPayroll = true;
+
+        showLoadingModal && showLoadingModal('Saving payroll...');
+        try {
+          let savedCount = 0;
+          console.log('[payroll] Starting to save payroll records. totalRecords=', currentPayrollData.length);
+
+          for (let i = 0; i < currentPayrollData.length; i++) {
+            const record = currentPayrollData[i];
+
+            const payrollData = {
+              staffNumber: record['Staff Number'] || record.staffNumber || '',
+              fullName: record['Full Name'] || record.fullName || '',
+              designation: record['Designation'] || record.designation || '',
+              payPeriod: currentPeriod,
+              basicSalary: parseFloat(record['Basic Salary'] || record.basicSalary || 0) || 0,
+              allowances: record['Allowances'] || [],
+              totalAllowances: parseFloat(record['Total Allowances'] || record.totalAllowances || 0) || 0,
+              grossSalary: parseFloat(record['Gross Salary'] || record.grossSalary || 0) || 0,
+              employeePension: parseFloat(record['Employee Pension (5.5%)'] || record.employeePension || 0) || 0,
+              employeePf: parseFloat(record['Employee PF'] || record.employeePf || 0) || 0,
+              taxRelief: parseFloat(record['Tax Relief'] || record.taxRelief || 0) || 0,
+              taxableIncome: parseFloat(record['Taxable Income'] || record.taxableIncome || 0) || 0,
+              paye: parseFloat(record['PAYE'] || record.paye || 0) || 0,
+              totalDeduction: parseFloat(record['Total Deduction'] || record.totalDeduction || 0) || 0,
+              netPay: parseFloat(record['Net Pay'] || record.netPay || 0) || 0,
+              employerPension: parseFloat(record['Employer Pension (13%)'] || record.employerPension || 0) || 0,
+              employerPf: parseFloat(record['Employer PF'] || record.employerPf || 0) || 0,
+              loanMonthly: parseFloat(record['Monthly Loan'] || record.loanMonthly || 0) || 0
+            };
+
+            // Provide progress feedback in console and toast for long runs
+            if (i % 25 === 0) {
+              console.log(`[payroll] saving record ${i + 1}/${currentPayrollData.length} - ${payrollData.staffNumber}`);
+              try { showToast(`Saving payroll: ${i + 1}/${currentPayrollData.length}`, 'info'); } catch (e) {}
+            }
+
+            try {
+              const response = await API.savePayrollRun(payrollData);
+              if (response && response.success !== false) {
+                savedCount++;
+                if (!currentRunId && response.runId) currentRunId = response.runId;
+              } else {
+                console.warn('[payroll] savePayrollRun returned failure for', payrollData.staffNumber, response);
+              }
+            } catch (err) {
+              console.error('[payroll] savePayrollRun threw for', payrollData.staffNumber, err);
+            }
+          }
+
+          if (savedCount > 0) {
+            showToast(`Payroll saved for ${formatDisplayMonth(currentPeriod)} (${savedCount} records)`, 'success');
+            console.log('[payroll] savedCount=', savedCount, 'reloading saved run for period:', currentPeriod);
+            try {
+              await loadSavedRunForPeriod(currentPeriod); // reload saved data & update UI
+            } catch (e) {
+              console.warn('[payroll] reload after save failed:', e);
+            }
+          } else {
+            showToast('Failed to save payroll records', 'error');
+            console.warn('[payroll] savedCount is 0 after attempting to save all records');
+          }
+        } catch (err) {
+          console.error('[payroll] unexpected error while saving payroll:', err);
+          showToast('Failed to save payroll: ' + (err.message || err), 'error');
+        } finally {
+          window._processingPayroll = false;
+          hideLoadingModal && hideLoadingModal();
+          closeConfirmModal();
+        }
+      },
+      function onCancel() {
+        // user cancelled
+        window._payrollConfirmShown = false;
+        closeConfirmModal();
+        showToast('Payroll save cancelled', 'info');
+      }
+    );
+  } catch (err) {
+    console.error('[payroll] processPayroll top-level error:', err);
+    window._payrollConfirmShown = false;
+    window._processingPayroll = false;
+    hideLoadingModal && hideLoadingModal();
+    try { showToast('Error: ' + (err.message || err), 'error'); } catch (e) {}
+  }
+}
 /* ===========================
    Delete Payroll Period
    =========================== */
