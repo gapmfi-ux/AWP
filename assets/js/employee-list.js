@@ -355,11 +355,50 @@ async function getEmployeesFromServer() {
   }
 }
 
-async function renderEmployeeTable() {
-  const employees = await getEmployeesFromServer();
+// In employee-list.js - Add this function
+async function terminateEmployee(staffNumber) {
+  if (!staffNumber) return;
+  
+  // Confirm before terminating
+  const confirmTerminate = confirm(`Are you sure you want to terminate employee ${staffNumber}? This will set their status to Inactive.`);
+  if (!confirmTerminate) return;
+  
+  try {
+    showLoadingModal('Terminating employee...');
+    
+    // Get current employee data
+    const employee = await API.getEmployeeByStaffNumber(staffNumber);
+    if (!employee) {
+      showToast('Employee not found', 'error');
+      return;
+    }
+    
+    // Update status to Inactive
+    employee.status = 'Inactive';
+    
+    // Save the updated employee
+    const response = await API.updateEmployee(employee);
+    
+    if (response && response.success !== false) {
+      showToast(`Employee ${staffNumber} terminated successfully`, 'success');
+      // Refresh the employee list
+      await loadEmployeeList();
+    } else {
+      showToast('Failed to terminate employee: ' + (response?.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('Error terminating employee:', error);
+    showToast('Error terminating employee', 'error');
+  } finally {
+    hideLoadingModal();
+  }
+}
+
+// Update the renderEmployeeTable function to add the Terminate button
+function renderEmployeeTable(employees) {
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) return;
-
+  
   if (!employees || employees.length === 0) {
     tbody.innerHTML = `
       <tr>
@@ -372,22 +411,60 @@ async function renderEmployeeTable() {
     `;
     return;
   }
+  
+  const rows = employees.map(emp => {
+    const staffNumber = emp['Staff Number'] || emp.staffNumber || '';
+    const fullName = emp['Full Name'] || emp.name || '';
+    const department = emp['Department'] || emp.department || '';
+    const designation = emp['Designation'] || emp.designation || '';
+    const email = emp['Email'] || emp.email || '';
+    const ssnit = emp['SSNIT'] || emp.ssnit || '';
+    const status = emp['Status'] || emp.status || 'Active';
+    const isActive = status.toLowerCase() === 'active';
+    
+    return `
+      <tr class="${!isActive ? 'inactive-row' : ''}">
+        <td>${escapeHtml(staffNumber)}</td>
+        <td>${escapeHtml(fullName)}</td>
+        <td>${escapeHtml(department)}</td>
+        <td>${escapeHtml(designation)}</td>
+        <td>${escapeHtml(email)}</td>
+        <td>${escapeHtml(ssnit)}</td>
+        <td style="text-align:center; white-space:nowrap;">
+          <button class="action-btn" onclick="editEmployee('${escapeJs(staffNumber)}')" title="Edit Employee">
+            <i class="fas fa-edit"></i>
+          </button>
+          ${isActive ? `
+            <button class="action-btn terminate-btn" onclick="terminateEmployee('${escapeJs(staffNumber)}')" title="Terminate Employee (Set Inactive)">
+              <i class="fas fa-times-circle" style="color:#e53e3e;"></i>
+            </button>
+          ` : `
+            <span style="font-size:10px; color:#718096; background:#edf2f7; padding:2px 6px; border-radius:4px;">Inactive</span>
+          `}
+        </td>
+      </tr>
+    `;
+  }).join('');
+  
+  tbody.innerHTML = rows;
+}
 
-  tbody.innerHTML = employees.map(e => `
-    <tr>
-      <td class="col-staff">${escapeHtml(e.staff || '')}</td>
-      <td class="col-name">${escapeHtml(e.name || '')}</td>
-      <td>${escapeHtml(e.department || '')}</td>
-      <td>${escapeHtml(e.designation || '')}</td>
-      <td>${escapeHtml(e.email || '')}</td>
-      <td>${escapeHtml(e.ssnit || '')}</td>
-      <td class="col-center">
-        <button class="btn-edit-icon" onclick="editEmployee('${escapeHtml(e.staff)}')" title="Edit employee">
-          <i class="fas fa-pencil-alt"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
+// Helper functions for escaping
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[m];
+  });
+}
+
+function escapeJs(str) {
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
 /* ============== Modal show / hide / populate ============== */
