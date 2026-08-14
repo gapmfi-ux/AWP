@@ -1,6 +1,5 @@
 /**
- * API - Payslip Module
- * Follows same pattern as api-payroll.js
+ * API - Payslip Module (Fixed)
  */
 
 if (!window.API) {
@@ -13,132 +12,89 @@ if (!window.API) {
 
 /**
  * Send a payslip to a single employee
- * @param {string} staffNumber - Employee staff number
- * @param {string} period - Pay period (YYYY-MM)
- * @param {Object} options - Optional parameters
- * @returns {Promise}
  */
 API.sendPayslip = async function(staffNumber, period, options = {}) {
   if (!staffNumber || !period) {
     throw new Error('Staff number and period are required');
   }
-  return this.request('sendPayslip', { staffNumber, period }, options);
+  return this.request('sendPayslip', { 
+    staffNumber: staffNumber, 
+    period: period 
+  }, options);
 };
 
 /**
  * Send payslips to all employees for a period
- * @param {string} period - Pay period (YYYY-MM)
- * @param {Object} options - Optional parameters
- * @returns {Promise}
  */
 API.sendAllPayslips = async function(period, options = {}) {
   if (!period) {
     throw new Error('Period is required');
   }
-  return this.request('sendAllPayslips', { period }, options);
+  return this.request('sendAllPayslips', { period: period }, options);
 };
 
 /**
  * Get payslip data for a single employee
- * @param {string} staffNumber - Employee staff number
- * @param {string} period - Pay period (YYYY-MM)
- * @param {Object} options - Optional parameters
- * @returns {Promise}
  */
 API.getPayslipData = async function(staffNumber, period, options = {}) {
   if (!staffNumber || !period) {
     throw new Error('Staff number and period are required');
   }
-  return this.request('getPayslipData', { staffNumber, period }, options);
+  return this.request('getPayslipData', { 
+    staffNumber: staffNumber, 
+    period: period 
+  }, options);
 };
 
-
+/**
+ * Generate payslip HTML
+ */
 API.generatePayslipHTML = async function(staffNumber, period, options = {}) {
   if (!staffNumber || !period) {
     throw new Error('Staff number and period are required');
   }
-  return this.request('generatePayslipHTML', { staffNumber, period }, options);
-};
-
-// =============================================================
-// HELPER FUNCTIONS
-// =============================================================
-
-
-API.formatCurrency = function(amount) {
-  const num = parseFloat(amount) || 0;
-  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return this.request('generatePayslipHTML', { 
+    staffNumber: staffNumber, 
+    period: period 
+  }, options);
 };
 
 /**
- * API - Payslip Module - With PDF Attachment
+ * Generate payslip PDF
  */
+API.generatePayslipPDF = async function(params, options = {}) {
+  var { staffNumber, period, htmlContent } = params || {};
+  return this.request('generatePayslipPDF', {
+    staffNumber: staffNumber,
+    period: period,
+    htmlContent: htmlContent
+  }, options);
+};
 
-if (!window.API) {
-  throw new Error('API core (api-core.js) must be loaded before api-payslip.js');
-}
-
-// =============================================================
-// PAYSLIP API FUNCTIONS
-// =============================================================
-
-
+/**
+ * Send payslip with PDF attachment
+ */
 API.sendPayslipWithAttachment = async function(params, options = {}) {
-  const { staffNumber, period, subject, narration, pdfBase64, pdfName } = params;
+  var { staffNumber, period, subject, narration, pdfBase64, pdfName } = params || {};
   
   if (!staffNumber || !period) {
     throw new Error('Staff number and period are required');
   }
 
   return this.request('sendPayslipWithAttachment', {
-    staffNumber,
-    period,
-    subject,
-    narration,
-    pdfBase64,
-    pdfName
+    staffNumber: staffNumber,
+    period: period,
+    subject: subject,
+    narration: narration,
+    pdfBase64: pdfBase64,
+    pdfName: pdfName
   }, options);
 };
 
-
-API.generatePayslipPDF = async function(params, options = {}) {
-  const { staffNumber, period, htmlContent } = params;
-  
-  return this.request('generatePayslipPDF', {
-    staffNumber,
-    period,
-    htmlContent
-  }, options);
-};
-
-
-API.sendPayslip = async function(staffNumber, period, options = {}) {
-  if (!staffNumber || !period) {
-    throw new Error('Staff number and period are required');
-  }
-  return this.request('sendPayslip', { staffNumber, period }, options);
-};
-
-
-API.sendAllPayslips = async function(period, options = {}) {
-  if (!period) {
-    throw new Error('Period is required');
-  }
-  return this.request('sendAllPayslips', { period }, options);
-};
-
-
-API.getPayslipData = async function(staffNumber, period, options = {}) {
-  if (!staffNumber || !period) {
-    throw new Error('Staff number and period are required');
-  }
-  return this.request('getPayslipData', { staffNumber, period }, options);
-};
-
-
-API.generatePayslipHTML = async function(staffNumber, period, options = {}) {
-  if (!staffNumber || !period) {
-    throw new Error('Staff number and period are required');
-  }
-  return this.request('generatePayslipHTML', { staffNumber, period }, options);
+/**
+ * Format currency helper
+ */
+API.formatCurrency = function(amount) {
+  var num = parseFloat(amount) || 0;
+  return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
