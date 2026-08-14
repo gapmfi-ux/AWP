@@ -1,400 +1,39 @@
-/* Employee list client logic - merged Add Employee + Add Employee Pay (server-backed) */
+/**
+ * EMPLOYEE LIST MODULE - Updated with Terminate functionality
+ */
 
-// Cache for dropdown options
-let departmentOptions = [];
-let designationOptions = [];
-let allowanceTypeOptions = [];
-
-/* ============== Initialization & server employee loading ============== */
+let currentEmployees = [];
 
 function initEmployeeList() {
-  renderEmployeeTable();
-  loadDropdownOptions();
+  console.log('Employee List module loaded');
+  loadEmployeeList();
+  populateDepartmentDropdown();
+  populateDesignationDropdown();
 }
 
-async function loadDropdownOptions() {
-  try {
-    // Load departments from server
-    const depts = await API.getAllDepartments().catch(() => []);
-    departmentOptions = Array.isArray(depts) ? depts : [];
+// ============================================
+// LOAD EMPLOYEE LIST
+// ============================================
 
-    // Load designations from server
-    const desigs = await API.getAllDesignations().catch(() => []);
-    designationOptions = Array.isArray(desigs) ? desigs : [];
-
-    // Load allowance types from server
-    const types = await API.getAllAllowanceTypes().catch(() => []);
-    allowanceTypeOptions = Array.isArray(types) ? types : [];
-
-    populateDepartmentSelect();
-    populateDesignationSelect();
-  } catch (err) {
-    console.warn('Error loading dropdown options:', err);
-  }
-}
-
-function populateDepartmentSelect() {
-  const select = document.getElementById('empDepartment');
-  if (!select) return;
-  const currentValue = select.value;
-  select.innerHTML = '<option value="">Select...</option>';
-  departmentOptions.forEach(dept => {
-    const opt = document.createElement('option');
-    opt.value = dept;
-    opt.textContent = dept;
-    select.appendChild(opt);
-  });
-  if (currentValue && departmentOptions.includes(currentValue)) {
-    select.value = currentValue;
-  }
-}
-
-function populateDesignationSelect() {
-  const select = document.getElementById('empDesignation');
-  if (!select) return;
-  const currentValue = select.value;
-  select.innerHTML = '<option value="">Select...</option>';
-  designationOptions.forEach(desig => {
-    const opt = document.createElement('option');
-    opt.value = desig;
-    opt.textContent = desig;
-    select.appendChild(opt);
-  });
-  if (currentValue && designationOptions.includes(currentValue)) {
-    select.value = currentValue;
-  }
-}
-
-function populateAllowanceTypeSelect(selectElement) {
-  if (!selectElement) return;
-  const currentValue = selectElement.value;
-  selectElement.innerHTML = '<option value="">Select type...</option>';
-  allowanceTypeOptions.forEach(type => {
-    const opt = document.createElement('option');
-    opt.value = type;
-    opt.textContent = type;
-    selectElement.appendChild(opt);
-  });
-  // Add an option for "Add New"
-  const addNewOpt = document.createElement('option');
-  addNewOpt.value = '__ADD_NEW__';
-  addNewOpt.textContent = '➕ Add New...';
-  addNewOpt.style.fontWeight = 'bold';
-  addNewOpt.style.color = '#4361ee';
-  selectElement.appendChild(addNewOpt);
-  if (currentValue && allowanceTypeOptions.includes(currentValue)) {
-    selectElement.value = currentValue;
-  }
-}
-
-// Handlers for select changes
-function onDepartmentSelect(select) {
-  // If user selected a value, we're good
-}
-
-function onDesignationSelect(select) {
-  // If user selected a value, we're good
-}
-
-/* ============== Add New Department - Inline Toggle ============== */
-
-function toggleNewDepartmentField() {
-  const field = document.getElementById('newDepartmentField');
-  if (!field) return;
-  const isVisible = field.style.display !== 'none';
-  field.style.display = isVisible ? 'none' : 'block';
-  if (!isVisible) {
-    document.getElementById('newDepartmentInput')?.focus();
-  }
-}
-
-function cancelNewDepartment() {
-  const f = document.getElementById('newDepartmentField');
-  if (f) f.style.display = 'none';
-  const i = document.getElementById('newDepartmentInput');
-  if (i) i.value = '';
-}
-
-async function saveNewDepartment() {
-  const input = document.getElementById('newDepartmentInput');
-  const name = input.value.trim();
-  if (!name) {
-    showToast('Please enter a department name', 'warning');
-    return;
-  }
-  try {
-    // Check if already exists
-    if (departmentOptions.includes(name)) {
-      showToast('Department already exists', 'warning');
-      cancelNewDepartment();
-      return;
-    }
-
-    // Add to local options
-    departmentOptions.push(name);
-    departmentOptions.sort();
-    populateDepartmentSelect();
-    document.getElementById('empDepartment').value = name;
-    showToast('Department added successfully', 'success');
-    cancelNewDepartment();
-  } catch (err) {
-    showToast('Error adding department: ' + err.message, 'error');
-  }
-}
-
-/* ============== Add New Designation - Inline Toggle ============== */
-
-function toggleNewDesignationField() {
-  const field = document.getElementById('newDesignationField');
-  if (!field) return;
-  const isVisible = field.style.display !== 'none';
-  field.style.display = isVisible ? 'none' : 'block';
-  if (!isVisible) {
-    document.getElementById('newDesignationInput')?.focus();
-  }
-}
-
-function cancelNewDesignation() {
-  const f = document.getElementById('newDesignationField');
-  if (f) f.style.display = 'none';
-  const i = document.getElementById('newDesignationInput');
-  if (i) i.value = '';
-}
-
-async function saveNewDesignation() {
-  const input = document.getElementById('newDesignationInput');
-  const name = input.value.trim();
-  if (!name) {
-    showToast('Please enter a designation name', 'warning');
-    return;
-  }
-  try {
-    // Check if already exists
-    if (designationOptions.includes(name)) {
-      showToast('Designation already exists', 'warning');
-      cancelNewDesignation();
-      return;
-    }
-
-    // Add to local options
-    designationOptions.push(name);
-    designationOptions.sort();
-    populateDesignationSelect();
-    document.getElementById('empDesignation').value = name;
-    showToast('Designation added successfully', 'success');
-    cancelNewDesignation();
-  } catch (err) {
-    showToast('Error adding designation: ' + err.message, 'error');
-  }
-}
-
-/* ============== Add New Allowance Type - Inline ============== */
-
-function toggleNewAllowanceField(selectElement) {
-  const row = selectElement.closest('.allowance-row');
-  if (!row) return;
-
-  let newField = row.querySelector('.new-allowance-field');
-  if (!newField) {
-    newField = document.createElement('div');
-    newField.className = 'new-allowance-field';
-    newField.style.cssText = 'display:flex; gap:4px; align-items:center; margin-top:4px;';
-    newField.innerHTML = `
-      <input type="text" class="new-allowance-input" placeholder="Enter new allowance type" style="flex:1; padding:4px 8px; border:1px solid #4361ee; border-radius:6px; font-size:12px; height:28px; background:#f0f4ff;">
-      <button type="button" class="btn-primary" onclick="saveNewAllowance(this)" style="padding:2px 10px; font-size:11px; height:28px;">Add</button>
-      <button type="button" class="btn-secondary" onclick="cancelNewAllowance(this)" style="padding:2px 8px; font-size:11px; height:28px;">Cancel</button>
-    `;
-    row.appendChild(newField);
-  }
-  newField.style.display = 'flex';
-  const input = newField.querySelector('.new-allowance-input');
-  if (input) input.focus();
-}
-
-function cancelNewAllowance(btn) {
-  const row = btn.closest('.allowance-row');
-  if (!row) return;
-  const field = row.querySelector('.new-allowance-field');
-  if (field) field.remove();
-}
-
-async function saveNewAllowance(btn) {
-  const row = btn.closest('.allowance-row');
-  if (!row) return;
-
-  const input = row.querySelector('.new-allowance-input');
-  const name = (input.value || '').trim();
-  if (!name) {
-    showToast('Please enter an allowance type name', 'warning');
-    return;
-  }
-
-  try {
-    if (allowanceTypeOptions.includes(name)) {
-      showToast('Allowance type already exists', 'warning');
-      const field = row.querySelector('.new-allowance-field');
-      if (field) field.remove();
-      return;
-    }
-
-    allowanceTypeOptions.push(name);
-    allowanceTypeOptions.sort();
-
-    // Update the select in this row
-    const select = row.querySelector('.emp-allowance-type');
-    if (select) {
-      populateAllowanceTypeSelect(select);
-      select.value = name;
-    }
-
-    showToast('Allowance type added successfully', 'success');
-    const field = row.querySelector('.new-allowance-field');
-    if (field) field.remove();
-    recalcPayrollPreviewFromEmployeeModal();
-  } catch (err) {
-    showToast('Error adding allowance type: ' + err.message, 'error');
-  }
-}
-
-/* ============== Add Allowance Row ============== */
-
-function addEmployeeAllowanceRow(type = '', amount = '') {
-  const container = document.getElementById('empAllowanceList');
-  if (!container) return;
-
-  if (allowanceTypeOptions.length === 0) {
-    loadDropdownOptions();
-  }
-
-  const row = document.createElement('div');
-  row.className = 'allowance-row';
-  row.style.cssText = 'display:flex; gap:8px; align-items:center; flex-wrap:wrap;';
-
-  const select = document.createElement('select');
-  select.className = 'emp-allowance-type';
-  select.style.cssText = 'flex:1; min-width:120px; padding:4px 8px; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px; background:#fff;';
-  select.onchange = function() {
-    if (this.value === '__ADD_NEW__') {
-      // Show inline new allowance field
-      toggleNewAllowanceField(this);
-      // Reset the select to previous value or empty
-      setTimeout(() => {
-        if (this.value === '__ADD_NEW__') {
-          this.value = '';
-        }
-      }, 50);
-    }
-    recalcPayrollPreviewFromEmployeeModal();
-  };
-
-  populateAllowanceTypeSelect(select);
-  if (type && allowanceTypeOptions.includes(type)) {
-    select.value = type;
-  } else if (type) {
-    allowanceTypeOptions.push(type);
-    allowanceTypeOptions.sort();
-    populateAllowanceTypeSelect(select);
-    select.value = type;
-  }
-
-  const amt = document.createElement('input');
-  amt.type = 'number';
-  amt.className = 'emp-allowance-amount';
-  amt.placeholder = '0.00';
-  amt.step = '0.01';
-  amt.min = '0';
-  amt.value = amount;
-  amt.style.cssText = 'width:100px; padding:4px 8px; text-align:right; font-size:12px; border:1px solid #e2e8f0; border-radius:6px; height:28px;';
-  amt.oninput = recalcPayrollPreviewFromEmployeeModal;
-
-  const removeBtn = document.createElement('button');
-  removeBtn.type = 'button';
-  removeBtn.className = 'btn-outline';
-  removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-  removeBtn.onclick = function() {
-    row.remove();
-    recalcPayrollPreviewFromEmployeeModal();
-  };
-  removeBtn.style.cssText = 'padding:4px 8px; font-size:12px; height:28px;';
-
-  row.appendChild(select);
-  row.appendChild(amt);
-  row.appendChild(removeBtn);
-
-  container.appendChild(row);
-  recalcPayrollPreviewFromEmployeeModal();
-}
-
-/* ============== Get employees from server (normalized) ============== */
-
-async function getEmployeesFromServer() {
+async function loadEmployeeList() {
   try {
     showLoadingModal('Loading employees...');
-    const resp = await API.getEmployees({ useCache: false });
-    const serverRecords = Array.isArray(resp) ? resp : (resp && resp.records) ? resp.records : (resp || []);
-    const employees = serverRecords.map(rec => ({
-      staff: rec['Staff Number'] || rec.staff || '',
-      name: rec['Full Name'] || rec.name || '',
-      department: rec['Department'] || '',
-      designation: rec['Designation'] || '',
-      email: rec['Email'] || '',
-      ssnit: rec['SSNIT'] || '',
-      ghanaCard: rec['Ghana Card'] || '',
-      basicSalary: parseFloat(rec['Basic Salary'] || rec.basicSalary || 0) || 0,
-      employeePFrate: parseFloat(rec['Employee PF Rate (%)'] || rec.employeePFrate || 0) || 0,
-      employerPFrate: parseFloat(rec['Employer PF Rate (%)'] || rec.employerPFrate || 0) || 0,
-      taxRelief: parseFloat(rec['Tax Relief Amount'] || rec.taxRelief || 0) || 0
-    }));
-    return employees;
-  } catch (err) {
-    console.error('Error loading employees', err);
-    showToast('Failed to load employees', 'error');
-    return [];
-  } finally {
-    hideLoadingModal();
-  }
-}
-
-// In employee-list.js - Add this function
-async function terminateEmployee(staffNumber) {
-  if (!staffNumber) return;
-  
-  // Confirm before terminating
-  const confirmTerminate = confirm(`Are you sure you want to terminate employee ${staffNumber}? This will set their status to Inactive.`);
-  if (!confirmTerminate) return;
-  
-  try {
-    showLoadingModal('Terminating employee...');
-    
-    // Get current employee data
-    const employee = await API.getEmployeeByStaffNumber(staffNumber);
-    if (!employee) {
-      showToast('Employee not found', 'error');
-      return;
-    }
-    
-    // Update status to Inactive
-    employee.status = 'Inactive';
-    
-    // Save the updated employee
-    const response = await API.updateEmployee(employee);
-    
-    if (response && response.success !== false) {
-      showToast(`Employee ${staffNumber} terminated successfully`, 'success');
-      // Refresh the employee list
-      await loadEmployeeList();
-    } else {
-      showToast('Failed to terminate employee: ' + (response?.error || 'Unknown error'), 'error');
-    }
+    const employees = await API.getEmployees();
+    currentEmployees = Array.isArray(employees) ? employees : [];
+    renderEmployeeTable(currentEmployees);
+    updateEmployeeCount(currentEmployees.length);
   } catch (error) {
-    console.error('Error terminating employee:', error);
-    showToast('Error terminating employee', 'error');
+    console.error('Error loading employees:', error);
+    showToast('Failed to load employees', 'error');
   } finally {
     hideLoadingModal();
   }
 }
 
-// Update the renderEmployeeTable function to add the Terminate button
+// ============================================
+// RENDER EMPLOYEE TABLE
+// ============================================
+
 function renderEmployeeTable(employees) {
   const tbody = document.getElementById('employeeTableBody');
   if (!tbody) return;
@@ -439,7 +78,7 @@ function renderEmployeeTable(employees) {
               <i class="fas fa-times-circle" style="color:#e53e3e;"></i>
             </button>
           ` : `
-            <span style="font-size:10px; color:#718096; background:#edf2f7; padding:2px 6px; border-radius:4px;">Inactive</span>
+            <span style="font-size:10px; color:#718096; background:#edf2f7; padding:2px 8px; border-radius:4px;">Inactive</span>
           `}
         </td>
       </tr>
@@ -449,7 +88,565 @@ function renderEmployeeTable(employees) {
   tbody.innerHTML = rows;
 }
 
-// Helper functions for escaping
+// ============================================
+// TERMINATE EMPLOYEE
+// ============================================
+
+async function terminateEmployee(staffNumber) {
+  if (!staffNumber) return;
+  
+  // Confirm before terminating
+  const confirmTerminate = confirm(`Are you sure you want to terminate employee ${staffNumber}? This will set their status to Inactive.`);
+  if (!confirmTerminate) return;
+  
+  try {
+    showLoadingModal('Terminating employee...');
+    
+    // Get current employee data
+    const employee = await API.getEmployeeByStaffNumber(staffNumber);
+    if (!employee) {
+      showToast('Employee not found', 'error');
+      return;
+    }
+    
+    // Update status to Inactive
+    employee.Status = 'Inactive';
+    employee.status = 'Inactive';
+    
+    // Save the updated employee
+    const response = await API.updateEmployee(employee);
+    
+    if (response && response.success !== false) {
+      showToast(`Employee ${staffNumber} terminated successfully`, 'success');
+      // Refresh the employee list
+      await loadEmployeeList();
+    } else {
+      showToast('Failed to terminate employee: ' + (response?.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('Error terminating employee:', error);
+    showToast('Error terminating employee', 'error');
+  } finally {
+    hideLoadingModal();
+  }
+}
+
+// ============================================
+// FILTER EMPLOYEE LIST
+// ============================================
+
+function filterEmployeeList() {
+  const searchInput = document.getElementById('employeeSearch');
+  const searchTerm = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  if (!searchTerm) {
+    renderEmployeeTable(currentEmployees);
+    return;
+  }
+  
+  const filtered = currentEmployees.filter(emp => {
+    const staffNumber = (emp['Staff Number'] || emp.staffNumber || '').toLowerCase();
+    const fullName = (emp['Full Name'] || emp.name || '').toLowerCase();
+    const department = (emp['Department'] || emp.department || '').toLowerCase();
+    const designation = (emp['Designation'] || emp.designation || '').toLowerCase();
+    
+    return staffNumber.includes(searchTerm) || 
+           fullName.includes(searchTerm) || 
+           department.includes(searchTerm) || 
+           designation.includes(searchTerm);
+  });
+  
+  renderEmployeeTable(filtered);
+  updateEmployeeCount(filtered.length);
+}
+
+// ============================================
+// UPDATE EMPLOYEE COUNT
+// ============================================
+
+function updateEmployeeCount(count) {
+  // You can add a count display if needed
+}
+
+// ============================================
+// POPULATE DROPDOWNS
+// ============================================
+
+async function populateDepartmentDropdown() {
+  try {
+    const departments = await API.getAllDepartments();
+    const select = document.getElementById('empDepartment');
+    if (!select) return;
+    
+    // Clear existing options except the first one
+    while (select.options.length > 1) {
+      select.remove(1);
+    }
+    
+    if (departments && Array.isArray(departments)) {
+      departments.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept;
+        option.textContent = dept;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading departments:', error);
+  }
+}
+
+async function populateDesignationDropdown() {
+  try {
+    const designations = await API.getAllDesignations();
+    const select = document.getElementById('empDesignation');
+    if (!select) return;
+    
+    while (select.options.length > 1) {
+      select.remove(1);
+    }
+    
+    if (designations && Array.isArray(designations)) {
+      designations.forEach(desg => {
+        const option = document.createElement('option');
+        option.value = desg;
+        option.textContent = desg;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading designations:', error);
+  }
+}
+
+// ============================================
+// SHOW ADD EMPLOYEE MODAL
+// ============================================
+
+function showAddEmployeeModal() {
+  const modal = document.getElementById('employeeModal');
+  if (!modal) return;
+  
+  // Reset form
+  document.getElementById('empStaffNumber').value = '';
+  document.getElementById('empName').value = '';
+  document.getElementById('empDepartment').value = '';
+  document.getElementById('empDesignation').value = '';
+  document.getElementById('empEmail').value = '';
+  document.getElementById('empSSNIT').value = '';
+  document.getElementById('empGhanaCard').value = '';
+  document.getElementById('empBasicSalary').value = '';
+  document.getElementById('empEmployeePFRate').value = '5.5';
+  document.getElementById('empEmployerPFRate').value = '5';
+  document.getElementById('empTaxRelief').value = '';
+  document.getElementById('empLoanMonthly').value = '';
+  
+  // Reset checkboxes
+  document.getElementById('empHasPF').checked = false;
+  document.getElementById('empHasTaxRelief').checked = false;
+  document.getElementById('empHasAllowances').checked = false;
+  document.getElementById('empHasLoan').checked = false;
+  
+  // Hide conditional fields
+  document.getElementById('empPFFieldsWrapper').style.display = 'none';
+  document.getElementById('empTaxReliefFieldWrapper').style.display = 'none';
+  document.getElementById('empAllowanceArea').style.display = 'none';
+  document.getElementById('empLoanFieldWrapper').style.display = 'none';
+  
+  // Clear allowance list
+  document.getElementById('empAllowanceList').innerHTML = '';
+  
+  // Set title
+  document.getElementById('employeeModalTitle').textContent = 'Add Employee';
+  
+  // Show modal
+  modal.style.display = 'flex';
+  modal.classList.add('show');
+  
+  // Reset payroll preview
+  recalcPayrollPreviewFromEmployeeModal();
+}
+
+function closeEmployeeModal() {
+  const modal = document.getElementById('employeeModal');
+  if (modal) {
+    modal.style.display = 'none';
+    modal.classList.remove('show');
+  }
+}
+
+// ============================================
+// EDIT EMPLOYEE
+// ============================================
+
+async function editEmployee(staffNumber) {
+  try {
+    showLoadingModal('Loading employee data...');
+    const employee = await API.getEmployeeByStaffNumber(staffNumber);
+    if (!employee) {
+      showToast('Employee not found', 'error');
+      return;
+    }
+    
+    const modal = document.getElementById('employeeModal');
+    if (!modal) return;
+    
+    // Populate form
+    document.getElementById('empStaffNumber').value = employee['Staff Number'] || employee.staffNumber || '';
+    document.getElementById('empName').value = employee['Full Name'] || employee.name || '';
+    document.getElementById('empDepartment').value = employee['Department'] || employee.department || '';
+    document.getElementById('empDesignation').value = employee['Designation'] || employee.designation || '';
+    document.getElementById('empEmail').value = employee['Email'] || employee.email || '';
+    document.getElementById('empSSNIT').value = employee['SSNIT'] || employee.ssnit || '';
+    document.getElementById('empGhanaCard').value = employee['Ghana Card'] || employee.ghanaCard || '';
+    document.getElementById('empBasicSalary').value = employee['Basic Salary'] || employee.basicSalary || '';
+    document.getElementById('empEmployeePFRate').value = employee['Employee PF Rate (%)'] || employee.employeePFrate || '5.5';
+    document.getElementById('empEmployerPFRate').value = employee['Employer PF Rate (%)'] || employee.employerPFrate || '5';
+    document.getElementById('empTaxRelief').value = employee['Tax Relief'] || employee.taxRelief || '';
+    document.getElementById('empLoanMonthly').value = employee['Monthly Loan'] || employee.loanMonthly || '';
+    
+    // Set checkboxes
+    const hasPF = parseFloat(employee['Employee PF Rate (%)'] || employee.employeePFrate || 0) > 0;
+    document.getElementById('empHasPF').checked = hasPF;
+    if (hasPF) {
+      document.getElementById('empPFFieldsWrapper').style.display = 'flex';
+    }
+    
+    const hasTaxRelief = parseFloat(employee['Tax Relief'] || employee.taxRelief || 0) > 0;
+    document.getElementById('empHasTaxRelief').checked = hasTaxRelief;
+    if (hasTaxRelief) {
+      document.getElementById('empTaxReliefFieldWrapper').style.display = 'block';
+    }
+    
+    const hasLoan = parseFloat(employee['Monthly Loan'] || employee.loanMonthly || 0) > 0;
+    document.getElementById('empHasLoan').checked = hasLoan;
+    if (hasLoan) {
+      document.getElementById('empLoanFieldWrapper').style.display = 'block';
+    }
+    
+    // Set title
+    document.getElementById('employeeModalTitle').textContent = 'Edit Employee';
+    
+    // Show modal
+    modal.style.display = 'flex';
+    modal.classList.add('show');
+    
+    // Recalculate preview
+    recalcPayrollPreviewFromEmployeeModal();
+    
+  } catch (error) {
+    console.error('Error loading employee:', error);
+    showToast('Failed to load employee data', 'error');
+  } finally {
+    hideLoadingModal();
+  }
+}
+
+// ============================================
+// SAVE EMPLOYEE
+// ============================================
+
+async function saveEmployee() {
+  try {
+    const staffNumber = document.getElementById('empStaffNumber').value.trim();
+    const name = document.getElementById('empName').value.trim();
+    
+    if (!staffNumber || !name) {
+      showToast('Staff Number and Name are required', 'warning');
+      return;
+    }
+    
+    const employeeData = {
+      staff: staffNumber,
+      name: name,
+      department: document.getElementById('empDepartment').value,
+      designation: document.getElementById('empDesignation').value,
+      email: document.getElementById('empEmail').value.trim(),
+      ssnit: document.getElementById('empSSNIT').value.trim(),
+      ghanaCard: document.getElementById('empGhanaCard').value.trim(),
+      basicSalary: parseFloat(document.getElementById('empBasicSalary').value) || 0,
+      employeePFrate: parseFloat(document.getElementById('empEmployeePFRate').value) || 0,
+      employerPFrate: parseFloat(document.getElementById('empEmployerPFRate').value) || 0,
+      taxRelief: parseFloat(document.getElementById('empTaxRelief').value) || 0,
+      loanMonthly: parseFloat(document.getElementById('empLoanMonthly').value) || 0,
+      status: 'Active'
+    };
+    
+    // Get allowances from the allowance list
+    const allowanceRows = document.querySelectorAll('#empAllowanceList .allowance-row');
+    const allowances = [];
+    allowanceRows.forEach(row => {
+      const type = row.querySelector('.allowance-type')?.value || '';
+      const amount = parseFloat(row.querySelector('.allowance-amount')?.value) || 0;
+      const effectiveDate = row.querySelector('.allowance-date')?.value || new Date().toISOString().split('T')[0];
+      if (type && amount > 0) {
+        allowances.push({ type, amount, effectiveDate });
+      }
+    });
+    
+    // Check if editing or adding
+    const isEdit = document.getElementById('employeeModalTitle').textContent.includes('Edit');
+    
+    let response;
+    if (isEdit) {
+      // Add existing employee data for update
+      const existing = await API.getEmployeeByStaffNumber(staffNumber);
+      if (existing) {
+        Object.assign(employeeData, existing);
+        employeeData.status = existing.Status || existing.status || 'Active';
+      }
+      response = await API.updateEmployee(employeeData);
+    } else {
+      response = await API.addEmployee(employeeData);
+    }
+    
+    if (response && response.success !== false) {
+      showToast(`Employee ${staffNumber} ${isEdit ? 'updated' : 'added'} successfully`, 'success');
+      closeEmployeeModal();
+      
+      // Save allowances if any
+      if (allowances.length > 0) {
+        for (const allowance of allowances) {
+          try {
+            await API.saveAllowance(staffNumber, allowance.type, allowance.amount, allowance.effectiveDate);
+          } catch (e) {
+            console.warn('Failed to save allowance:', e);
+          }
+        }
+      }
+      
+      await loadEmployeeList();
+    } else {
+      showToast('Failed to save employee: ' + (response?.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('Error saving employee:', error);
+    showToast('Error saving employee', 'error');
+  }
+}
+
+// ============================================
+// TOGGLE FUNCTIONS FOR EMPLOYEE MODAL
+// ============================================
+
+function toggleEmployeePFFields() {
+  const checked = document.getElementById('empHasPF').checked;
+  const wrapper = document.getElementById('empPFFieldsWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'flex' : 'none';
+  }
+  recalcPayrollPreviewFromEmployeeModal();
+}
+
+function toggleEmployeeTaxReliefField() {
+  const checked = document.getElementById('empHasTaxRelief').checked;
+  const wrapper = document.getElementById('empTaxReliefFieldWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'block' : 'none';
+  }
+  recalcPayrollPreviewFromEmployeeModal();
+}
+
+function toggleEmployeeLoanFields() {
+  const checked = document.getElementById('empHasLoan').checked;
+  const wrapper = document.getElementById('empLoanFieldWrapper');
+  if (wrapper) {
+    wrapper.style.display = checked ? 'block' : 'none';
+  }
+  recalcPayrollPreviewFromEmployeeModal();
+}
+
+function toggleEmployeeAllowanceField() {
+  const checked = document.getElementById('empHasAllowances').checked;
+  const area = document.getElementById('empAllowanceArea');
+  if (area) {
+    area.style.display = checked ? 'block' : 'none';
+  }
+  if (checked && document.getElementById('empAllowanceList').children.length === 0) {
+    addEmployeeAllowanceRow();
+  }
+  recalcPayrollPreviewFromEmployeeModal();
+}
+
+// ============================================
+// ALLOWANCE ROWS
+// ============================================
+
+function addEmployeeAllowanceRow() {
+  const container = document.getElementById('empAllowanceList');
+  if (!container) return;
+  
+  const row = document.createElement('div');
+  row.className = 'allowance-row';
+  row.style.cssText = 'display:flex; gap:8px; align-items:center; margin-bottom:4px;';
+  row.innerHTML = `
+    <select class="allowance-type" style="flex:1; padding:4px 8px; border:1px solid #e2e8f0; border-radius:4px; font-size:12px; height:28px;">
+      <option value="">Select Type</option>
+      <option value="Housing">Housing</option>
+      <option value="Transport">Transport</option>
+      <option value="Meal">Meal</option>
+      <option value="Medical">Medical</option>
+      <option value="Education">Education</option>
+      <option value="Other">Other</option>
+    </select>
+    <input type="number" class="allowance-amount" placeholder="Amount" step="0.01" min="0" style="width:100px; padding:4px 8px; border:1px solid #e2e8f0; border-radius:4px; font-size:12px; height:28px;" oninput="recalcPayrollPreviewFromEmployeeModal()">
+    <input type="date" class="allowance-date" style="width:130px; padding:4px 8px; border:1px solid #e2e8f0; border-radius:4px; font-size:12px; height:28px;">
+    <button type="button" class="btn-danger" style="padding:2px 8px; font-size:12px; height:28px; width:28px; display:flex; align-items:center; justify-content:center;" onclick="this.closest('.allowance-row').remove(); recalcPayrollPreviewFromEmployeeModal();">
+      <i class="fas fa-times"></i>
+    </button>
+  `;
+  
+  container.appendChild(row);
+  
+  // Set default date to today
+  const dateInput = row.querySelector('.allowance-date');
+  if (dateInput) {
+    dateInput.value = new Date().toISOString().split('T')[0];
+  }
+}
+
+// ============================================
+// PAYROLL PREVIEW CALCULATION
+// ============================================
+
+function recalcPayrollPreviewFromEmployeeModal() {
+  const basicSalary = parseFloat(document.getElementById('empBasicSalary').value) || 0;
+  
+  // Get allowances
+  const allowanceRows = document.querySelectorAll('#empAllowanceList .allowance-row');
+  let totalAllowances = 0;
+  allowanceRows.forEach(row => {
+    const amount = parseFloat(row.querySelector('.allowance-amount')?.value) || 0;
+    totalAllowances += amount;
+  });
+  
+  const grossSalary = basicSalary + totalAllowances;
+  
+  // Calculate deductions
+  const employeePension = grossSalary * 0.055;
+  
+  let employeePF = 0;
+  if (document.getElementById('empHasPF').checked) {
+    const rate = parseFloat(document.getElementById('empEmployeePFRate').value) || 0;
+    employeePF = basicSalary * (rate / 100);
+  }
+  
+  const taxRelief = document.getElementById('empHasTaxRelief').checked ? 
+    parseFloat(document.getElementById('empTaxRelief').value) || 0 : 0;
+  
+  const totalDeductions = employeePension + employeePF + taxRelief;
+  const taxableIncome = Math.max(0, grossSalary - totalDeductions);
+  
+  // Calculate PAYE using tax brackets
+  const paye = calculatePAYE(taxableIncome);
+  const netPay = taxableIncome - paye;
+  
+  // Update preview
+  document.getElementById('empPreviewGross').textContent = grossSalary.toFixed(2);
+  document.getElementById('empPreviewPension').textContent = employeePension.toFixed(2);
+  document.getElementById('empPreviewPf').textContent = employeePF.toFixed(2);
+  document.getElementById('empPreviewTaxable').textContent = taxableIncome.toFixed(2);
+  document.getElementById('empPreviewPaye').textContent = paye.toFixed(2);
+  document.getElementById('empPreviewNet').textContent = netPay.toFixed(2);
+}
+
+// ============================================
+// DEPARTMENT/DESIGNATION HELPERS
+// ============================================
+
+function toggleNewDepartmentField() {
+  const field = document.getElementById('newDepartmentField');
+  if (field) {
+    field.style.display = field.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+function toggleNewDesignationField() {
+  const field = document.getElementById('newDesignationField');
+  if (field) {
+    field.style.display = field.style.display === 'none' ? 'block' : 'none';
+  }
+}
+
+async function saveNewDepartment() {
+  const input = document.getElementById('newDepartmentInput');
+  const name = input?.value.trim();
+  if (!name) {
+    showToast('Please enter a department name', 'warning');
+    return;
+  }
+  
+  const select = document.getElementById('empDepartment');
+  if (select) {
+    // Check if already exists
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === name) {
+        showToast('Department already exists', 'warning');
+        return;
+      }
+    }
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+    select.value = name;
+  }
+  
+  input.value = '';
+  document.getElementById('newDepartmentField').style.display = 'none';
+  showToast('Department added successfully', 'success');
+}
+
+async function saveNewDesignation() {
+  const input = document.getElementById('newDesignationInput');
+  const name = input?.value.trim();
+  if (!name) {
+    showToast('Please enter a designation name', 'warning');
+    return;
+  }
+  
+  const select = document.getElementById('empDesignation');
+  if (select) {
+    for (let i = 0; i < select.options.length; i++) {
+      if (select.options[i].value === name) {
+        showToast('Designation already exists', 'warning');
+        return;
+      }
+    }
+    const option = document.createElement('option');
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+    select.value = name;
+  }
+  
+  input.value = '';
+  document.getElementById('newDesignationField').style.display = 'none';
+  showToast('Designation added successfully', 'success');
+}
+
+function cancelNewDepartment() {
+  document.getElementById('newDepartmentField').style.display = 'none';
+  document.getElementById('newDepartmentInput').value = '';
+}
+
+function cancelNewDesignation() {
+  document.getElementById('newDesignationField').style.display = 'none';
+  document.getElementById('newDesignationInput').value = '';
+}
+
+function onDepartmentSelect(select) {
+  // Handle department selection if needed
+}
+
+function onDesignationSelect(select) {
+  // Handle designation selection if needed
+}
+
+// ============================================
+// HELPER FUNCTIONS
+// ============================================
+
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/[&<>"']/g, function(m) {
@@ -467,586 +664,29 @@ function escapeJs(str) {
   return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 }
 
-/* ============== Modal show / hide / populate ============== */
-
-async function showAddEmployeeModal(editData) {
-  const modal = document.getElementById('employeeModal');
-  if (!modal) return;
-
-  // Load dropdown options if not loaded
-  if (departmentOptions.length === 0) {
-    await loadDropdownOptions();
-  }
-
-  const isEdit = !!editData;
-  document.getElementById('employeeModalTitle').textContent = isEdit ? 'Edit Employee' : 'Add Employee';
-
-  // Clear fields
-  ['empStaffNumber','empName','empEmail','empSSNIT','empGhanaCard','empBasicSalary',
-   'empEmployeePFRate','empEmployerPFRate','empTaxRelief','empLoanMonthly'].forEach(id=>{
-    const el = document.getElementById(id); if (el) el.value = '';
-  });
-
-  // Reset selects to default
-  const deptSel = document.getElementById('empDepartment');
-  if (deptSel) deptSel.value = '';
-  const desigSel = document.getElementById('empDesignation');
-  if (desigSel) desigSel.value = '';
-
-  // Hide new department/designation fields
-  cancelNewDepartment();
-  cancelNewDesignation();
-
-  // clear allowances
-  const allowanceList = document.getElementById('empAllowanceList');
-  if (allowanceList) allowanceList.innerHTML = '';
-  const allowanceArea = document.getElementById('empAllowanceArea');
-  if (allowanceArea) allowanceArea.style.display = 'none';
-  const pfWrapper = document.getElementById('empPFFieldsWrapper');
-  if (pfWrapper) pfWrapper.style.display = 'none';
-  const taxWrapper = document.getElementById('empTaxReliefFieldWrapper');
-  if (taxWrapper) taxWrapper.style.display = 'none';
-  const loanWrapper = document.getElementById('empLoanFieldWrapper');
-  if (loanWrapper) loanWrapper.style.display = 'none';
-
-  // reset toggles
-  const hasPF = document.getElementById('empHasPF');
-  if (hasPF) hasPF.checked = false;
-  const hasTax = document.getElementById('empHasTaxRelief');
-  if (hasTax) hasTax.checked = false;
-  const hasAllow = document.getElementById('empHasAllowances');
-  if (hasAllow) hasAllow.checked = false;
-  const hasLoan = document.getElementById('empHasLoan');
-  if (hasLoan) hasLoan.checked = false;
-
-  toggleEmployeePFFields();
-  toggleEmployeeTaxReliefField();
-  toggleEmployeeAllowanceField();
-  toggleEmployeeLoanFields();
-  recalcPayrollPreviewFromEmployeeModal();
-
-  if (isEdit) {
-    // populate from editData (client-shaped)
-    document.getElementById('empStaffNumber').value = editData.staff || '';
-    document.getElementById('empName').value = editData.name || '';
-
-    // Set department if exists in options
-    if (editData.department && departmentOptions.includes(editData.department)) {
-      document.getElementById('empDepartment').value = editData.department;
-    } else if (editData.department) {
-      // Add it to options if it doesn't exist
-      departmentOptions.push(editData.department);
-      departmentOptions.sort();
-      populateDepartmentSelect();
-      document.getElementById('empDepartment').value = editData.department;
-    }
-
-    if (editData.designation && designationOptions.includes(editData.designation)) {
-      document.getElementById('empDesignation').value = editData.designation;
-    } else if (editData.designation) {
-      designationOptions.push(editData.designation);
-      designationOptions.sort();
-      populateDesignationSelect();
-      document.getElementById('empDesignation').value = editData.designation;
-    }
-
-    document.getElementById('empEmail').value = editData.email || '';
-    document.getElementById('empSSNIT').value = editData.ssnit || '';
-    document.getElementById('empGhanaCard').value = editData.ghanaCard || '';
-    document.getElementById('empBasicSalary').value = editData.basicSalary || '';
-
-    // PF
-    if (editData.employeePFrate) {
-      document.getElementById('empHasPF').checked = true;
-      document.getElementById('empEmployeePFRate').value = editData.employeePFrate;
-      document.getElementById('empEmployerPFRate').value = editData.employerPFrate || 0;
-    }
-
-    // tax relief
-    if (editData.taxRelief && Number(editData.taxRelief) > 0) {
-      document.getElementById('empHasTaxRelief').checked = true;
-      document.getElementById('empTaxRelief').value = editData.taxRelief;
-    }
-
-    // loan
-    if (editData.loanMonthly && Number(editData.loanMonthly) > 0) {
-      document.getElementById('empHasLoan').checked = true;
-      document.getElementById('empLoanMonthly').value = editData.loanMonthly;
-    }
-
-    // allowances: fetch from server and populate if present
-    const allowances = await API.getAllowancesByStaff(editData.staff).catch(()=>[]);
-    if (allowances && allowances.length > 0) {
-      document.getElementById('empHasAllowances').checked = true;
-      toggleEmployeeAllowanceField();
-      allowances.forEach(a => addEmployeeAllowanceRow(a.type, a.amount));
-    }
-
-    modal.dataset.editStaff = editData.staff;
-    toggleEmployeePFFields();
-    toggleEmployeeTaxReliefField();
-    toggleEmployeeLoanFields();
-    recalcPayrollPreviewFromEmployeeModal();
-  } else {
-    delete modal.dataset.editStaff;
-  }
-
-  modal.classList.add('show');
-  document.getElementById('empStaffNumber')?.focus();
-}
-
-function closeEmployeeModal() {
-  const modal = document.getElementById('employeeModal');
-  if (modal) modal.classList.remove('show');
-  // Clean up any open new fields
-  cancelNewDepartment();
-  cancelNewDesignation();
-}
-
-/* ============== Edit flow ============== */
-
-async function editEmployee(staff) {
-  if (!staff) return;
-  try {
-    showLoadingModal('Loading employee...');
-    const resp = await API.getEmployeeByStaffNumber(staff);
-    const rec = resp || {};
-    const client = {
-      staff: rec['Staff Number'] || rec.staff || staff,
-      name: rec['Full Name'] || rec.name || '',
-      department: rec['Department'] || '',
-      designation: rec['Designation'] || '',
-      email: rec['Email'] || '',
-      ssnit: rec['SSNIT'] || '',
-      ghanaCard: rec['Ghana Card'] || '',
-      basicSalary: parseFloat(rec['Basic Salary'] || 0) || 0,
-      employeePFrate: parseFloat(rec['Employee PF Rate (%)'] || rec.employeePFrate || 0) || 0,
-      employerPFrate: parseFloat(rec['Employer PF Rate (%)'] || rec.employerPFrate || 0) || 0,
-      taxRelief: parseFloat(rec['Tax Relief Amount'] || rec.taxRelief || 0) || 0,
-      loanMonthly: parseFloat(rec['Loan Monthly'] || 0) || 0
-    };
-    await showAddEmployeeModal(client);
-  } catch (err) {
-    console.error('Error fetching employee', err);
-    showToast('Employee not found.', 'warning');
-  } finally {
-    hideLoadingModal();
-  }
-}
-
-/* ============== Save employee + allowances (NO payroll run creation) ============== */
-
-async function saveEmployee() {
-  const staff = (document.getElementById('empStaffNumber')?.value || '').trim();
-  const name = (document.getElementById('empName')?.value || '').trim();
-
-  if (!staff || !name) {
-    alert('Staff number and name are required');
-    return;
-  }
-
-  const department = (document.getElementById('empDepartment')?.value || '').trim();
-  const designation = (document.getElementById('empDesignation')?.value || '').trim();
-  const email = (document.getElementById('empEmail')?.value || '').trim();
-  const ssnit = (document.getElementById('empSSNIT')?.value || '').trim();
-  const ghanaCard = (document.getElementById('empGhanaCard')?.value || '').trim();
-
-  const basicSalary = parseFloat(document.getElementById('empBasicSalary')?.value) || 0;
-  const hasPF = document.getElementById('empHasPF')?.checked;
-  const employeePFrate = hasPF ? (parseFloat(document.getElementById('empEmployeePFRate')?.value) || 0) : 0;
-  const employerPFrate = hasPF ? (parseFloat(document.getElementById('empEmployerPFRate')?.value) || 0) : 0;
-  const hasTaxRelief = document.getElementById('empHasTaxRelief')?.checked;
-  const taxRelief = hasTaxRelief ? (parseFloat(document.getElementById('empTaxRelief')?.value) || 0) : 0;
-  const hasLoan = document.getElementById('empHasLoan')?.checked;
-  const loanMonthly = hasLoan ? (parseFloat(document.getElementById('empLoanMonthly')?.value) || 0) : 0;
-
-  // gather allowances from modal
-  const allowances = [];
-  document.querySelectorAll('#empAllowanceList .allowance-row').forEach(row => {
-    const typeSelect = row.querySelector('.emp-allowance-type');
-    let type = (typeSelect?.value || '').trim();
-    // If the inline "add new" field still visible, pick text if present
-    if (type === '__ADD_NEW__') {
-      // ignore until user explicitly adds via inline field
-      const newField = row.querySelector('.new-allowance-field .new-allowance-input');
-      if (newField && newField.value.trim()) {
-        type = newField.value.trim();
-      } else {
-        return; // skip row
-      }
-    }
-    const amt = parseFloat(row.querySelector('.emp-allowance-amount')?.value) || 0;
-    if (type && amt > 0) allowances.push({ type, amount: amt });
-  });
-
-  const modal = document.getElementById('employeeModal');
-  const editStaff = modal?.dataset?.editStaff || null;
-
-  // Employee record to send to server (direct object, not nested)
-  const employeeRecord = {
-    staff,
-    name,
-    department,
-    designation,
-    email,
-    ssnit,
-    ghanaCard,
-    basicSalary,
-    employeePFrate,
-    employerPFrate,
-    taxRelief,
-    loanMonthly
-  };
-
-  try {
-    showLoadingModal(editStaff ? 'Updating employee...' : 'Adding employee...');
-    let empResp;
-    if (editStaff) {
-      empResp = await API.updateEmployee(employeeRecord);
-    } else {
-      empResp = await API.addEmployee(employeeRecord);
-    }
-
-    if (!(empResp && (empResp.success !== false))) {
-      throw new Error((empResp && empResp.error) ? empResp.error : 'Failed to save employee');
-    }
-
-    // Save allowances to allowance sheet for this staff.
-    // Clear existing allowances first (if backend supports) - not all backends support bulk overwrite,
-    // so we'll save each allowance entry. If backend has overwrite semantics, pass options.
-    try {
-      // Ideally the backend will handle duplicates; we just post each allowance row.
-      for (const a of allowances) {
-        // effectiveDate: today in ISO date format
-        const effectiveDate = new Date().toISOString().slice(0, 10);
-        await API.saveAllowance(staff, a.type, a.amount, effectiveDate).catch(err => {
-          console.warn('Failed to save allowance for', staff, a, err);
-        });
-      }
-    } catch (e) {
-      console.warn('save allowances error', e);
-    }
-
-    showToast(editStaff ? 'Employee updated' : 'Employee added', 'success');
-
-    await renderEmployeeTable();
-    closeEmployeeModal();
-    delete modal.dataset.editStaff;
-  } catch (err) {
-    console.error('Error saving employee', err);
-    showToast('Failed to save employee: ' + (err.message || err), 'error');
-  } finally {
-    hideLoadingModal();
-  }
-}
-
-/* ============== Toggles show/hide ============== */
-
-function toggleEmployeePFFields() {
-  const checked = document.getElementById('empHasPF').checked;
-  const wrapper = document.getElementById('empPFFieldsWrapper');
-  if (wrapper) {
-    wrapper.style.display = checked ? 'flex' : 'none';
-  }
-}
-
-function toggleEmployeeTaxReliefField() {
-  const checked = document.getElementById('empHasTaxRelief').checked;
-  const wrapper = document.getElementById('empTaxReliefFieldWrapper');
-  if (wrapper) {
-    wrapper.style.display = checked ? 'block' : 'none';
-  }
-}
-
-function toggleEmployeeAllowanceField() {
-  const checked = document.getElementById('empHasAllowances').checked;
-  const area = document.getElementById('empAllowanceArea');
-  if (area) {
-    area.style.display = checked ? 'block' : 'none';
-  }
-  if (!checked) {
-    document.getElementById('empAllowanceList').innerHTML = '';
-    recalcPayrollPreviewFromEmployeeModal();
-  }
-}
-
-function toggleEmployeeLoanFields() {
-  const checked = document.getElementById('empHasLoan').checked;
-  const wrapper = document.getElementById('empLoanFieldWrapper');
-  if (wrapper) {
-    wrapper.style.display = checked ? 'block' : 'none';
-  }
-}
-
-/* ============== Auto-fill payroll defaults when staff is selected ============== */
-
-async function autoFillEmployeePayrollDefaults(staffNumber) {
-  if (!staffNumber || staffNumber.trim() === '') return;
-  try {
-    const rec = await API.getEmployeeByStaffNumber(staffNumber).catch(()=>null);
-    if (!rec) return;
-    const basic = parseFloat(rec['Basic Salary'] || rec.basicSalary || 0) || 0;
-    const empPf = parseFloat(rec['Employee PF Rate (%)'] || rec.employeePFrate || 0) || 0;
-    const erPf = parseFloat(rec['Employer PF Rate (%)'] || rec.employerPFrate || 0) || 0;
-    const tr = parseFloat(rec['Tax Relief Amount'] || rec.taxRelief || 0) || 0;
-    const loan = parseFloat(rec['Loan Monthly'] || 0) || 0;
-
-    if (basic > 0) document.getElementById('empBasicSalary').value = basic;
-    if (empPf) { document.getElementById('empHasPF').checked = true; document.getElementById('empEmployeePFRate').value = empPf; }
-    if (erPf) document.getElementById('empEmployerPFRate').value = erPf;
-    if (tr && tr > 0) { document.getElementById('empHasTaxRelief').checked = true; document.getElementById('empTaxRelief').value = tr; }
-    if (loan && loan > 0) { document.getElementById('empHasLoan').checked = true; document.getElementById('empLoanMonthly').value = loan; }
-
-    toggleEmployeePFFields();
-    toggleEmployeeTaxReliefField();
-    toggleEmployeeLoanFields();
-
-    // Load allowances
-    const allowances = await API.getAllowancesByStaff(staffNumber).catch(()=>[]);
-    if (allowances && allowances.length > 0) {
-      document.getElementById('empHasAllowances').checked = true;
-      toggleEmployeeAllowanceField();
-      allowances.forEach(a => addEmployeeAllowanceRow(a.type, a.amount));
-    }
-
-    recalcPayrollPreviewFromEmployeeModal();
-  } catch (err) {
-    console.warn('autoFillEmployeePayrollDefaults error', err);
-  }
-}
-
-/* ============== Payroll calculation helpers (client-side preview) ============== */
-
-function roundToTwo(n) {
-  return Math.round((n + Number.EPSILON) * 100) / 100;
-}
-
-function getTaxBrackets() {
-  return [
-    { bracket: 'First', amount: 490, rate: 0 },
-    { bracket: 'Next', amount: 110, rate: 0.05 },
-    { bracket: 'Next', amount: 130, rate: 0.10 },
-    { bracket: 'Next', amount: 3166.67, rate: 0.175 },
-    { bracket: 'Next', amount: 16000, rate: 0.25 },
-    { bracket: 'Next', amount: 30520, rate: 0.30 },
-    { bracket: 'Exceeding', amount: 50000, rate: 0.35 }
-  ];
-}
-
-function calculatePAYE(taxableIncome) {
-  const brackets = getTaxBrackets();
-  let remainingIncome = taxableIncome;
-  let totalTax = 0;
-
-  for (let i = 0; i < brackets.length; i++) {
-    const bracket = brackets[i];
-    const bracketAmount = bracket.amount;
-    const bracketRate = bracket.rate;
-
-    if (remainingIncome <= 0) break;
-
-    if (i === brackets.length - 1) {
-      totalTax += remainingIncome * bracketRate;
-      break;
-    } else {
-      const taxableInThisBracket = Math.min(remainingIncome, bracketAmount);
-      totalTax += taxableInThisBracket * bracketRate;
-      remainingIncome -= taxableInThisBracket;
-    }
-  }
-
-  return roundToTwo(totalTax);
-}
-
-function computePayrollRow({ basicSalary = 0, allowances = [], employeePFpct = 5.5, employerPFpct = 5, reliefAmount = 0, loanMonthly = 0, pfChecked = true }) {
-  // ==========================================
-  // STEP 1: Calculate Gross Salary
-  // ==========================================
-  const totalAllowances = roundToTwo(allowances.reduce((s,a) => s + (parseFloat(a.amount) || 0), 0));
-  const grossSalary = roundToTwo(basicSalary + totalAllowances);
-
-  // ==========================================
-  // STEP 2: Calculate Deductions (Before Tax)
-  // ==========================================
-  // Employee Pension = 5.5% of Gross
-  const employeePension = roundToTwo(basicSalary * 0.055);
-
-  // Employee PF = Employee PF Rate × Basic Salary (if PF eligible)
-  const employeePf = pfChecked ? roundToTwo(basicSalary * (employeePFpct / 100)) : 0;
-
-  // Tax Relief (user defined)
-  const taxRelief = roundToTwo(reliefAmount || 0);
-
-  // Total Deductions before tax
-  const totalDeductionsBeforeTax = roundToTwo(employeePension + employeePf + taxRelief);
-
-  // ==========================================
-  // STEP 3: Calculate Taxable Amount
-  // ==========================================
-  const taxableAmount = Math.max(0, roundToTwo(grossSalary - totalDeductionsBeforeTax));
-
-  // ==========================================
-  // STEP 4: Calculate PAYE on Taxable Amount
-  // ==========================================
-  const paye = calculatePAYE(taxableAmount);
-
-  // ==========================================
-  // STEP 5: Calculate Net Pay
-  // ==========================================
-  const netPay = roundToTwo(taxableAmount - paye);
-
-  // ==========================================
-  // STEP 6: Calculate Take-Home Pay
-  // ==========================================
-  const loanMonthlyAmount = roundToTwo(loanMonthly || 0);
-  const takeHomePay = roundToTwo(netPay - loanMonthlyAmount);
-
-  // ==========================================
-  // STEP 7: Calculate Employer Costs
-  // ==========================================
-  const employerPension = roundToTwo(basicSalary * 0.13);
-  const employerPf = pfChecked ? roundToTwo(basicSalary * (employerPFpct / 100)) : 0;
-
-  return {
-    totalAllowances,
-    grossSalary,
-    employeePension,
-    employeePf,
-    taxRelief,
-    totalDeductionsBeforeTax,
-    taxableAmount,
-    paye,
-    netPay,
-    loanMonthly: loanMonthlyAmount,
-    takeHomePay,
-    employerPension,
-    employerPf
-  };
-}
-
-function recalcPayrollPreviewFromEmployeeModal() {
-  const basicSalary = parseFloat(document.getElementById('empBasicSalary')?.value) || 0;
-  const pfChecked = document.getElementById('empHasPF')?.checked;
-  const employeePFpct = pfChecked ? (parseFloat(document.getElementById('empEmployeePFRate')?.value) || 5.5) : 0;
-  const employerPFpct = pfChecked ? (parseFloat(document.getElementById('empEmployerPFRate')?.value) || 5) : 0;
-  const taxReliefChecked = document.getElementById('empHasTaxRelief')?.checked;
-  const reliefAmount = taxReliefChecked ? (parseFloat(document.getElementById('empTaxRelief')?.value) || 0) : 0;
-  const loanChecked = document.getElementById('empHasLoan')?.checked;
-  const loanMonthly = loanChecked ? (parseFloat(document.getElementById('empLoanMonthly')?.value) || 0) : 0;
-
-  // allowances
-  const allowances = [];
-  document.querySelectorAll('#empAllowanceList .allowance-row').forEach(row => {
-    const typeSelect = row.querySelector('.emp-allowance-type');
-    let type = (typeSelect?.value || '').trim();
-    if (type === '__ADD_NEW__') type = '';
-    const amt = parseFloat(row.querySelector('.emp-allowance-amount')?.value) || 0;
-    if (type && amt > 0) allowances.push({ type, amount: amt });
-  });
-
-  // Always calculate preview using CORRECTED structure
-  const calc = computePayrollRow({
-    basicSalary,
-    allowances,
-    employeePFpct,
-    employerPFpct,
-    reliefAmount,
-    loanMonthly,
-    pfChecked
-  });
-
-  updateEmployeeCalcPreview(calc);
-}
-
-function updateEmployeeCalcPreview(calc) {
-  document.getElementById('empPreviewGross').textContent = formatMoney(calc.grossSalary);
-  document.getElementById('empPreviewNet').textContent = formatMoney(calc.netPay);
-  document.getElementById('empPreviewPaye').textContent = formatMoney(calc.paye);
-  document.getElementById('empPreviewTaxable').textContent = formatMoney(calc.taxableAmount || calc.taxableAmount);
-  document.getElementById('empPreviewPension').textContent = formatMoney(calc.employeePension);
-  document.getElementById('empPreviewPf').textContent = formatMoney(calc.employeePf);
-}
-
-/* ============== Search ============== */
-
-async function filterEmployeeList() {
-  const q = document.getElementById('employeeSearch')?.value.trim().toLowerCase() || '';
-  const employees = await getEmployeesFromServer();
-  const filtered = employees.filter(e => {
-    return (e.staff || '').toLowerCase().includes(q)
-      || (e.name || '').toLowerCase().includes(q)
-      || (e.department || '').toLowerCase().includes(q)
-      || (e.designation || '').toLowerCase().includes(q);
-  });
-  const tbody = document.getElementById('employeeTableBody');
-  if (!tbody) return;
-  if (!filtered || filtered.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7" class="employee-table-empty">
-          <i class="fas fa-search"></i>
-          <p>No matching employees found</p>
-          <span class="sub-text">Try a different search term</span>
-        </td>
-      </tr>
-    `;
-    return;
-  }
-  tbody.innerHTML = filtered.map(e => `
-    <tr>
-      <td class="col-staff">${escapeHtml(e.staff || '')}</td>
-      <td class="col-name">${escapeHtml(e.name || '')}</td>
-      <td>${escapeHtml(e.department || '')}</td>
-      <td>${escapeHtml(e.designation || '')}</td>
-      <td>${escapeHtml(e.email || '')}</td>
-      <td>${escapeHtml(e.ssnit || '')}</td>
-      <td class="col-center">
-        <button class="btn-edit-icon" onclick="editEmployee('${escapeHtml(e.staff)}')" title="Edit employee">
-          <i class="fas fa-pencil-alt"></i>
-        </button>
-      </td>
-    </tr>
-  `).join('');
-}
-
-/* ============== Utilities ============== */
-
-function formatMoney(n) {
-  if (typeof n !== 'number' || isNaN(n)) return '0.00';
-  return n.toFixed(2);
-}
-
-function escapeHtml(str) {
-  if (!str) return '';
-  return String(str).replace(/[&<>"'`]/g, s => ({
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-    '`': '&#96;'
-  }[s]));
-}
-
-/* ============== Exports ============== */
+// ============================================
+// EXPOSE GLOBALLY
+// ============================================
 
 window.initEmployeeList = initEmployeeList;
+window.loadEmployeeList = loadEmployeeList;
+window.filterEmployeeList = filterEmployeeList;
 window.showAddEmployeeModal = showAddEmployeeModal;
 window.closeEmployeeModal = closeEmployeeModal;
-window.saveEmployee = saveEmployee;
-window.filterEmployeeList = filterEmployeeList;
 window.editEmployee = editEmployee;
+window.saveEmployee = saveEmployee;
+window.terminateEmployee = terminateEmployee;
 window.toggleEmployeePFFields = toggleEmployeePFFields;
 window.toggleEmployeeTaxReliefField = toggleEmployeeTaxReliefField;
-window.toggleEmployeeAllowanceField = toggleEmployeeAllowanceField;
 window.toggleEmployeeLoanFields = toggleEmployeeLoanFields;
+window.toggleEmployeeAllowanceField = toggleEmployeeAllowanceField;
 window.addEmployeeAllowanceRow = addEmployeeAllowanceRow;
 window.recalcPayrollPreviewFromEmployeeModal = recalcPayrollPreviewFromEmployeeModal;
 window.toggleNewDepartmentField = toggleNewDepartmentField;
-window.cancelNewDepartment = cancelNewDepartment;
-window.saveNewDepartment = saveNewDepartment;
 window.toggleNewDesignationField = toggleNewDesignationField;
-window.cancelNewDesignation = cancelNewDesignation;
+window.saveNewDepartment = saveNewDepartment;
 window.saveNewDesignation = saveNewDesignation;
+window.cancelNewDepartment = cancelNewDepartment;
+window.cancelNewDesignation = cancelNewDesignation;
 window.onDepartmentSelect = onDepartmentSelect;
 window.onDesignationSelect = onDesignationSelect;
