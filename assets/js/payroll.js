@@ -23,23 +23,60 @@ function initPayroll() {
   // Set heading period text
   updateHeaderPeriodLabel();
 
-  // Ensure Run Payroll button triggers the function reliably (fixes dynamic module load issues)
-  const runBtn = document.getElementById('btnRunPayroll');
-  if (runBtn) {
-    try {
-      runBtn.removeAttribute('onclick'); // avoid duplicate handlers
-    } catch (e) { /* ignore */ }
-    runBtn.addEventListener('click', function (e) {
-      e.preventDefault();
-      if (typeof window.processPayroll === 'function') {
-        window.processPayroll();
-      } else if (typeof processPayroll === 'function') {
-        processPayroll();
-      } else {
-        console.error('processPayroll not found');
-        try { showToast('Payroll function unavailable', 'error'); } catch (e) { /* ignore */ }
+  // Ensure we only add the delegated handler once across re-initializations
+  if (!window._payrollRunDelegatedHandlerAdded) {
+    document.addEventListener('click', function (e) {
+      try {
+        const btn = e.target.closest && e.target.closest('#btnRunPayroll');
+        if (!btn) return;
+        console.log('[payroll] Run Payroll button (delegated) clicked');
+        // Prefer the exported window.processPayroll
+        if (typeof window.processPayroll === 'function') {
+          try {
+            console.log('[payroll] Calling window.processPayroll()');
+            window.processPayroll();
+          } catch (err) {
+            console.error('[payroll] processPayroll threw:', err);
+            try { showToast('Error running payroll: ' + (err.message || err), 'error'); } catch (e) {}
+          }
+        } else {
+          console.error('[payroll] processPayroll not found on window');
+          try { showToast('Payroll function unavailable', 'error'); } catch (e) {}
+        }
+      } catch (outerErr) {
+        console.error('[payroll] delegated click handler error', outerErr);
       }
-    });
+    }, true); // use capture to pick up early
+    window._payrollRunDelegatedHandlerAdded = true;
+  }
+
+  // Also attach a direct listener if the button exists now (safe/optional)
+  const runBtn = document.getElementById('btnRunPayroll');
+  if (runBtn && !runBtn._payrollDirectHandler) {
+    try {
+      // remove inline onclick to avoid duplicate calls
+      try { runBtn.removeAttribute('onclick'); } catch (e) {}
+      const handler = function (ev) {
+        ev.preventDefault();
+        console.log('[payroll] Run Payroll button (direct) clicked');
+        if (typeof window.processPayroll === 'function') {
+          try {
+            console.log('[payroll] Calling window.processPayroll() (direct)');
+            window.processPayroll();
+          } catch (err) {
+            console.error('[payroll] processPayroll threw (direct):', err);
+            try { showToast('Error running payroll: ' + (err.message || err), 'error'); } catch (e) {}
+          }
+        } else {
+          console.error('[payroll] processPayroll not found on window (direct)');
+          try { showToast('Payroll function unavailable', 'error'); } catch (e) {}
+        }
+      };
+      runBtn.addEventListener('click', handler);
+      runBtn._payrollDirectHandler = handler;
+    } catch (e) {
+      console.warn('[payroll] failed to attach direct handler', e);
+    }
   }
 
   // Default buttons: show Process/Run (no saved run)
@@ -48,8 +85,10 @@ function initPayroll() {
   // Pre-fill modal input with current month for convenience
   const input = document.getElementById('monthModalInput');
   if (input) input.value = getCurrentMonthValue();
-}
 
+  // small sanity logs
+  console.log('[payroll] initPayroll completed. processPayroll is', typeof window.processPayroll);
+}
 /* ===========================
    Helpers
    =========================== */
