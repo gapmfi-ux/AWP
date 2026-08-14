@@ -845,3 +845,64 @@
   background: #fafbfc;
   border-radius: 0 0 12px 12px;
 }
+
+/* ============================================
+   ACCESS CODE MODAL
+   ============================================ */
+
+.access-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 999999;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.access-modal.show {
+  display: flex;
+}
+
+.access-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 420px;
+  width: 92%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.25s ease-out;
+  padding: 0;
+  overflow: hidden;
+}
+
+.access-modal-header {
+  padding: 18px 24px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #fafbfc;
+}
+
+.access-modal-header h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.access-modal-header h3 i {
+  color: #4361ee;
+  margin-right: 8px;
+}
+
+.access-modal-body {
+  padding: 24px;
+}
+
+.access-modal-body p {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  color: #4a5568;
+}
