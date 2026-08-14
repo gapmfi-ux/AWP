@@ -590,103 +590,302 @@
   };
 
   // =============================================================
-  // SEND PAYSLIP - Exposed globally
-  // =============================================================
-  window.sendPayslip = async function(staffNumber) {
-    window.closeActionDropdown();
-    const period = _currentPeriod;
+// SEND PAYSLIP WITH PDF ATTACHMENT - Updated
+// =============================================================
 
-    if (!period) {
-      showToast('Please select a period first', 'warning');
+window.sendPayslip = async function(staffNumber) {
+  window.closeActionDropdown();
+  const period = _currentPeriod;
+
+  if (!period) {
+    showToast('Please select a period first', 'warning');
+    return;
+  }
+
+  if (!staffNumber) {
+    showToast('No employee selected', 'warning');
+    return;
+  }
+
+  // Confirm before sending
+  if (!confirm(`Send payslip to ${staffNumber} for ${formatDisplayMonth(period)}?`)) {
+    return;
+  }
+
+  const sendBtn = document.getElementById('modalSendBtn');
+  const sendSpinner = document.getElementById('modalSendSpinner');
+  let originalSendText = '';
+
+  if (sendBtn) {
+    originalSendText = sendBtn.innerHTML;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+    sendBtn.disabled = true;
+  }
+
+  try {
+    showLoadingModal && showLoadingModal('Generating and sending payslip...');
+
+    // Step 1: Get employee details
+    const employee = await API.getEmployeeByStaffNumber(staffNumber);
+    if (!employee) {
+      showToast('Employee not found', 'error');
       return;
     }
 
-    if (!staffNumber) {
-      showToast('No employee selected', 'warning');
+    const email = employee['Email'] || employee.email;
+    if (!email) {
+      showToast('Employee has no email address on file', 'error');
       return;
     }
 
-    const sendBtn = document.getElementById('modalSendBtn');
-    const sendSpinner = document.getElementById('modalSendSpinner');
-    let originalSendText = '';
+    // Step 2: Get payslip data
+    const payslipData = await API.getPayslipData(staffNumber, period);
+    if (!payslipData || payslipData.success === false) {
+      showToast('Failed to generate payslip data', 'error');
+      return;
+    }
 
+    // Step 3: Generate PDF
+    const employeeName = employee['Full Name'] || employee.name || staffNumber;
+    const periodDisplay = formatDisplayMonth(period);
+    
+    const pdfBlob = await generatePayslipPDF(
+      payslipData.employee || employee,
+      payslipData.payroll,
+      period
+    );
+
+    // Step 4: Convert PDF to base64
+    const pdfBase64 = await blobToBase64(pdfBlob);
+    const pdfName = `Payslip_${staffNumber}_${period}.pdf`;
+
+    // Step 5: Send email with PDF attachment
+    const subject = `Payslip - ${periodDisplay} - ${employeeName}`;
+    const narration = `Dear ${employeeName},
+
+Please find attached your payslip for the period ${periodDisplay}.
+
+If you have any questions regarding your salary or deductions, please contact the Accounts Department.
+
+Best regards,
+Accounts Department
+GAP Microfinance Ltd`;
+
+    const result = await API.sendPayslipWithAttachment({
+      staffNumber,
+      period,
+      subject,
+      narration,
+      pdfBase64,
+      pdfName
+    });
+
+    if (result && result.success !== false) {
+      showToast(`Payslip sent to ${employeeName} (${email})`, 'success');
+      const modal = document.getElementById('payslipModal');
+      if (modal) modal.style.display = 'none';
+    } else {
+      showToast('Failed to send payslip: ' + (result?.error || 'Unknown error'), 'error');
+    }
+  } catch (error) {
+    console.error('sendPayslip error:', error);
+    showToast('Error sending payslip: ' + (error.message || error), 'error');
+  } finally {
     if (sendBtn) {
-      originalSendText = sendBtn.innerHTML;
-      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
-      sendBtn.disabled = true;
+      sendBtn.innerHTML = originalSendText || '<i class="fas fa-envelope"></i> Send';
+      sendBtn.disabled = false;
+    }
+    if (sendSpinner) sendSpinner.style.display = 'none';
+    hideLoadingModal && hideLoadingModal();
+  }
+};
+
+// =============================================================
+// SEND ALL PAYSLIPS WITH PDF ATTACHMENT - Updated
+// =============================================================
+
+async function sendAllPayslips(period) {
+  const tbody = document.getElementById('payslipListBody');
+  if (!tbody) return;
+
+  // Get visible rows (respecting search filter)
+  const rows = Array.from(tbody.querySelectorAll('tr[data-staff]')).filter(row => row.style.display !== 'none');
+  if (rows.length === 0) {
+    showToast('No employees to send (check search filter)', 'warning');
+    return;
+  }
+
+  // Confirm before sending all
+  if (!confirm(`Send payslips to all ${rows.length} employees for ${formatDisplayMonth(period)}?`)) {
+    return;
+  }
+
+  const overlay = document.getElementById('sendAllLoadingOverlay');
+  const progressEl = document.getElementById('sendAllProgress');
+
+  if (overlay) overlay.className = 'active';
+  if (progressEl) progressEl.textContent = 'Preparing to send...';
+
+  let successCount = 0;
+  let failCount = 0;
+  const failedEmployees = [];
+
+  for (let i = 0; i < rows.length; i++) {
+    const staff = rows[i].getAttribute('data-staff');
+    const nameCell = rows[i].querySelector('td:nth-child(2)');
+    const name = nameCell ? nameCell.textContent : staff;
+
+    if (progressEl) {
+      progressEl.textContent = `Sending ${i + 1}/${rows.length}... (${name})`;
     }
 
     try {
-      if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
-        const res = await API.sendPayslip(staffNumber, period);
-        if (res && res.success !== false) {
-          showToast('Payslip sent to ' + staffNumber, 'success');
-          const modal = document.getElementById('payslipModal');
-          if (modal) modal.style.display = 'none';
-        } else {
-          showToast('Failed to send payslip: ' + (res && res.error ? res.error : 'Unknown error'), 'error');
-        }
+      // Get employee details
+      const employee = await API.getEmployeeByStaffNumber(staff);
+      if (!employee) {
+        failCount++;
+        failedEmployees.push(staff + ' (employee not found)');
+        continue;
+      }
+
+      const email = employee['Email'] || employee.email;
+      if (!email) {
+        failCount++;
+        failedEmployees.push(staff + ' (no email)');
+        continue;
+      }
+
+      // Get payslip data
+      const payslipData = await API.getPayslipData(staff, period);
+      if (!payslipData || payslipData.success === false) {
+        failCount++;
+        failedEmployees.push(staff + ' (no data)');
+        continue;
+      }
+
+      // Generate PDF
+      const employeeName = employee['Full Name'] || employee.name || staff;
+      const periodDisplay = formatDisplayMonth(period);
+      
+      const pdfBlob = await generatePayslipPDF(
+        payslipData.employee || employee,
+        payslipData.payroll,
+        period
+      );
+
+      // Convert PDF to base64
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      const pdfName = `Payslip_${staff}_${period}.pdf`;
+
+      // Send email with PDF attachment
+      const subject = `Payslip - ${periodDisplay} - ${employeeName}`;
+      const narration = `Dear ${employeeName},
+
+Please find attached your payslip for the period ${periodDisplay}.
+
+If you have any questions regarding your salary or deductions, please contact the Accounts Department.
+
+Best regards,
+Accounts Department
+GAP Microfinance Ltd`;
+
+      const result = await API.sendPayslipWithAttachment({
+        staffNumber: staff,
+        period,
+        subject,
+        narration,
+        pdfBase64,
+        pdfName
+      });
+
+      if (result && result.success !== false) {
+        successCount++;
       } else {
-        showToast('Send feature not configured. (Simulated)', 'info');
+        failCount++;
+        failedEmployees.push(staff + ' (send failed)');
       }
     } catch (err) {
-      console.error('sendPayslip error', err);
-      showToast('Failed to send payslip', 'error');
-    } finally {
-      if (sendBtn) {
-        sendBtn.innerHTML = originalSendText || '<i class="fas fa-envelope"></i> Send';
-        sendBtn.disabled = false;
-      }
-      if (sendSpinner) sendSpinner.style.display = 'none';
+      failCount++;
+      failedEmployees.push(staff + ' (' + err.message + ')');
     }
-  };
-
-  // =============================================================
-  // SEND ALL PAYSLIPS
-  // =============================================================
-  async function sendAllPayslips(period) {
-    const tbody = document.getElementById('payslipListBody');
-    if (!tbody) return;
-
-    // Get visible rows (respecting search filter)
-    const rows = Array.from(tbody.querySelectorAll('tr[data-staff]')).filter(row => row.style.display !== 'none');
-    if (rows.length === 0) {
-      showToast('No employees to send (check search filter)', 'warning');
-      return;
-    }
-
-    const overlay = document.getElementById('sendAllLoadingOverlay');
-    const progressEl = document.getElementById('sendAllProgress');
-
-    if (overlay) overlay.className = 'active';
-    if (progressEl) progressEl.textContent = 'Preparing to send...';
-
-    let successCount = 0;
-    let failCount = 0;
-
-    for (let i = 0; i < rows.length; i++) {
-      const staff = rows[i].getAttribute('data-staff');
-      if (progressEl) progressEl.textContent = `Sending ${i + 1}/${rows.length}... (${staff})`;
-
-      try {
-        if (typeof API !== 'undefined' && API && typeof API.sendPayslip === 'function') {
-          const res = await API.sendPayslip(staff, period);
-          if (res && res.success !== false) {
-            successCount++;
-          } else {
-            failCount++;
-          }
-        } else {
-          successCount++;
-        }
-      } catch (e) {
-        failCount++;
-      }
-    }
-
-    if (overlay) overlay.className = '';
-    showToast(`Payslips sent: ${successCount} successful, ${failCount} failed`, successCount > 0 ? 'success' : 'error');
   }
+
+  if (overlay) overlay.className = '';
+
+  let message = `Payslips sent: ${successCount} successful, ${failCount} failed`;
+  if (failedEmployees.length > 0 && failedEmployees.length <= 5) {
+    message += `\nFailed: ${failedEmployees.join(', ')}`;
+  } else if (failedEmployees.length > 5) {
+    message += `\n${failedEmployees.length} employees failed. Check console for details.`;
+  }
+  
+  showToast(message, successCount > 0 ? 'success' : 'error');
+}
+
+// =============================================================
+// HELPER: Generate PDF from payslip HTML
+// =============================================================
+
+async function generatePayslipPDF(employee, payroll, period) {
+  try {
+    const staffNumber = employee['Staff Number'] || employee.staffNumber;
+    const html = buildPayslipHTML(employee, payroll, period);
+
+    const response = await API.generatePayslipPDF({
+      staffNumber: staffNumber,
+      period: period,
+      htmlContent: html
+    });
+
+    if (response && response.success && response.pdfBase64) {
+      const byteCharacters = atob(response.pdfBase64);
+      const byteNumbers = new Array(byteCharacters.length);
+      for (let i = 0; i < byteCharacters.length; i++) {
+        byteNumbers[i] = byteCharacters.charCodeAt(i);
+      }
+      const byteArray = new Uint8Array(byteNumbers);
+      return new Blob([byteArray], { type: 'application/pdf' });
+    } else {
+      throw new Error(response?.error || 'Failed to generate PDF');
+    }
+  } catch (error) {
+    console.error('generatePayslipPDF error:', error);
+    throw error;
+  }
+}
+
+// =============================================================
+// HELPER: Convert Blob to Base64
+// =============================================================
+
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64 = reader.result.split(',')[1] || reader.result;
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+// =============================================================
+// HELPER: Format display month
+// =============================================================
+
+function formatDisplayMonth(yyyymm) {
+  if (!yyyymm) return '';
+  try {
+    const parts = yyyymm.split('-');
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10);
+    const date = new Date(y, m - 1, 1);
+    return date.toLocaleString('default', { month: 'long', year: 'numeric' });
+  } catch (e) {
+    return yyyymm;
+  }
+}
 
   // =============================================================
   // PRINT PAYSLIP
