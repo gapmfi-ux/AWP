@@ -153,7 +153,7 @@
     <p>Loading...</p>
   </div>
 
-<!-- Access Code Modal -->
+
 <div id="accessCodeModal" class="access-modal">
   <div class="access-modal-content">
     <div class="access-modal-header">
@@ -167,6 +167,7 @@
           id="accessCodeInput" 
           placeholder="Enter access code..." 
           autocomplete="off"
+          onkeypress="if(event.key==='Enter') verifyAccessCode();"
         >
         <button class="btn-primary" onclick="verifyAccessCode()">
           <i class="fas fa-check"></i> Verify
