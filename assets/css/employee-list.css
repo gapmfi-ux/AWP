@@ -679,3 +679,21 @@
     min-width: unset;
   }
 }
+/* In employee-list.css */
+.action-btn.terminate-btn {
+  color: #e53e3e;
+  transition: transform 0.15s ease;
+}
+
+.action-btn.terminate-btn:hover {
+  transform: scale(1.2);
+}
+
+.inactive-row {
+  background-color: #f7fafc !important;
+  opacity: 0.7;
+}
+
+.inactive-row td {
+  color: #a0aec0 !important;
+}
