@@ -733,7 +733,6 @@ function formatDateForInput(date) {
 // ============================================
 
 window.loadModule = loadModule;
-window.originalLoadModule = originalLoadModule;
 window.toggleSidebar = toggleSidebar;
 window.toggleUserMenu = toggleUserMenu;
 window.toggleSubmenu = toggleSubmenu;
