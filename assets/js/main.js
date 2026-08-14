@@ -518,6 +518,96 @@ function initPayslipModule() {
   console.log('Payslip module loaded');
   if (typeof window.initPayslip === 'function') window.initPayslip();
 }
+// In main.js - Access Code Management
+const PAYROLL_ACCESS_CODE = 'GAP2026'; // Default code - you can change this
+
+// Track which payroll module was requested
+let pendingPayrollModule = null;
+
+function checkPayrollAccess(moduleName) {
+  // Check if access was already granted in this session
+  if (sessionStorage.getItem('payrollAccessGranted') === 'true') {
+    // Access already granted, proceed
+    loadModule(moduleName);
+    return;
+  }
+  
+  // Store the requested module and show access modal
+  pendingPayrollModule = moduleName;
+  showAccessModal();
+}
+
+function showAccessModal() {
+  const modal = document.getElementById('accessCodeModal');
+  const input = document.getElementById('accessCodeInput');
+  const error = document.getElementById('accessCodeError');
+  
+  if (modal) {
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    if (error) {
+      error.style.display = 'none';
+    }
+  }
+}
+
+function verifyAccessCode() {
+  const input = document.getElementById('accessCodeInput');
+  const error = document.getElementById('accessCodeError');
+  const enteredCode = input ? input.value.trim() : '';
+  
+  if (enteredCode === PAYROLL_ACCESS_CODE) {
+    // Access granted
+    sessionStorage.setItem('payrollAccessGranted', 'true');
+    closeAccessModal();
+    
+    // Load the pending module
+    if (pendingPayrollModule) {
+      loadModule(pendingPayrollModule);
+      pendingPayrollModule = null;
+    }
+  } else {
+    // Invalid code
+    if (error) {
+      error.style.display = 'block';
+    }
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
+    // Clear any previous success
+    sessionStorage.removeItem('payrollAccessGranted');
+  }
+}
+
+function closeAccessModal() {
+  const modal = document.getElementById('accessCodeModal');
+  if (modal) {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  }
+  const error = document.getElementById('accessCodeError');
+  if (error) {
+    error.style.display = 'none';
+  }
+}
+
+// Override the loadModule function to check for payroll modules
+const originalLoadModule = loadModule;
+loadModule = function(moduleName) {
+  const payrollModules = ['employeeList', 'payroll', 'payslip'];
+  
+  if (payrollModules.includes(moduleName)) {
+    checkPayrollAccess(moduleName);
+  } else {
+    originalLoadModule(moduleName);
+  }
+};
+
 
 // ============================================
 // USER FUNCTIONS
