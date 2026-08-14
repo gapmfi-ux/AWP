@@ -8,10 +8,10 @@ let sidebarCollapsed = false;
 let currentUser = null;
 let currentModule = 'dashboard';
 let pendingPayrollModule = null;
-let isProcessingAccess = false; // Prevent recursive calls
+let isProcessingAccess = false;
 
 // ============================================
-// PAYROLL ACCESS CODE - UPDATED
+// PAYROLL ACCESS CODE
 // ============================================
 
 const PAYROLL_ACCESS_CODE = 'GAP2026';
@@ -19,12 +19,13 @@ const PAYROLL_ACCESS_CODE = 'GAP2026';
 function checkPayrollAccess(moduleName) {
   console.log('[Access] Checking access for:', moduleName);
   
+  // Prevent infinite recursion
   if (isProcessingAccess) {
     console.log('[Access] Already processing, skipping');
     return;
   }
   
-  // Check if access was already granted
+  // Check if access was already granted in this session
   if (sessionStorage.getItem('payrollAccessGranted') === 'true') {
     console.log('[Access] Access already granted');
     loadModuleDirect(moduleName);
@@ -44,20 +45,29 @@ function showAccessModal() {
   const error = document.getElementById('accessCodeError');
   
   if (!modal) {
-    console.error('[Access] Modal element not found!');
+    console.error('[Access] Modal element not found! Make sure access modal HTML exists in index.html');
+    // Fallback: try to load module anyway if modal doesn't exist
+    isProcessingAccess = false;
+    if (pendingPayrollModule) {
+      const moduleToLoad = pendingPayrollModule;
+      pendingPayrollModule = null;
+      loadModuleDirect(moduleToLoad);
+    }
     return;
   }
   
   // Reset error
   if (error) {
     error.textContent = 'Invalid access code. Please try again.';
-    error.className = ''; // Remove 'show' class
+    error.className = '';
   }
   
   // Clear input
   if (input) {
     input.value = '';
-    setTimeout(() => input.focus(), 100);
+    setTimeout(function() {
+      input.focus();
+    }, 100);
   }
   
   // Show modal - use both class and style to ensure visibility
@@ -119,18 +129,15 @@ function closeAccessModal() {
 }
 
 // ============================================
-// COMPATIBILITY LAYER - For modules using google.script.run
+// COMPATIBILITY LAYER
 // ============================================
 
-// Create a wrapper that mimics google.script.run for compatibility
 window.google = {
   script: {
     run: (function() {
-      // Store the current success and failure handlers
       let currentSuccessHandler = null;
       let currentFailureHandler = null;
       
-      // Create the chainable object
       const chainable = {
         withSuccessHandler: function(callback) {
           currentSuccessHandler = callback;
@@ -142,7 +149,6 @@ window.google = {
         }
       };
       
-      // Add dynamic methods for all API actions
       const actions = [
         'getUserInfo',
         'processForm',
@@ -173,7 +179,6 @@ window.google = {
         'getAssetRegisterHTML',
         'getInvestmentAddHTML',
         'getInvestmentReportHTML',
-        // Payroll actions
         'getEmployees',
         'getEmployeeByStaffNumber',
         'addEmployee',
@@ -203,19 +208,13 @@ window.google = {
       
       actions.forEach(action => {
         chainable[action] = function(...args) {
-          // Map the action to API methods
           const actionMap = {
-            // User
             'getUserInfo': () => API.getUserInfo(),
-            
-            // Payment Voucher
             'processForm': () => API.processForm(args[0]),
             'getNextPVNumber': () => API.getNextPVNumber(args[0]),
             'getPVNumbersByType': () => API.getPVNumbersByType(),
             'getVoucherByNumber': () => API.getVoucherByNumber(args[0], args[1]),
             'updateVoucher': () => API.updateVoucher(args[0]),
-            
-            // Inventory
             'generateInventoryCategoryCode': () => API.generateInventoryCategoryCode(),
             'getInventoryCategories': () => API.getInventoryCategories(),
             'addNewInventory': () => API.addNewInventory(args[0]),
@@ -224,20 +223,14 @@ window.google = {
             'getInventoryListData': () => API.getInventoryListData(args[0]),
             'recordInventoryUsage': () => API.recordInventoryUsage(args[0]),
             'removeInventory': () => API.removeInventory(args[0]),
-            
-            // Fixed Assets
             'generateAssetCode': () => API.generateAssetCode(args[0]),
             'addNewAsset': () => API.addNewAsset(args[0]),
             'getDetailedRegister': () => API.getDetailedRegister(),
             'updateAssetStatus': () => API.updateAssetStatus(args[0], args[1]),
-            
-            // Investment
             'generateInvestmentCode': () => API.generateInvestmentCode(args[0]),
             'addNewInvestment': () => API.addNewInvestment(args[0]),
             'getInvestmentsByDateRange': () => API.getInvestmentsByDateRange(args[0], args[1]),
             'getMaturedInvestments': () => API.getMaturedInvestments(args[0]),
-            
-            // Subscription
             'getSubscriptionCategories': () => API.getSubscriptionCategories(),
             'generateSubscriptionCategoryCode': () => API.generateSubscriptionCategoryCode(),
             'getNextSubscriptionCode': () => API.getNextSubscriptionCode(args[0]),
@@ -248,8 +241,6 @@ window.google = {
             'getSubscriptionsByDateRange': () => API.getSubscriptionsByDateRange(args[0], args[1]),
             'getExpiredSubscriptions': () => API.getExpiredSubscriptions(args[0]),
             'renewSubscription': () => API.renewSubscription(args[0], args[1], args[2]),
-             
-            // HTML Module Loaders
             'getPVFormHTML': () => loadModuleFile('paymentVoucher'),
             'getAddInventoryHTML': () => loadModuleFile('inventoryAdd'),
             'getInventoryReportHTML': () => loadModuleFile('inventoryReport'),
@@ -257,8 +248,6 @@ window.google = {
             'getAssetRegisterHTML': () => loadModuleFile('viewAssetRegister'),
             'getInvestmentAddHTML': () => loadModuleFile('investmentAdd'),
             'getInvestmentReportHTML': () => loadModuleFile('investmentReport'),
-            
-            // Payroll
             'getEmployees': () => API.getEmployees(),
             'getEmployeeByStaffNumber': () => API.getEmployeeByStaffNumber(args[0]),
             'addEmployee': () => API.addEmployee(args[0]),
@@ -295,7 +284,7 @@ window.google = {
                 }
               })
               .catch(error => {
-                console.error(`API call failed for ${action}:`, error);
+                console.error('API call failed for ' + action + ':', error);
                 if (currentFailureHandler) {
                   currentFailureHandler(error);
                 }
@@ -303,7 +292,7 @@ window.google = {
           } else {
             console.error('Unknown action:', action);
             if (currentFailureHandler) {
-              currentFailureHandler(new Error(`Unknown action: ${action}`));
+              currentFailureHandler(new Error('Unknown action: ' + action));
             }
           }
           return chainable;
@@ -333,7 +322,7 @@ async function loadModuleFile(moduleName) {
   try {
     const response = await fetch(modules[moduleName]);
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error('HTTP ' + response.status);
     }
     return await response.text();
   } catch (error) {
@@ -355,18 +344,15 @@ function initializeApp() {
   setupEventListeners();
   setupSidebarToggleOnResize();
   
-  // Load dashboard content directly (using dashboard.js function)
   if (typeof loadDashboardContent === 'function') {
     loadDashboardContent();
   } else {
-    // Fallback
     const mainContent = document.getElementById('mainContent');
     if (mainContent) {
       mainContent.innerHTML = '<div class="content-wrapper"><p>Loading dashboard...</p></div>';
     }
   }
   
-  // Check if sidebar should be collapsed based on screen size
   if (window.innerWidth <= 768) {
     sidebarCollapsed = true;
     const s = document.getElementById('sidebar');
@@ -375,7 +361,6 @@ function initializeApp() {
 }
 
 function setupEventListeners() {
-  // Close user dropdown when clicking outside
   document.addEventListener('click', function(event) {
     const userMenu = document.querySelector('.user-menu');
     const userDropdown = document.getElementById('userDropdown');
@@ -389,7 +374,7 @@ function setupEventListeners() {
 function setupSidebarToggleOnResize() {
   window.addEventListener('resize', function() {
     if (window.innerWidth > 768 && sidebarCollapsed) {
-      // Do nothing, keep collapsed state
+      // Do nothing
     } else if (window.innerWidth <= 768) {
       const s = document.getElementById('sidebar');
       if (s) s.classList.remove('show-mobile');
@@ -436,12 +421,11 @@ function toggleSidebar() {
     if (mainContent) mainContent.classList.toggle('expanded');
     sidebarCollapsed = sidebar && sidebar.classList.contains('collapsed');
     
-    // Close all submenus when sidebar is collapsed
     if (sidebarCollapsed) {
-      document.querySelectorAll('.submenu').forEach(menu => {
+      document.querySelectorAll('.submenu').forEach(function(menu) {
         menu.classList.remove('show');
       });
-      document.querySelectorAll('.dropdown-icon').forEach(icon => {
+      document.querySelectorAll('.dropdown-icon').forEach(function(icon) {
         icon.classList.remove('rotated');
       });
       currentOpenSubmenu = null;
@@ -460,7 +444,6 @@ function toggleSubmenu(submenuId) {
   const submenu = document.getElementById(submenuId);
   const icon = document.getElementById(submenuId.replace('Submenu', 'Icon'));
   
-  // Close other submenus
   if (currentOpenSubmenu && currentOpenSubmenu !== submenu) {
     currentOpenSubmenu.classList.remove('show');
     const prevIcon = document.getElementById(currentOpenSubmenu.id.replace('Submenu', 'Icon'));
@@ -478,7 +461,8 @@ function toggleSubmenu(submenuId) {
 // LOADING MODAL
 // ============================================
 
-function showLoadingModal(message = 'Loading...') {
+function showLoadingModal(message) {
+  message = message || 'Loading...';
   let modal = document.getElementById('contentLoadingModal');
   if (!modal) {
     modal = document.createElement('div');
@@ -502,12 +486,11 @@ function hideLoadingModal() {
 }
 
 // ============================================
-// MODULE LOADING - FIXED RECURSION
+// MODULE LOADING
 // ============================================
 
-// The main module loading function
 function loadModuleDirect(moduleName) {
-  return new Promise((resolve, reject) => {
+  return new Promise(function(resolve, reject) {
     if (currentModule === moduleName) {
       resolve();
       return;
@@ -515,11 +498,9 @@ function loadModuleDirect(moduleName) {
     
     showLoadingModal('Loading module...');
     currentModule = moduleName;
-    
-    // Update active state in sidebar
     updateActiveMenuItem(moduleName);
     
-    const modules = {
+    var modules = {
       'paymentVoucher': { file: 'modules/payment-voucher.html', init: 'initPVModule' },
       'inventoryAdd': { file: 'modules/add-inventory.html', init: 'initInventoryModule' },
       'inventoryReport': { file: 'modules/inventory-report.html', init: 'initInventoryReportModule' },
@@ -536,7 +517,6 @@ function loadModuleDirect(moduleName) {
       'dashboard': null
     };
     
-    // Handle dashboard separately
     if (moduleName === 'dashboard') {
       if (typeof loadDashboardContent === 'function') {
         loadDashboardContent();
@@ -547,7 +527,7 @@ function loadModuleDirect(moduleName) {
       return;
     }
     
-    const config = modules[moduleName];
+    var config = modules[moduleName];
     if (!config) {
       showError('Module not found: ' + moduleName);
       hideLoadingModal();
@@ -556,13 +536,19 @@ function loadModuleDirect(moduleName) {
     }
     
     fetch(config.file)
-      .then(response => response.ok ? response.text() : Promise.reject('HTTP ' + response.status))
-      .then(html => {
-        const main = document.getElementById('mainContent');
-        if (main) {
-          main.innerHTML = `<div class="content-wrapper">${html}</div>`;
+      .then(function(response) {
+        if (response.ok) {
+          return response.text();
+        } else {
+          return Promise.reject('HTTP ' + response.status);
         }
-        setTimeout(() => {
+      })
+      .then(function(html) {
+        var main = document.getElementById('mainContent');
+        if (main) {
+          main.innerHTML = '<div class="content-wrapper">' + html + '</div>';
+        }
+        setTimeout(function() {
           try {
             if (window[config.init] && typeof window[config.init] === 'function') {
               window[config.init]();
@@ -577,7 +563,7 @@ function loadModuleDirect(moduleName) {
           }
         }, 150);
       })
-      .catch(error => {
+      .catch(function(error) {
         console.error('Error loading module:', error);
         showError('Could not load module. Please try again.');
         hideLoadingModal();
@@ -588,9 +574,9 @@ function loadModuleDirect(moduleName) {
 
 // Wrapper function that checks for payroll access
 function loadModule(moduleName) {
-  const payrollModules = ['employeeList', 'payroll', 'payslip'];
+  var payrollModules = ['employeeList', 'payroll', 'payslip'];
   
-  if (payrollModules.includes(moduleName)) {
+  if (payrollModules.indexOf(moduleName) !== -1) {
     checkPayrollAccess(moduleName);
   } else {
     loadModuleDirect(moduleName);
@@ -598,15 +584,13 @@ function loadModule(moduleName) {
 }
 
 function updateActiveMenuItem(moduleName) {
-  // Remove active class from all menu items
-  document.querySelectorAll('.menu-item').forEach(item => {
+  document.querySelectorAll('.menu-item').forEach(function(item) {
     item.classList.remove('active');
   });
   
-  // Find and activate the corresponding menu item
-  document.querySelectorAll('.menu-item').forEach(item => {
-    const onclickAttr = item.getAttribute('onclick');
-    if (onclickAttr && onclickAttr.includes(`'${moduleName}'`)) {
+  document.querySelectorAll('.menu-item').forEach(function(item) {
+    var onclickAttr = item.getAttribute('onclick');
+    if (onclickAttr && onclickAttr.indexOf("'" + moduleName + "'") !== -1) {
       item.classList.add('active');
     }
   });
@@ -618,7 +602,7 @@ function showError(message) {
 
 function closeSidebarMobile() {
   if (window.innerWidth <= 768) {
-    const sidebar = document.getElementById('sidebar');
+    var sidebar = document.getElementById('sidebar');
     if (sidebar) {
       sidebar.classList.remove('show-mobile');
     }
@@ -667,13 +651,11 @@ function initSubscriptionScheduleModule() {
 
 function initDailyLiquidityModule() {
   console.log('Daily Liquidity module loaded');
-  // The actual init is in dailyliquidity.js
   if (typeof window.initDailyLiquidityModule === 'function') {
     window.initDailyLiquidityModule();
   }
 }
 
-// New payroll/employee/payslip init wrappers
 function initEmployeeListModule() {
   console.log('Employee List module loaded');
   if (typeof window.initEmployeeList === 'function') window.initEmployeeList();
@@ -717,7 +699,7 @@ function logout() {
 function formatDate(dateString) {
   if (!dateString) return '';
   try {
-    const date = new Date(dateString);
+    var date = new Date(dateString);
     return date.toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -733,22 +715,22 @@ function getToday() {
 }
 
 function getStartOfYear() {
-  const today = new Date();
-  const startOfYear = new Date(today.getFullYear(), 0, 1);
+  var today = new Date();
+  var startOfYear = new Date(today.getFullYear(), 0, 1);
   return formatDateForInput(startOfYear);
 }
 
 function formatDateForInput(date) {
   if (!date) return '';
-  const d = new Date(date);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  var d = new Date(date);
+  var year = d.getFullYear();
+  var month = String(d.getMonth() + 1).padStart(2, '0');
+  var day = String(d.getDate()).padStart(2, '0');
+  return year + '-' + month + '-' + day;
 }
 
 // ============================================
-// EXPORT FOR MODULES
+// EXPORT
 // ============================================
 
 window.loadModule = loadModule;
@@ -782,11 +764,11 @@ window.closeAccessModal = closeAccessModal;
 window.checkPayrollAccess = checkPayrollAccess;
 
 // ============================================
-// ADD CSS FOR LOADING MODAL
+// CSS FOR LOADING MODAL
 // ============================================
 
-const homepageLoadingStyle = document.createElement('style');
-homepageLoadingStyle.textContent = `
+var style = document.createElement('style');
+style.textContent = `
   .content-loading-modal {
     position: fixed;
     top: 0;
@@ -830,74 +812,5 @@ homepageLoadingStyle.textContent = `
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-
-  /* Access Code Modal */
-  .access-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.6);
-    z-index: 999999;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(4px);
-  }
-
-  .access-modal.show {
-    display: flex;
-  }
-
-  .access-modal-content {
-    background: #ffffff;
-    border-radius: 12px;
-    max-width: 420px;
-    width: 92%;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    animation: modalSlideIn 0.25s ease-out;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .access-modal-header {
-    padding: 18px 24px;
-    border-bottom: 1px solid #e2e8f0;
-    background: #fafbfc;
-  }
-
-  .access-modal-header h3 {
-    margin: 0;
-    font-size: 17px;
-    font-weight: 700;
-    color: #1a202c;
-  }
-
-  .access-modal-header h3 i {
-    color: #4361ee;
-    margin-right: 8px;
-  }
-
-  .access-modal-body {
-    padding: 24px;
-  }
-
-  .access-modal-body p {
-    margin: 0 0 4px 0;
-    font-size: 14px;
-    color: #4a5568;
-  }
-
-  @keyframes modalSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-20px) scale(0.95);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0) scale(1);
-    }
-  }
 `;
-document.head.appendChild(homepageLoadingStyle);
+document.head.appendChild(style);
