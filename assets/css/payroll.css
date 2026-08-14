@@ -614,3 +614,234 @@
     width: 26px;
   }
 }
+/* ============================================
+   CONFIRM MODAL - FIXED VISIBILITY
+   ============================================ */
+
+.confirm-modal {
+  display: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  background: rgba(0, 0, 0, 0.6) !important;
+  z-index: 999999 !important;
+  align-items: center !important;
+  justify-content: center !important;
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+.confirm-modal.show {
+  display: flex !important;
+}
+
+.confirm-modal-content {
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  max-width: 460px !important;
+  width: 92% !important;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35) !important;
+  animation: confirmModalSlideIn 0.3s ease-out !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+@keyframes confirmModalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.confirm-modal-header {
+  padding: 18px 24px !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: #fafbfc !important;
+}
+
+.confirm-modal-header h3 {
+  margin: 0 !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: #1a202c !important;
+}
+
+.confirm-modal-header h3 i {
+  margin-right: 8px !important;
+  color: #4361ee !important;
+}
+
+.confirm-modal-close {
+  background: none !important;
+  border: none !important;
+  font-size: 26px !important;
+  font-weight: 300 !important;
+  color: #a0aec0 !important;
+  cursor: pointer !important;
+  padding: 0 6px !important;
+  line-height: 1 !important;
+  transition: color 0.15s ease !important;
+}
+
+.confirm-modal-close:hover {
+  color: #e53e3e !important;
+}
+
+.confirm-modal-body {
+  padding: 24px 24px 20px 24px !important;
+  font-size: 15px !important;
+  color: #2d3748 !important;
+  line-height: 1.7 !important;
+}
+
+.confirm-modal-body strong {
+  color: #2b6cb0 !important;
+}
+
+.confirm-modal-body .text-muted {
+  color: #718096 !important;
+  font-size: 13px !important;
+}
+
+.confirm-modal-footer {
+  padding: 16px 24px !important;
+  border-top: 1px solid #e2e8f0 !important;
+  display: flex !important;
+  justify-content: flex-end !important;
+  gap: 10px !important;
+  background: #fafbfc !important;
+}
+
+.confirm-modal-footer .btn-secondary {
+  padding: 8px 22px !important;
+  background: #edf2f7 !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 6px !important;
+  color: #4a5568 !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.confirm-modal-footer .btn-secondary:hover {
+  background: #e2e8f0 !important;
+}
+
+.confirm-modal-footer .btn-primary {
+  padding: 8px 22px !important;
+  background: #4361ee !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.confirm-modal-footer .btn-primary:hover {
+  background: #3651d4 !important;
+  transform: translateY(-1px) !important;
+}
+
+.confirm-modal-footer .btn-primary:active {
+  transform: translateY(0) !important;
+}
+
+/* ============================================
+   MONTH MODAL - Already in use
+   ============================================ */
+
+.payroll-modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99999;
+  align-items: center;
+  justify-content: center;
+}
+
+.payroll-modal.show {
+  display: flex;
+}
+
+.payroll-modal-content {
+  background: #ffffff;
+  border-radius: 12px;
+  max-width: 480px;
+  width: 94%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+  animation: modalSlideIn 0.25s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.payroll-modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.payroll-modal-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a202c;
+}
+
+.payroll-modal-header h3 i {
+  color: #4361ee;
+  margin-right: 8px;
+}
+
+.payroll-modal-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #a0aec0;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.payroll-modal-close:hover {
+  color: #e53e3e;
+}
+
+.payroll-modal-body {
+  padding: 20px;
+}
+
+.payroll-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  background: #fafbfc;
+  border-radius: 0 0 12px 12px;
+}
