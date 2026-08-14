@@ -11,7 +11,6 @@ let currentModule = 'dashboard';
 // ============================================
 // COMPATIBILITY LAYER - For modules using google.script.run
 // ============================================
-
 // Create a wrapper that mimics google.script.run for compatibility
 window.google = {
   script: {
