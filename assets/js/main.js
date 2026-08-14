@@ -11,60 +11,79 @@ let pendingPayrollModule = null;
 let isProcessingAccess = false; // Prevent recursive calls
 
 // ============================================
-// PAYROLL ACCESS CODE
+// PAYROLL ACCESS CODE - UPDATED
 // ============================================
 
-const PAYROLL_ACCESS_CODE = 'GAP2026'; // Default code - you can change this
+const PAYROLL_ACCESS_CODE = 'GAP2026';
 
 function checkPayrollAccess(moduleName) {
-  // Prevent infinite recursion
+  console.log('[Access] Checking access for:', moduleName);
+  
   if (isProcessingAccess) {
-    console.log('[Access] Already processing access request, skipping');
+    console.log('[Access] Already processing, skipping');
     return;
   }
   
-  // Check if access was already granted in this session
+  // Check if access was already granted
   if (sessionStorage.getItem('payrollAccessGranted') === 'true') {
-    // Access already granted, proceed directly
+    console.log('[Access] Access already granted');
     loadModuleDirect(moduleName);
     return;
   }
   
-  // Store the requested module and show access modal
+  console.log('[Access] Access required, showing modal');
   isProcessingAccess = true;
   pendingPayrollModule = moduleName;
   showAccessModal();
 }
 
 function showAccessModal() {
+  console.log('[Access] Showing access modal');
   const modal = document.getElementById('accessCodeModal');
   const input = document.getElementById('accessCodeInput');
   const error = document.getElementById('accessCodeError');
   
-  if (modal) {
-    modal.classList.add('show');
-    modal.style.display = 'flex';
-    if (input) {
-      input.value = '';
-      setTimeout(() => input.focus(), 100);
-    }
-    if (error) {
-      error.style.display = 'none';
-    }
+  if (!modal) {
+    console.error('[Access] Modal element not found!');
+    return;
   }
+  
+  // Reset error
+  if (error) {
+    error.textContent = 'Invalid access code. Please try again.';
+    error.className = ''; // Remove 'show' class
+  }
+  
+  // Clear input
+  if (input) {
+    input.value = '';
+    setTimeout(() => input.focus(), 100);
+  }
+  
+  // Show modal - use both class and style to ensure visibility
+  modal.classList.add('show');
+  modal.style.display = 'flex';
+  
+  console.log('[Access] Modal should now be visible');
 }
 
 function verifyAccessCode() {
   const input = document.getElementById('accessCodeInput');
   const error = document.getElementById('accessCodeError');
-  const enteredCode = input ? input.value.trim() : '';
+  
+  if (!input) {
+    console.error('[Access] Input element not found');
+    return;
+  }
+  
+  const enteredCode = input.value.trim();
+  console.log('[Access] Verifying code...');
   
   if (enteredCode === PAYROLL_ACCESS_CODE) {
-    // Access granted
+    console.log('[Access] Access granted!');
     sessionStorage.setItem('payrollAccessGranted', 'true');
     closeAccessModal();
     
-    // Load the pending module
     if (pendingPayrollModule) {
       const moduleToLoad = pendingPayrollModule;
       pendingPayrollModule = null;
@@ -72,19 +91,22 @@ function verifyAccessCode() {
       loadModuleDirect(moduleToLoad);
     }
   } else {
-    // Invalid code
+    console.log('[Access] Invalid code entered');
     if (error) {
-      error.style.display = 'block';
+      error.textContent = 'Invalid access code. Please try again.';
+      error.className = 'show';
     }
     if (input) {
       input.value = '';
       input.focus();
+      input.select();
     }
     sessionStorage.removeItem('payrollAccessGranted');
   }
 }
 
 function closeAccessModal() {
+  console.log('[Access] Closing access modal');
   const modal = document.getElementById('accessCodeModal');
   if (modal) {
     modal.classList.remove('show');
@@ -92,7 +114,7 @@ function closeAccessModal() {
   }
   const error = document.getElementById('accessCodeError');
   if (error) {
-    error.style.display = 'none';
+    error.className = '';
   }
 }
 
