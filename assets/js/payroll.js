@@ -14,6 +14,56 @@ let currentPeriod = '';        // 'YYYY-MM'
 let currentRunId = null;       // populated if a saved run is loaded
 let monthModalMode = null;     // 'process' or 'view'
 
+// In payroll.js - Server side function to set/verify access code
+function setPayrollAccessCode(code) {
+  try {
+    const ss = SpreadsheetApp.openById(PAYROLL_CONFIG.SHEET_ID);
+    let sheet = ss.getSheetByName('Access');
+    if (!sheet) {
+      sheet = ss.insertSheet('Access');
+      sheet.appendRow(['Setting', 'Value']);
+      sheet.appendRow(['PayrollAccessCode', code || 'GAP2026']);
+      sheet.setFrozenRows(1);
+    } else {
+      // Update existing code
+      const data = sheet.getDataRange().getValues();
+      let found = false;
+      for (let i = 0; i < data.length; i++) {
+        if (data[i][0] === 'PayrollAccessCode') {
+          sheet.getRange(i + 1, 2).setValue(code || 'GAP2026');
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        sheet.appendRow(['PayrollAccessCode', code || 'GAP2026']);
+      }
+    }
+    return { success: true, message: 'Access code updated' };
+  } catch (e) {
+    return { success: false, error: e.message };
+  }
+}
+
+function getPayrollAccessCode() {
+  try {
+    const ss = SpreadsheetApp.openById(PAYROLL_CONFIG.SHEET_ID);
+    const sheet = ss.getSheetByName('Access');
+    if (!sheet) return { code: 'GAP2026' };
+    
+    const data = sheet.getDataRange().getValues();
+    for (let i = 0; i < data.length; i++) {
+      if (data[i][0] === 'PayrollAccessCode') {
+        return { code: String(data[i][1] || 'GAP2026') };
+      }
+    }
+    return { code: 'GAP2026' };
+  } catch (e) {
+    return { code: 'GAP2026' };
+  }
+}
+
+
 function initPayroll() {
   currentPayrollData = [];
   currentPeriod = '';
