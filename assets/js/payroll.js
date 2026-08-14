@@ -326,11 +326,13 @@ async function processPayroll() {
   try {
     console.log('[payroll] processPayroll invoked. currentPeriod=', currentPeriod, 'currentPayrollDataCount=', (currentPayrollData && currentPayrollData.length) || 0);
 
+    // If no period selected, show month modal first
     if (!currentPeriod) {
-      showToast('No period selected — click Process to choose a month', 'warning');
+      showMonthModal('process');
       return;
     }
 
+    // If no preview data, generate it first
     if (!currentPayrollData || currentPayrollData.length === 0) {
       showToast('No preview available — generating preview now', 'info');
       try {
@@ -344,11 +346,25 @@ async function processPayroll() {
       }
     }
 
+    // IMPORTANT: Reset the confirm flag before showing the modal
+    // This prevents the button from being "stuck"
+    window._payrollConfirmShown = false;
+
+    // Also reset processing flag if it's stuck
+    if (window._processingPayroll) {
+      console.log('[payroll] Resetting stuck processing flag');
+      window._processingPayroll = false;
+    }
+
+    // Prevent duplicate confirm modals
     if (window._payrollConfirmShown) {
       console.log('[payroll] Confirm modal already shown, ignoring duplicate call.');
       return;
     }
     window._payrollConfirmShown = true;
+
+    // Close any existing confirm modal first
+    closeConfirmModal();
 
     showConfirmModal(
       'Confirm Payroll Processing',
@@ -404,7 +420,6 @@ async function processPayroll() {
               const response = await API.savePayrollRun(payrollData);
               console.log(`[payroll] savePayrollRun response for ${payrollData.staffNumber}:`, response);
 
-              // Many backends return { success: true } or { success: false, error: '...' }
               if (response && response.success !== false) {
                 results.saved++;
                 if (!currentRunId && response.runId) currentRunId = response.runId;
@@ -412,19 +427,16 @@ async function processPayroll() {
                 results.failed++;
                 results.failures.push({ staff: payrollData.staffNumber, response: response });
                 console.warn('[payroll] save failed for', payrollData.staffNumber, response);
-                // STOP on first failure so we can inspect problem immediately
                 break;
               }
             } catch (err) {
               results.failed++;
               results.failures.push({ staff: payrollData.staffNumber, error: String(err), stack: err && err.stack });
               console.error('[payroll] savePayrollRun threw for', payrollData.staffNumber, err);
-              // STOP on exception so we can inspect
               break;
             }
-          } // end for
+          }
 
-          // Final handling
           if (results.failed === 0 && results.saved > 0) {
             showToast(`Payroll saved for ${formatDisplayMonth(currentPeriod)} (${results.saved} records)`, 'success');
             console.log('[payroll] savedCount=', results.saved, 'reloading saved run for period:', currentPeriod);
@@ -449,6 +461,7 @@ async function processPayroll() {
       },
       function onCancel() {
         window._payrollConfirmShown = false;
+        window._processingPayroll = false;
         closeConfirmModal();
         showToast('Payroll save cancelled', 'info');
       }
