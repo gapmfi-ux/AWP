@@ -712,43 +712,46 @@ async function getYTDTotals(staffNumber, currentPeriod) {
   // =============================================================
   // BUILD PAYSLIP HTML with YTD and proper alignment
   // =============================================================
-  function buildPayslipHTML(employee, payroll, period) {
-    const format = (n) => {
-      const num = parseFloat(n) || 0;
-      return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    };
+  // In buildPayslipHTML - Updated YTD handling
+function buildPayslipHTML(employee, payroll, period) {
+  const format = (n) => {
+    const num = parseFloat(n) || 0;
+    return num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
-    // Current period values
-    const basic = format(payroll?.['Basic Salary'] || 0);
-    const allowances = format(payroll?.['Total Allowances'] || 0);
-    const gross = format(payroll?.['Gross Salary'] || 0);
-    const paye = format(payroll?.['PAYE'] || 0);
-    const empPension = format(payroll?.['Employee Pension'] || 0);
-    const empPF = format(payroll?.['Employee PF'] || 0);
-    const taxRelief = format(payroll?.['Tax Relief'] || 0);
-    const totalDed = format(payroll?.['Total Deduction'] || 0);
-    const netPay = format(payroll?.['Net Pay'] || 0);
-    const empPension13 = format(payroll?.['Employer Pension'] || 0);
-    const empPF5 = format(payroll?.['Employer PF'] || 0);
-    const loan = format(payroll?.['Monthly Loan'] || 0);
+  // Current period values
+  const basic = format(payroll?.['Basic Salary'] || 0);
+  const allowances = format(payroll?.['Total Allowances'] || 0);
+  const gross = format(payroll?.['Gross Salary'] || 0);
+  const paye = format(payroll?.['PAYE'] || 0);
+  const empPension = format(payroll?.['Employee Pension'] || 0);
+  const empPF = format(payroll?.['Employee PF'] || 0);
+  const taxRelief = format(payroll?.['Tax Relief'] || 0);
+  const totalDed = format(payroll?.['Total Deduction'] || 0);
+  const netPay = format(payroll?.['Net Pay'] || 0);
+  const empPension13 = format(payroll?.['Employer Pension'] || 0);
+  const empPF5 = format(payroll?.['Employer PF'] || 0);
+  const loan = format(payroll?.['Monthly Loan'] || 0);
 
-    // YTD values
-    const ytd = payroll?.YTD || null;
-    const ytdBasic = ytd ? format(ytd.basicSalary) : '--';
-    const ytdAllowances = ytd ? format(ytd.totalAllowances) : '--';
-    const ytdGross = ytd ? format(ytd.grossSalary) : '--';
-    const ytdPaye = ytd ? format(ytd.paye) : '--';
-    const ytdEmpPension = ytd ? format(ytd.employeePension) : '--';
-    const ytdEmpPF = ytd ? format(ytd.employeePF) : '--';
-    const ytdTaxRelief = ytd ? format(ytd.taxRelief) : '--';
-    const ytdTotalDed = ytd ? format(ytd.totalDeduction) : '--';
-    const ytdNetPay = ytd ? format(ytd.netPay) : '--';
-    const ytdEmpPension13 = ytd ? format(ytd.employerPension) : '--';
-    const ytdEmpPF5 = ytd ? format(ytd.employerPF) : '--';
-    const ytdLoan = ytd ? format(ytd.monthlyLoan) : '--';
-    const ytdTotalEmployer = ytd ? format((ytd.employerPension || 0) + (ytd.employerPF || 0)) : '--';
+  // YTD values - if no YTD data, use current period values (for single month)
+  const ytd = payroll?.YTD || null;
+  
+  // If no YTD data, use current period values as YTD (first/only month)
+  const ytdBasic = ytd ? format(ytd.basicSalary) : basic;
+  const ytdAllowances = ytd ? format(ytd.totalAllowances) : allowances;
+  const ytdGross = ytd ? format(ytd.grossSalary) : gross;
+  const ytdPaye = ytd ? format(ytd.paye) : paye;
+  const ytdEmpPension = ytd ? format(ytd.employeePension) : empPension;
+  const ytdEmpPF = ytd ? format(ytd.employeePF) : empPF;
+  const ytdTaxRelief = ytd ? format(ytd.taxRelief) : taxRelief;
+  const ytdTotalDed = ytd ? format(ytd.totalDeduction) : totalDed;
+  const ytdNetPay = ytd ? format(ytd.netPay) : netPay;
+  const ytdEmpPension13 = ytd ? format(ytd.employerPension) : empPension13;
+  const ytdEmpPF5 = ytd ? format(ytd.employerPF) : empPF5;
+  const ytdLoan = ytd ? format(ytd.monthlyLoan) : loan;
+  const ytdTotalEmployer = ytd ? format((ytd.employerPension || 0) + (ytd.employerPF || 0)) : format((parseFloat(empPension13) || 0) + (parseFloat(empPF5) || 0));
 
-    return `
+     return `
       <div style="padding:6px 0;">
         <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:'Arial',sans-serif;">
           <thead>
