@@ -1,4 +1,5 @@
-// assets/js/payslip.js
+// assets/js/payslip.js - Complete updated file with fixed YTD calculation
+
 (function() {
   // state
   let _actionPortalOpen = false;
@@ -185,7 +186,7 @@
           employeeMap.set(staffNumber, {
             staffNumber: staffNumber,
             fullName: fullName,
-            payrollRecord: record // Keep the full record for later use
+            payrollRecord: record
           });
         }
       });
@@ -247,7 +248,7 @@
   }
 
   // =============================================================
-  // GET YTD TOTALS FOR A STAFF (includes current month)
+  // GET YTD TOTALS FOR A STAFF (includes current month) - FIXED
   // =============================================================
   async function getYTDTotals(staffNumber, currentPeriod) {
     try {
@@ -258,10 +259,15 @@
       const runsResp = await API.getPayrollRunsByStaff(staffNumber).catch(() => []);
       const runs = Array.isArray(runsResp) ? runsResp : (runsResp && runsResp.records) ? runsResp.records : (runsResp && runsResp.data) ? runsResp.data : [];
       
-      // Filter runs for the current year and up to AND INCLUDING the current period
+      // IMPORTANT FIX: Filter runs for the current year and up to AND INCLUDING the current period
+      // Use string comparison that works with YYYY-MM format
       const yearRuns = runs.filter(r => {
         const payPeriod = r['Pay Period'] || r.payPeriod || r['period'] || '';
-        return payPeriod.startsWith(year) && payPeriod <= currentPeriod;
+        // Check if period is from the current year
+        const isCurrentYear = payPeriod.startsWith(year);
+        // Check if period is less than or equal to the current period (includes current month)
+        const isUpToCurrent = payPeriod <= currentPeriod;
+        return isCurrentYear && isUpToCurrent;
       });
 
       // Sort by period to ensure correct order
@@ -271,7 +277,7 @@
         return periodA.localeCompare(periodB);
       });
 
-      // Sum up all the values
+      // Initialize YTD accumulator
       const ytd = {
         basicSalary: 0,
         totalAllowances: 0,
@@ -288,20 +294,50 @@
         monthlyLoan: 0
       };
 
-      yearRuns.forEach(r => {
-        ytd.basicSalary += parseFloat(r['Basic Salary'] || r.basicSalary || 0) || 0;
-        ytd.totalAllowances += parseFloat(r['Total Allowances'] || r.totalAllowances || 0) || 0;
-        ytd.grossSalary += parseFloat(r['Gross Salary'] || r.grossSalary || 0) || 0;
-        ytd.employeePension += parseFloat(r['Employee Pension'] || r.employeePension || 0) || 0;
-        ytd.employeePF += parseFloat(r['Employee PF'] || r.employeePf || r['PF 10% Amount'] || 0) || 0;
-        ytd.taxRelief += parseFloat(r['Tax Relief'] || r.taxRelief || 0) || 0;
-        ytd.taxableIncome += parseFloat(r['Taxable Income'] || r.taxableIncome || r['Taxable Amount'] || 0) || 0;
-        ytd.paye += parseFloat(r['PAYE'] || r.paye || 0) || 0;
-        ytd.totalDeduction += parseFloat(r['Total Deduction'] || r.totalDeduction || 0) || 0;
-        ytd.netPay += parseFloat(r['Net Pay'] || r.netPay || 0) || 0;
-        ytd.employerPension += parseFloat(r['Employer Pension'] || r.employerPension || r['Employer 13% Amount'] || 0) || 0;
-        ytd.employerPF += parseFloat(r['Employer PF'] || r.employerPf || r['Employer PF Amount'] || 0) || 0;
-        ytd.monthlyLoan += parseFloat(r['Monthly Loan'] || r.loanMonthly || 0) || 0;
+      // Helper to get numeric value with multiple field name fallbacks
+      const getNumeric = (record, fieldNames) => {
+        for (const name of fieldNames) {
+          if (record[name] !== undefined && record[name] !== null && record[name] !== '') {
+            const val = parseFloat(String(record[name]).replace(/,/g, ''));
+            if (!isNaN(val)) return val;
+          }
+        }
+        return 0;
+      };
+
+      // Accumulate all values from each period
+      yearRuns.forEach((r) => {
+        const basicVal = getNumeric(r, ['Basic Salary', 'basicSalary', 'basic_salary']);
+        const allowancesVal = getNumeric(r, ['Total Allowances', 'totalAllowances', 'Allowances', 'allowances']);
+        const grossVal = getNumeric(r, ['Gross Salary', 'grossSalary', 'gross_salary']);
+        const empPensionVal = getNumeric(r, ['Employee Pension', 'employeePension', 'Employee Pension (5.5%)']);
+        const empPFVal = getNumeric(r, ['Employee PF', 'employeePf', 'PF 10% Amount']);
+        const taxReliefVal = getNumeric(r, ['Tax Relief', 'taxRelief', 'tax_relief']);
+        const taxableVal = getNumeric(r, ['Taxable Income', 'taxableIncome', 'Taxable Amount']);
+        const payeVal = getNumeric(r, ['PAYE', 'paye']);
+        const totalDedVal = getNumeric(r, ['Total Deduction', 'totalDeduction', 'total_deduction']);
+        // CRITICAL: Net Pay accumulation - try multiple field names
+        const netPayVal = getNumeric(r, ['Net Pay', 'netPay', 'net_pay', 'Net Pay (GHS)']);
+        const empPension13Val = getNumeric(r, ['Employer Pension', 'employerPension', 'Employer 13% Amount']);
+        const empPF5Val = getNumeric(r, ['Employer PF', 'employerPf', 'Employer PF Amount']);
+        const loanVal = getNumeric(r, ['Monthly Loan', 'loanMonthly', 'monthly_loan']);
+
+        ytd.basicSalary += basicVal;
+        ytd.totalAllowances += allowancesVal;
+        ytd.grossSalary += grossVal;
+        ytd.employeePension += empPensionVal;
+        ytd.employeePF += empPFVal;
+        ytd.taxRelief += taxReliefVal;
+        ytd.taxableIncome += taxableVal;
+        ytd.paye += payeVal;
+        ytd.totalDeduction += totalDedVal;
+        ytd.netPay += netPayVal;  // Accumulates net pay from ALL periods including current
+        ytd.employerPension += empPension13Val;
+        ytd.employerPF += empPF5Val;
+        ytd.monthlyLoan += loanVal;
+
+        // Debug logging
+        console.log(`Period ${r['Pay Period'] || r.payPeriod}: Net Pay = ${netPayVal}, Running YTD Net Pay = ${ytd.netPay}`);
       });
 
       // Round all values to 2 decimal places
@@ -309,6 +345,7 @@
         ytd[key] = roundToTwo(ytd[key]);
       });
 
+      console.log('Final YTD Net Pay:', ytd.netPay);
       return ytd;
     } catch (err) {
       console.warn('Error calculating YTD:', err);
