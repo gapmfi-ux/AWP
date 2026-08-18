@@ -89,26 +89,46 @@ class ApiService {
           }
           
           _self.log(`Response for ${_action}:`, response);
-          
-          // Check if response is a string (might be HTML error page)
+
+          // Handle string responses:
           if (typeof response === 'string') {
-            _self.error(`Response is string, not JSON: ${response.substring(0, 200)}`);
-            reject(new Error('Server returned HTML instead of JSON'));
-            return;
-          }
-          
-          // Check for success
-          if (response && response.success !== false) {
+            const trimmed = response.trim();
+            // If it looks like HTML, treat as an error
+            if (trimmed.startsWith('<') || /<!doctype/i.test(trimmed) || /<html/i.test(trimmed)) {
+              _self.error(`Response appears to be HTML, not JSON: ${trimmed.substring(0, 200)}`);
+              reject(new Error('Server returned HTML instead of JSON'));
+              return;
+            }
+            // Otherwise accept the string (e.g., PV number) as a valid response
             _self.cache.set(_cacheKey, {
               data: response,
               timestamp: Date.now()
             });
             resolve(response);
-          } else {
-            var errorMsg = (response && response.error) || 'API request failed';
-            _self.error(`Request failed: ${errorMsg}`);
-            reject(new Error(errorMsg));
+            return;
           }
+          
+          // If response is an object (normal expected case)
+          if (response && typeof response === 'object') {
+            // If server explicitly returned success: false, treat as error
+            if (response.success === false) {
+              var errorMsg = (response && response.error) || 'API request failed';
+              _self.error(`Request failed: ${errorMsg}`);
+              reject(new Error(errorMsg));
+              return;
+            }
+            // Accept the object response
+            _self.cache.set(_cacheKey, {
+              data: response,
+              timestamp: Date.now()
+            });
+            resolve(response);
+            return;
+          }
+          
+          // Any other unexpected response type
+          _self.error(`Unexpected response type for ${_action}: ${typeof response}`);
+          reject(new Error('Unexpected response from server'));
         };
         
         // Create and add the script tag
