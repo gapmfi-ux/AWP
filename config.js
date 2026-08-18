@@ -22,7 +22,7 @@ window.APP_CONFIG = {
   
   // Google Sheet IDs (keep these as they are)
   SHEETS: {
-    PV: '1vb3sUPMXWi455HVG6PbeWiWGLt-ek9DbwrY7Bw_yuKw',
+    PV: '1fMLO3VeFEPhloOY5gLBtzaVfqUD-TOHi2m_XCCTfmpA',
     INVENTORY: '1tgE_a9Bv5uuBSDcRYqtfifxHTAXhTILxHDI22z4C1TA',
     ASSETS: '1PnGJmfxZjdDxGhC7ddJE4dh3jhzdIz7Vo9UuzweptfU',
     INVESTMENTS: '1JxY5-A2A4xOKIF2NnB9n9yqTYO34Q7oP1N3D9wHfbkw'
