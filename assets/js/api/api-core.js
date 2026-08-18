@@ -80,36 +80,64 @@ class ApiService {
         }, timeoutDuration);
         
         // Create the callback function with better error handling
-        window[callbackName] = function(response) {
-          clearTimeout(timeoutId);
-          delete window[callbackName];
-          
-          if (script && script.parentNode) {
-            try { script.parentNode.removeChild(script); } catch(e) {}
-          }
-          
-          _self.log(`Response for ${_action}:`, response);
-          
-          // Check if response is a string (might be HTML error page)
-          if (typeof response === 'string') {
-            _self.error(`Response is string, not JSON: ${response.substring(0, 200)}`);
-            reject(new Error('Server returned HTML instead of JSON'));
-            return;
-          }
-          
-          // Check for success
-          if (response && response.success !== false) {
-            _self.cache.set(_cacheKey, {
-              data: response,
-              timestamp: Date.now()
-            });
-            resolve(response);
-          } else {
-            var errorMsg = (response && response.error) || 'API request failed';
-            _self.error(`Request failed: ${errorMsg}`);
-            reject(new Error(errorMsg));
-          }
-        };
+       // In api-core.js, replace the callback function section
+
+window[callbackName] = function(response) {
+  clearTimeout(timeoutId);
+  delete window[callbackName];
+  
+  if (script && script.parentNode) {
+    try { script.parentNode.removeChild(script); } catch(e) {}
+  }
+  
+  _self.log(`Response for ${_action}:`, response);
+  
+  // Handle string response (raw PV number, etc.)
+  if (typeof response === 'string') {
+    _self.log(`Response is string, treating as raw result: ${response}`);
+    
+    // If this is a getNextPVNumber request, return the string as result
+    if (_action === 'getNextPVNumber') {
+      resolve({
+        success: true,
+        result: response,
+        pvNumber: response
+      });
+      return;
+    }
+    
+    // For other actions, try to parse as JSON
+    try {
+      const parsed = JSON.parse(response);
+      if (parsed && parsed.success !== false) {
+        _self.cache.set(_cacheKey, {
+          data: parsed,
+          timestamp: Date.now()
+        });
+        resolve(parsed);
+        return;
+      }
+    } catch(e) {
+      // Not JSON, treat as error
+      _self.error(`Response is string, not JSON: ${response.substring(0, 200)}`);
+      reject(new Error('Server returned HTML instead of JSON'));
+      return;
+    }
+  }
+  
+  // Check for success
+  if (response && response.success !== false) {
+    _self.cache.set(_cacheKey, {
+      data: response,
+      timestamp: Date.now()
+    });
+    resolve(response);
+  } else {
+    var errorMsg = (response && response.error) || 'API request failed';
+    _self.error(`Request failed: ${errorMsg}`);
+    reject(new Error(errorMsg));
+  }
+};
         
         // Create and add the script tag
         const script = document.createElement('script');
