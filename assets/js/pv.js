@@ -414,9 +414,25 @@ function fetchNextPVNumberOptimized(voucherType) {
   
   // Show loading state
   if (pvDisplay) pvDisplay.textContent = '⏳ Loading...';
-  
-  API.getNextPVNumber(voucherType)
-    .then(function(pvNumber) {
+
+  // Force fresh fetch (do not use cache) so the number reflects current sheet state
+  API.getNextPVNumber(voucherType, { useCache: false })
+    .then(function(result) {
+      // Support both plain-string responses and object responses like { pvNumber: 'PVNO...' }
+      var pvNumber = '';
+      if (typeof result === 'string') {
+        pvNumber = result;
+      } else if (result && typeof result === 'object') {
+        // common property names that might be returned
+        pvNumber = result.pvNumber || result.pv || result.next || '';
+      } else {
+        pvNumber = '';
+      }
+
+      if (!pvNumber) {
+        throw new Error('Empty PV number returned from server');
+      }
+
       nextPvNumber = pvNumber;
       if (!currentlyEditingPvNumber) {
         if (pvField) pvField.value = pvNumber;
@@ -426,6 +442,7 @@ function fetchNextPVNumberOptimized(voucherType) {
     .catch(function(error) {
       console.error('Error fetching next PV number:', error);
       const fallbackNumber = generateFallbackPVNumber(voucherType);
+      nextPvNumber = fallbackNumber;
       if (!currentlyEditingPvNumber) {
         if (pvField) pvField.value = fallbackNumber;
         if (pvDisplay) pvDisplay.textContent = fallbackNumber;
