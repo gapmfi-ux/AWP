@@ -50,104 +50,158 @@ class ApiService {
 
     // Create the request promise
     const requestPromise = new Promise((resolve, reject) => {
-      // Store references to avoid closure issues
       const _action = action;
       const _data = data;
       const _cacheKey = cacheKey;
       const _self = this;
-      
-      try {
-        // Generate a unique callback name
-        const callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        
-        // Build URL with parameters
-        const url = new URL(this.BASE_URL);
-        url.searchParams.append('action', _action);
-        url.searchParams.append('data', JSON.stringify(_data));
-        url.searchParams.append('callback', callbackName);
-        
-        const fullUrl = url.toString();
-        _self.log(`Requesting: ${_action}`, _data);
-        
-        // Set timeout (use longer timeout for PDF generation)
-        const timeoutDuration = _action === 'generatePayslipPDF' ? 90000 : 30000;
-        const timeoutId = setTimeout(() => {
-          if (window[callbackName]) {
-            delete window[callbackName];
-            _self.error(`Request timeout for ${_action} (${timeoutDuration}ms)`);
-            reject(new Error(`Request timeout after ${timeoutDuration/1000} seconds`));
-          }
-        }, timeoutDuration);
-        
-        // Create the callback function with better error handling
-        window[callbackName] = function(response) {
-          clearTimeout(timeoutId);
-          delete window[callbackName];
-          
-          if (script && script.parentNode) {
-            try { script.parentNode.removeChild(script); } catch(e) {}
-          }
-          
-          _self.log(`Response for ${_action}:`, response);
 
-          // Handle string responses:
-          if (typeof response === 'string') {
-            const trimmed = response.trim();
-            // If it looks like HTML, treat as an error
-            if (trimmed.startsWith('<') || /<!doctype/i.test(trimmed) || /<html/i.test(trimmed)) {
-              _self.error(`Response appears to be HTML, not JSON: ${trimmed.substring(0, 200)}`);
-              reject(new Error('Server returned HTML instead of JSON'));
-              return;
-            }
-            // Otherwise accept the string (e.g., PV number) as a valid response
-            _self.cache.set(_cacheKey, {
-              data: response,
-              timestamp: Date.now()
-            });
-            resolve(response);
-            return;
-          }
-          
-          // If response is an object (normal expected case)
-          if (response && typeof response === 'object') {
-            // If server explicitly returned success: false, treat as error
-            if (response.success === false) {
-              var errorMsg = (response && response.error) || 'API request failed';
-              _self.error(`Request failed: ${errorMsg}`);
-              reject(new Error(errorMsg));
-              return;
-            }
-            // Accept the object response
-            _self.cache.set(_cacheKey, {
-              data: response,
-              timestamp: Date.now()
-            });
-            resolve(response);
-            return;
-          }
-          
-          // Any other unexpected response type
-          _self.error(`Unexpected response type for ${_action}: ${typeof response}`);
-          reject(new Error('Unexpected response from server'));
-        };
-        
-        // Create and add the script tag
-        const script = document.createElement('script');
-        script.src = fullUrl;
-        script.onerror = function() {
+      // Attempts allowed (0 = first attempt, 1 = retry)
+      let attempt = 0;
+      let timeoutId = null;
+      let script = null;
+      let callbackName = null;
+      let finished = false;
+
+      // Cleanup helper
+      function cleanup() {
+        if (timeoutId) {
           clearTimeout(timeoutId);
-          delete window[callbackName];
-          if (script.parentNode) {
-            try { script.parentNode.removeChild(script); } catch(e) {}
-          }
-          _self.error(`Script error for ${_action}`);
-          reject(new Error(`Script error - server may be down or returned invalid response`));
-        };
-        
-        // Add to head
-        document.head.appendChild(script);
-        _self.log(`Script tag added for ${_action}`);
-        
+          timeoutId = null;
+        }
+        if (callbackName && window[callbackName]) {
+          try { delete window[callbackName]; } catch (e) {}
+          callbackName = null;
+        }
+        if (script && script.parentNode) {
+          try { script.parentNode.removeChild(script); } catch (e) {}
+          script = null;
+        }
+      }
+
+      try {
+        // Build and insert the script tag; wraps logic so we can retry with a fresh callbackName
+        function makeRequest() {
+          // Generate a unique callback name for each attempt
+          callbackName = 'api_callback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+          
+          // Build URL with parameters (callback name baked into URL)
+          const url = new URL(_self.BASE_URL);
+          url.searchParams.append('action', _action);
+          url.searchParams.append('data', JSON.stringify(_data));
+          url.searchParams.append('callback', callbackName);
+
+          const fullUrl = url.toString();
+          _self.log(`Requesting: ${_action} (attempt ${attempt + 1})`, _data, fullUrl);
+
+          // Set timeout (use longer timeout for PDF generation)
+          const timeoutDuration = _action === 'generatePayslipPDF' ? 90000 : 30000;
+          timeoutId = setTimeout(() => {
+            // If callback still exists, clean up and reject
+            if (window[callbackName]) {
+              try { delete window[callbackName]; } catch(e) {}
+            }
+            // Remove script if present
+            if (script && script.parentNode) {
+              try { script.parentNode.removeChild(script); } catch(e) {}
+            }
+            _self.error(`Request timeout for ${_action} (attempt ${attempt + 1}) after ${timeoutDuration}ms`);
+            finished = true;
+            reject(new Error(`Request timeout after ${timeoutDuration/1000} seconds`));
+          }, timeoutDuration);
+
+          // Define the JSONP callback
+          window[callbackName] = function(response) {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeoutId);
+            timeoutId = null;
+
+            // Remove script tag
+            if (script && script.parentNode) {
+              try { script.parentNode.removeChild(script); } catch(e) {}
+            }
+
+            try {
+              // If response is a string, decide whether it's HTML or a valid primitive
+              _self.log(`Response for ${_action}:`, response);
+              if (typeof response === 'string') {
+                const trimmed = response.trim();
+                if (trimmed.startsWith('<') || /<!doctype/i.test(trimmed) || /<html/i.test(trimmed)) {
+                  _self.error(`Response appears to be HTML, not JSON: ${trimmed.substring(0,200)}`);
+                  reject(new Error('Server returned HTML instead of JSON'));
+                  cleanup();
+                  return;
+                }
+                _self.cache.set(_cacheKey, { data: response, timestamp: Date.now() });
+                resolve(response);
+                cleanup();
+                return;
+              }
+
+              if (response && typeof response === 'object') {
+                if (response.success === false) {
+                  var errorMsg = (response && response.error) || 'API request failed';
+                  _self.error(`Request failed: ${errorMsg}`);
+                  reject(new Error(errorMsg));
+                  cleanup();
+                  return;
+                }
+                _self.cache.set(_cacheKey, { data: response, timestamp: Date.now() });
+                resolve(response);
+                cleanup();
+                return;
+              }
+
+              _self.error(`Unexpected response type for ${_action}: ${typeof response}`);
+              reject(new Error('Unexpected response from server'));
+              cleanup();
+            } catch (cbErr) {
+              _self.error('Callback handling error:', cbErr);
+              reject(cbErr);
+              cleanup();
+            }
+          };
+
+          // Create and configure script tag
+          script = document.createElement('script');
+          script.src = fullUrl;
+          script.async = true;
+
+          script.onerror = function(ev) {
+            if (finished) return;
+            // Clean up the callback for this attempt
+            try { if (window[callbackName]) delete window[callbackName]; } catch(e) {}
+            // Remove script element
+            if (script && script.parentNode) {
+              try { script.parentNode.removeChild(script); } catch(e) {}
+            }
+
+            _self.error(`Script error for ${_action} (attempt ${attempt + 1}):`, fullUrl);
+            // If we haven't retried yet, schedule one retry
+            if (attempt === 0) {
+              attempt++;
+              // small backoff before retry
+              setTimeout(function() {
+                // prepare for retry: ensure previous script and callback cleaned
+                callbackName = null;
+                script = null;
+                makeRequest();
+              }, 300);
+            } else {
+              finished = true;
+              reject(new Error(`Script error - server may be down or returned invalid response (url=${fullUrl})`));
+              cleanup();
+            }
+          };
+
+          // Insert into DOM
+          document.head.appendChild(script);
+          _self.log(`Script tag added for ${_action} (attempt ${attempt + 1})`);
+        } // end makeRequest
+
+        // Kick off first request attempt
+        makeRequest();
+
       } catch (error) {
         _self.error(`Request error for ${_action}:`, error);
         reject(error);
