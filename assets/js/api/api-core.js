@@ -1,7 +1,4 @@
-/**
- * API Core Service
- * Handles all API requests to the Google Apps Script backend
- */
+
 
 class ApiService {
   constructor() {
