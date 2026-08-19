@@ -1,4 +1,3 @@
-
 function initInventoryModule() {
   console.log('Initializing Add Inventory Module');
   
@@ -436,74 +435,76 @@ window.submitNewInventory = submitNewInventory;
 window.closeInventoryModal = closeInventoryModal;
 window.closeSuccessModal = closeSuccessModal;
 
-/* Add CSS for success modal */
-const style = document.createElement('style');
-style.textContent = `
-  .success-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-  }
-
-  .success-modal-content {
-    background: white;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-    max-width: 380px;
-    text-align: center;
-    animation: successSlideIn 0.3s ease-out;
-  }
-
-  @keyframes successSlideIn {
-    from {
-      transform: translateY(-30px);
-      opacity: 0;
+/* Add CSS for success modal - scoped to avoid global 'style' collisions */
+(function() {
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    .success-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
     }
-    to {
-      transform: translateY(0);
-      opacity: 1;
+
+    .success-modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      max-width: 380px;
+      text-align: center;
+      animation: successSlideIn 0.3s ease-out;
     }
-  }
 
-  .success-modal-icon {
-    margin-bottom: 15px;
-  }
+    @keyframes successSlideIn {
+      from {
+        transform: translateY(-30px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
 
-  .success-modal-icon i {
-    font-size: 50px;
-    color: #06d6a0;
-  }
+    .success-modal-icon {
+      margin-bottom: 15px;
+    }
 
-  .success-modal-message {
-    font-size: 14px;
-    color: #2d3748;
-    line-height: 1.6;
-    margin-bottom: 20px;
-  }
+    .success-modal-icon i {
+      font-size: 50px;
+      color: #06d6a0;
+    }
 
-  .success-modal-btn {
-    padding: 10px 28px;
-    background: linear-gradient(135deg, #4361ee, #7209b7);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s;
-  }
+    .success-modal-message {
+      font-size: 14px;
+      color: #2d3748;
+      line-height: 1.6;
+      margin-bottom: 20px;
+    }
 
-  .success-modal-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
-  }
-`;
-document.head.appendChild(style);
+    .success-modal-btn {
+      padding: 10px 28px;
+      background: linear-gradient(135deg, #4361ee, #7209b7);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    .success-modal-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    }
+  `;
+  document.head.appendChild(styleEl);
+})();
