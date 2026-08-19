@@ -141,7 +141,7 @@ function submitForm() {
     amount: document.getElementById('amount').value,
     department: document.getElementById('department').value,
     accountCode: document.getElementById('accountCode').value,
-    creditAccountNo: document.getElementById('creditAccountNo').value,
+    creditAccountNo: document.getElementById('creditAccountNo') ? document.getElementById('creditAccountNo').value : '',
     transactionDetails: document.getElementById('transactionDetails').value,
     bank: document.getElementById('bank').value,
     chequeNumber: document.getElementById('chequeNumber').value,
@@ -149,21 +149,47 @@ function submitForm() {
     reviewedBy: document.getElementById('reviewedBy').value,
     receivedBy: document.getElementById('receivedBy').value,
     authorizedBy: document.getElementById('authorizedBy').value,
-    withholdingTaxAmount: document.getElementById('withholdingTaxCheckbox').checked ? 
+    withholdingTaxAmount: document.getElementById('withholdingTaxCheckbox') && document.getElementById('withholdingTaxCheckbox').checked ? 
       document.getElementById('withholdingTaxAmount').value : null
   };
   formObject.amountInWords = convertNumberToWords(formObject.amount);
   lastSubmittedVoucherData = formObject;
-  
+
+  console.log('Submitting PV formObject:', formObject);
+
   API.processForm(formObject)
     .then(function(response) {
-      showSuccess();
+      console.log('processForm response:', response);
+      // If server returns object with success flag, check it explicitly
+      if (response && typeof response === 'object') {
+        if (response.success === false) {
+          hideModal();
+          showError(response.error || response.message || 'Server reported failure');
+          return;
+        }
+        // Some server endpoints return plain object with pvNumber; handle that:
+        if (response.success === true || response.pvNumber || response.pv) {
+          showSuccess();
+        } else {
+          // unknown response shape — still show success UI but log
+          showSuccess();
+        }
+      } else if (typeof response === 'string') {
+        // older behavior: server might return a plain string pvNumber
+        console.log('processForm returned string:', response);
+        showSuccess();
+      } else {
+        // Unexpected response
+        hideModal();
+        showError('Unexpected server response: ' + JSON.stringify(response));
+      }
     })
     .catch(function(error) {
-      showError(error);
+      console.error('processForm error:', error);
+      hideModal();
+      showError('Error submitting voucher: ' + (error.message || error));
     });
 }
-
 function fetchPVTableOptimized() {
   API.getPVNumbersByType()
     .then(function(data) {
