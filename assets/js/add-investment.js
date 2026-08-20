@@ -13,6 +13,16 @@
   var isModuleInitialized = false;
 
   // ============================================
+  // SERVER DAY COUNT HELPER (client now follows server rules)
+  // ============================================
+  function getServerDayCountByInvestmentType(investmentType) {
+    const type = (investmentType || '').trim();
+    if (type === 'Treasury Bills') return 364;
+    if (type === 'Bonds') return 360;
+    return 365; // default for Fixed Deposit and others
+  }
+
+  // ============================================
   // INITIALIZATION
   // ============================================
 
@@ -290,7 +300,7 @@
       const newBankDayCount = document.getElementById('newBankDayCount');
       if (newBankDayCount) newBankDayCount.value = '365';
       
-      // Recalculate maturity amount when bank changes (day count may affect)
+      // Recalculate maturity amount when bank changes (no longer used for day count)
       calculateMaturityAmount();
     }
   };
@@ -360,7 +370,7 @@
   }
 
   // ============================================
-  // CALCULATIONS WITH DAY COUNT
+  // CALCULATIONS WITH SERVER DAY COUNT
   // ============================================
 
   window.calculateMaturityDate = function() {
@@ -394,33 +404,30 @@
     const amountField = document.getElementById('amount');
     const interestRateField = document.getElementById('interestRate');
     const durationField = document.getElementById('duration');
-    const bankSelect = document.getElementById('bankName');
-    
-    if (!amountField || !interestRateField || !durationField) return;
-    
+    const typeSelect = document.getElementById('investmentType');
+
+    if (!amountField || !interestRateField || !durationField || !typeSelect) return;
+
     const amount = parseFloat(amountField.value) || 0;
     const interestRate = parseFloat(interestRateField.value) || 0;
-    const duration = parseInt(durationField.value) || 0;
-    
-    // Get day count from selected bank or use default
-    let dayCount = 365;
-    const selectedBank = bankSelect ? bankSelect.value : '';
-    if (selectedBank && selectedBank !== 'add-new' && selectedBank !== '') {
-      dayCount = getBankDayCount(selectedBank);
-    }
+    const duration = parseInt(durationField.value, 10) || 0;
+
+    // Use server-authoritative day count based on investmentType
+    const investmentType = typeSelect.value || '';
+    const dayCount = getServerDayCountByInvestmentType(investmentType);
 
     const interestAmountField = document.getElementById('interestAmount');
     const maturityAmountField = document.getElementById('maturityAmount');
-    
+
     if (amount <= 0 || interestRate < 0 || duration <= 0) {
       if (interestAmountField) interestAmountField.value = '0.00';
       if (maturityAmountField) maturityAmountField.value = '0.00';
       return;
     }
 
-    // Interest = Principal * Rate * (Duration / DayCount)
-    const timeInYears = duration / dayCount;
-    const interestAmount = (amount * interestRate * timeInYears) / 100;
+    // Server formula: interest = P * Rate * (Duration / DayCount) / 100
+    const timeFactor = duration / dayCount;
+    const interestAmount = (amount * interestRate * timeFactor) / 100;
     const maturityAmountValue = amount + interestAmount;
 
     if (interestAmountField) interestAmountField.value = formatCurrency(interestAmount);
@@ -477,7 +484,7 @@
       dayCount = parseInt(newBankDayCount);
       isNewBank = true;
     } else {
-      // Get day count for existing bank
+      // Keep bank day count storage but NOT used for interest calc (server authoritative)
       dayCount = getBankDayCount(bankName);
     }
 
@@ -518,14 +525,9 @@
       addNewBankToDropdown(bankName, dayCount);
     }
 
-    // Calculate final amounts with day count
-    const timeInYears = parseInt(duration) / dayCount;
-    const calculatedInterestAmount = (parseFloat(amount) * parseFloat(interestRate) * timeInYears) / 100;
-    const calculatedMaturityAmount = parseFloat(amount) + calculatedInterestAmount;
-
     showInvestmentLoadingModal('Adding Investment...');
 
-    // Create data object
+    // Create data object (do NOT send client-computed interest/maturity; server will compute)
     const investmentData = {
       investmentType: investmentType.trim(),
       investmentCode: investmentCode.trim(),
@@ -534,10 +536,7 @@
       interestRate: parseFloat(interestRate),
       duration: parseInt(duration),
       investmentDate: investmentDate,
-      maturityDate: maturityDate,
-      interestAmount: calculatedInterestAmount,
-      maturityAmount: calculatedMaturityAmount,
-      dayCount: dayCount
+      maturityDate: maturityDate
     };
 
     console.log('Submitting investment data:', investmentData);
@@ -549,7 +548,14 @@
           console.log('Success response:', response);
           hideInvestmentLoadingModal();
           if (response && response.success) {
-            showInvestmentMessage('✓ Investment added successfully!', 'success');
+            // If server returns computed values, show them to the user
+            const computed = response.computed || {};
+            const interestShown = computed.interestAmount ? formatCurrency(computed.interestAmount) : formatCurrency(0);
+            const maturityShown = computed.maturityAmount ? formatCurrency(computed.maturityAmount) : formatCurrency(0);
+            showInvestmentMessage(
+              `✓ Investment added successfully!\nInterest: GHC ${interestShown}\nMaturity: GHC ${maturityShown}`,
+              'success'
+            );
             setTimeout(function() {
               resetInvestmentForm();
               // Refresh bank list and investment types after adding new investment
@@ -557,7 +563,7 @@
               loadInvestmentTypes();
             }, 1500);
           } else {
-            showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error');
+            showInvestmentMessage('Error: ' + (response?.error || 'Unknown error'), 'error'); 
           }
         })
         .catch(function(error) {
