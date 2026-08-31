@@ -749,38 +749,52 @@ function calculateAccruedInterest(amount, annualRate, investmentDate, fromDate, 
     // Daily interest rate based on investment type's day count
     const dailyRate = (annualRate / 100) / dayCount;
     
-    // Calculate accrued monthly: from periodStart to periodEnd, but NOT beyond maturity date
-    let accruedMonthlyEndDate = periodEnd;
-    if (periodEnd > maturityDateObj) {
-      accruedMonthlyEndDate = maturityDateObj;
+    // ============================================
+    // ACCRUED MONTHLY - CORRECTED
+    // Uses the LATER of periodStart and investStart
+    // ============================================
+    let monthlyStartDate = periodStart > investStart ? periodStart : investStart;
+    let accruedMonthly = 0;
+    let daysMonthlyDiff = 0;
+    
+    // Only calculate if:
+    // 1. The start date is before or on the period end
+    // 2. The start date is before maturity date
+    if (monthlyStartDate <= periodEnd && monthlyStartDate < maturityDateObj) {
+      // End date is the earlier of periodEnd and maturityDate
+      let monthlyEndDate = periodEnd < maturityDateObj ? periodEnd : maturityDateObj;
+      
+      // Calculate days between monthlyStartDate and monthlyEndDate
+      const timeMonthlyDiff = monthlyEndDate - monthlyStartDate;
+      daysMonthlyDiff = Math.max(0, Math.ceil(timeMonthlyDiff / (1000 * 60 * 60 * 24)));
+      accruedMonthly = amount * dailyRate * daysMonthlyDiff;
     }
     
-    // Calculate days: from periodStart to accruedMonthlyEndDate (inclusive)
-    const timeMonthlyDiff = accruedMonthlyEndDate - periodStart;
-    const daysMonthlyDiff = Math.ceil(timeMonthlyDiff / (1000 * 60 * 60 * 24));
-    const accruedMonthly = amount * dailyRate * daysMonthlyDiff;
-    
-    // Calculate accrued to-date: from investment date to toDate, but NOT beyond maturity date
-    // If already matured, accrued to-date should be 0
+    // ============================================
+    // ACCRUED TO DATE - CORRECTED
+    // Stops accruing at maturity date
+    // ============================================
     let accruedToDate = 0;
     let daysToDiff = 0;
     
-    if (periodEnd <= maturityDateObj) {
-      // Investment hasn't matured yet - calculate normally
-      const timeToDiff = periodEnd - investStart;
-      daysToDiff = Math.ceil(timeToDiff / (1000 * 60 * 60 * 24));
+    // Only calculate if:
+    // 1. Investment started before or on period end
+    // 2. Investment hasn't matured yet (investStart < maturityDateObj)
+    if (investStart <= periodEnd && investStart < maturityDateObj) {
+      // End date is the earlier of periodEnd and maturityDate
+      let toDateEnd = periodEnd < maturityDateObj ? periodEnd : maturityDateObj;
+      
+      // Calculate days between investStart and toDateEnd
+      const timeToDiff = toDateEnd - investStart;
+      daysToDiff = Math.max(0, Math.ceil(timeToDiff / (1000 * 60 * 60 * 24)));
       accruedToDate = amount * dailyRate * daysToDiff;
-    } else {
-      // Investment has matured - accrued to date is 0
-      accruedToDate = 0;
-      daysToDiff = 0;
     }
     
     return {
       monthly: accruedMonthly,
       toDate: accruedToDate,
-      daysToDiff: Math.max(daysToDiff, 0),
-      daysMonthlyDiff: Math.max(daysMonthlyDiff, 0)
+      daysToDiff: daysToDiff,
+      daysMonthlyDiff: daysMonthlyDiff
     };
   } catch (e) {
     console.error('Error calculating accrued interest:', e);
