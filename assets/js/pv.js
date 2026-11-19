@@ -236,6 +236,9 @@ function renderPVList(elementId, pvList) {
     return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${safePV}', '${safeType}')">📄 ${formattedPV}</button>`;
   }).join('');
 }
+
+let pvNumberRequestId = 0;
+
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
   const rect = btn.getBoundingClientRect();
