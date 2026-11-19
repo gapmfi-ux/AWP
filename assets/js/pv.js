@@ -5,6 +5,8 @@
 let lastSubmittedVoucherData = null;
 let currentlyEditingPvNumber = null;
 let nextPvNumber = null;
+let pvNumberRequestId = 0;
+
 
 function updateVoucherTypeFields() {
   var voucherType = document.getElementById('voucherType').value;
@@ -237,7 +239,6 @@ function renderPVList(elementId, pvList) {
   }).join('');
 }
 
-let pvNumberRequestId = 0;
 
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
