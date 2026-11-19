@@ -207,27 +207,35 @@ function fetchPVTableOptimized() {
 function renderPVList(elementId, pvList) {
   const el = document.getElementById(elementId);
   if (!el) return;
+
   if (!pvList || !pvList.length) {
     el.innerHTML = '<div style="color:#aaa; text-align:center; padding:8px;">None</div>';
     return;
   }
-  
-  const items = pvList.map(item => {
-    const match = item.pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
-    let formattedPV = item.pvNumber;
-    
-    if (match) {
-      const prefix = match[1];
-      const num = match[2].padStart(5, '0');
-      formattedPV = prefix + num;
-    }
-    
-    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${formattedPV}', '${item.voucherType}')">📄 ${formattedPV}</button>`;
-  }).join('');
-  
-  el.innerHTML = items;
-}
 
+  // PV numbers increase within each voucher type, so the highest sequence is newest.
+  const sortedList = [...pvList].sort((a, b) => {
+    const getSequence = item => {
+      const match = String(item.pvNumber || '').match(/(\d+)\s*$/);
+      return match ? Number(match[1]) : -1;
+    };
+    return getSequence(b) - getSequence(a);
+  });
+
+  el.innerHTML = sortedList.map(item => {
+    const pvNumber = String(item.pvNumber || '');
+    const match = pvNumber.match(/(PVNO\.[A-Z]{2})(\d+)/);
+    const formattedPV = match
+      ? match[1] + match[2].padStart(5, '0')
+      : pvNumber;
+
+    // Escape values used in the inline handler.
+    const safePV = formattedPV.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const safeType = String(item.voucherType || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+    return `<button class="pv-btn" onclick="openDropdownPortal(event, this, '${safePV}', '${safeType}')">📄 ${formattedPV}</button>`;
+  }).join('');
+}
 function openDropdownPortal(event, btn, pvNumber, voucherType) {
   closeDropdownPortal();
   const rect = btn.getBoundingClientRect();
@@ -435,44 +443,46 @@ function resetFormAfterUpdate() {
 
 // OPTIMIZED: Fast next PV number fetching with instant display
 function fetchNextPVNumberOptimized(voucherType) {
-  var pvField = document.getElementById('pvNumber');
-  var pvDisplay = document.getElementById('pvNumberDisplay');
-  
-  // Show loading state
-  if (pvDisplay) pvDisplay.textContent = '⏳ Loading...';
+  const pvField = document.getElementById('pvNumber');
+  const pvDisplay = document.getElementById('pvNumberDisplay');
+  const requestId = ++pvNumberRequestId;
 
-  // Force fresh fetch (do not use cache) so the number reflects current sheet state
+  if (!voucherType) {
+    if (!currentlyEditingPvNumber) {
+      if (pvField) pvField.value = '';
+      if (pvDisplay) pvDisplay.textContent = '';
+    }
+    return;
+  }
+
+  // Don't overwrite the number currently being edited.
+  if (!currentlyEditingPvNumber && pvDisplay) {
+    pvDisplay.textContent = 'Loading PV number…';
+  }
+
   API.getNextPVNumber(voucherType, { useCache: false })
     .then(function(result) {
-      // Support both plain-string responses and object responses like { pvNumber: 'PVNO...' }
-      var pvNumber = '';
+      // Ignore an older response if the user has since selected another type.
+      if (requestId !== pvNumberRequestId || currentlyEditingPvNumber) return;
+
+      let pvNumber = '';
       if (typeof result === 'string') {
         pvNumber = result;
       } else if (result && typeof result === 'object') {
-        // common property names that might be returned
         pvNumber = result.pvNumber || result.pv || result.next || '';
-      } else {
-        pvNumber = '';
       }
 
-      if (!pvNumber) {
-        throw new Error('Empty PV number returned from server');
-      }
+      if (!pvNumber) throw new Error('Empty PV number returned from server');
 
       nextPvNumber = pvNumber;
-      if (!currentlyEditingPvNumber) {
-        if (pvField) pvField.value = pvNumber;
-        if (pvDisplay) pvDisplay.textContent = pvNumber;
-      }
+      if (pvField) pvField.value = pvNumber;
+      if (pvDisplay) pvDisplay.textContent = pvNumber;
     })
     .catch(function(error) {
+      if (requestId !== pvNumberRequestId || currentlyEditingPvNumber) return;
+
       console.error('Error fetching next PV number:', error);
-      const fallbackNumber = generateFallbackPVNumber(voucherType);
-      nextPvNumber = fallbackNumber;
-      if (!currentlyEditingPvNumber) {
-        if (pvField) pvField.value = fallbackNumber;
-        if (pvDisplay) pvDisplay.textContent = fallbackNumber;
-      }
+      if (pvDisplay) pvDisplay.textContent = 'Could not load PV number';
     });
 }
 
