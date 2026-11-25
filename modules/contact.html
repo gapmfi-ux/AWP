@@ -1,1 +1,208 @@
+<div class="contact-module" id="contactModule">
+  <header class="contact-header">
+    <h1><i class="fas fa-address-book"></i> Contact</h1>
+    <p>Staff and third-party contact directory</p>
+  </header>
 
+  <nav class="contact-tabs" aria-label="Contact categories">
+    <button
+      type="button"
+      class="contact-tab-btn active"
+      id="staffTabButton"
+      aria-selected="true"
+      onclick="switchContactTab('staff')"
+    >
+      <i class="fas fa-users"></i> Staff
+    </button>
+    <button
+      type="button"
+      class="contact-tab-btn"
+      id="thirdPartyTabButton"
+      aria-selected="false"
+      onclick="switchContactTab('thirdParty')"
+    >
+      <i class="fas fa-building"></i> Third Party
+    </button>
+  </nav>
+
+  <section class="contact-tab-content active" id="staffContactTab">
+    <div class="contact-table-wrapper">
+      <table class="contact-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Designation</th>
+            <th>Office Mobile Number</th>
+            <th>Office Email</th>
+            <th>Personal Mobile Number</th>
+            <th>Personal Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="6" class="contact-empty">No staff contacts have been added yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="contact-tab-content" id="thirdPartyContactTab">
+    <div class="contact-table-wrapper">
+      <table class="contact-table">
+        <thead>
+          <tr>
+            <th>Institution/Individual Name</th>
+            <th>Nature of business</th>
+            <th>Contact person name</th>
+            <th>Contact Number</th>
+            <th>Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td colspan="5" class="contact-empty">No third-party contacts have been added yet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<style>
+  .contact-module {
+    background: #fff;
+    border-radius: 10px;
+    padding: 20px;
+    color: #1e293b;
+  }
+
+  .contact-header {
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 14px;
+  }
+
+  .contact-header h1 {
+    margin: 0 0 6px;
+    font-size: 1.4rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .contact-header h1 i {
+    color: #4361ee;
+  }
+
+  .contact-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 0.85rem;
+  }
+
+  .contact-tabs {
+    display: flex;
+    gap: 6px;
+    border-bottom: 2px solid #e2e8f0;
+    margin-bottom: 18px;
+  }
+
+  .contact-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: transparent;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    color: #64748b;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .contact-tab-btn:hover {
+    color: #4361ee;
+    background: #f8fafc;
+  }
+
+  .contact-tab-btn.active {
+    color: #4361ee;
+    border-bottom-color: #4361ee;
+  }
+
+  .contact-tab-content {
+    display: none;
+  }
+
+  .contact-tab-content.active {
+    display: block;
+  }
+
+  .contact-table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+  }
+
+  .contact-table {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+  }
+
+  .contact-table th,
+  .contact-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e2e8f0;
+    text-align: left;
+  }
+
+  .contact-table th {
+    background: #f8fafc;
+    color: #334155;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .contact-table tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .contact-table .contact-empty {
+    padding: 28px 12px;
+    color: #64748b;
+    text-align: center;
+  }
+
+  @media (max-width: 600px) {
+    .contact-module {
+      padding: 14px;
+    }
+
+    .contact-tab-btn {
+      padding: 10px 12px;
+    }
+  }
+</style>
+
+<script>
+  function switchContactTab(tabName) {
+    const module = document.getElementById('contactModule');
+    if (!module) return;
+
+    const isStaff = tabName === 'staff';
+
+    module.querySelector('#staffContactTab').classList.toggle('active', isStaff);
+    module.querySelector('#thirdPartyContactTab').classList.toggle('active', !isStaff);
+    module.querySelector('#staffTabButton').classList.toggle('active', isStaff);
+    module.querySelector('#thirdPartyTabButton').classList.toggle('active', !isStaff);
+
+    module.querySelector('#staffTabButton').setAttribute('aria-selected', String(isStaff));
+    module.querySelector('#thirdPartyTabButton').setAttribute('aria-selected', String(!isStaff));
+  }
+</script>
