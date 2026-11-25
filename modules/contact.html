@@ -190,19 +190,3 @@
   }
 </style>
 
-<script>
-  function switchContactTab(tabName) {
-    const module = document.getElementById('contactModule');
-    if (!module) return;
-
-    const isStaff = tabName === 'staff';
-
-    module.querySelector('#staffContactTab').classList.toggle('active', isStaff);
-    module.querySelector('#thirdPartyContactTab').classList.toggle('active', !isStaff);
-    module.querySelector('#staffTabButton').classList.toggle('active', isStaff);
-    module.querySelector('#thirdPartyTabButton').classList.toggle('active', !isStaff);
-
-    module.querySelector('#staffTabButton').setAttribute('aria-selected', String(isStaff));
-    module.querySelector('#thirdPartyTabButton').setAttribute('aria-selected', String(!isStaff));
-  }
-</script>
