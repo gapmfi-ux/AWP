@@ -2,6 +2,8 @@
   'use strict';
 
   let activeContactType = 'STAFF';
+  let editingContactCNo = null;
+  let contactRecords = [];
 
   const CONTACT_FORMS = {
     STAFF: [
@@ -39,6 +41,7 @@
 
   function initContactModule() {
     activeContactType = 'STAFF';
+    editingContactCNo = null;
     switchContactTab('STAFF');
   }
 
@@ -47,6 +50,7 @@
     if (!module) return;
 
     activeContactType = type === 'THIRD-PARTY' ? 'THIRD-PARTY' : 'STAFF';
+    editingContactCNo = null;
 
     const isStaff = activeContactType === 'STAFF';
     module.querySelector('#staffContactTab').classList.toggle('active', isStaff);
@@ -67,8 +71,9 @@
     const tbody = module.querySelector(isStaff ? '#staffContactsBody' : '#thirdPartyContactsBody');
     if (!tbody) return;
 
-    const columnCount = isStaff ? 7 : 6;
-    tbody.innerHTML = '<tr><td colspan="' + columnCount + '" class="contact-empty">Loading contacts…</td></tr>';
+    const columnCount = isStaff ? 8 : 7;
+    tbody.innerHTML =
+      '<tr><td colspan="' + columnCount + '" class="contact-empty">Loading contacts…</td></tr>';
 
     try {
       const response = await API.request(
@@ -81,40 +86,67 @@
         throw new Error((response && response.error) || 'Unable to load contacts.');
       }
 
-      const records = Array.isArray(response.records) ? response.records : [];
-      if (records.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="' + columnCount + '" class="contact-empty">No contacts have been added yet.</td></tr>';
+      contactRecords = Array.isArray(response.records) ? response.records : [];
+
+      if (contactRecords.length === 0) {
+        tbody.innerHTML =
+          '<tr><td colspan="' + columnCount +
+          '" class="contact-empty">No contacts have been added yet.</td></tr>';
         return;
       }
 
-      tbody.innerHTML = records.map(function(record) {
-        const cells = isStaff
-          ? [
-              record.cNo,
-              record.name,
-              record.designation,
-              record.officeMobileNumber,
-              record.officeEmail,
-              record.personalMobileNumber,
-              record.personalEmail
-            ]
-          : [
-              record.cNo,
-              record.institutionIndividualName,
-              record.natureOfBusiness,
-              record.contactPersonName,
-              record.contactNumber,
-              record.email
-            ];
+      tbody.innerHTML = contactRecords.map(function(record) {
+        let cells;
 
-        return '<tr>' + cells.map(function(value) {
+        if (isStaff) {
+          cells = [
+            record.cNo,
+            record.name,
+            record.designation,
+            record.officeMobileNumber,
+            record.officeEmail,
+            record.personalMobileNumber,
+            record.personalEmail
+          ];
+        } else {
+          cells = [
+            record.cNo,
+            record.institutionIndividualName,
+            record.natureOfBusiness,
+            record.contactPersonName,
+            record.contactNumber,
+            record.email
+          ];
+        }
+
+        let html = '<tr>';
+
+        html += cells.map(function(value) {
           return '<td>' + escapeHtml(value) + '</td>';
-        }).join('') + '</tr>';
+        }).join('');
+
+        html +=
+          '<td class="contact-row-actions">' +
+            '<button type="button" class="contact-action-btn contact-edit-btn" ' +
+              'title="Edit" aria-label="Edit ' + escapeHtml(record.cNo) + '" ' +
+              'onclick="openEditContact(' + JSON.stringify(record.cNo).replace(/"/g, '&quot;') + ')">' +
+              '<i class="fas fa-edit"></i>' +
+            '</button>' +
+            '<button type="button" class="contact-action-btn contact-delete-btn" ' +
+              'title="Remove" aria-label="Remove ' + escapeHtml(record.cNo) + '" ' +
+              'onclick="deleteContact(' + JSON.stringify(record.cNo).replace(/"/g, '&quot;') + ')">' +
+              '<i class="fas fa-trash"></i>' +
+            '</button>' +
+          '</td>';
+
+        html += '</tr>';
+        return html;
       }).join('');
     } catch (error) {
       console.error('Error loading contacts:', error);
       tbody.innerHTML =
-        '<tr><td colspan="' + columnCount + '" class="contact-empty">' +
+        '<tr><td colspan="' + columnCount +
+        '" class="contact-empty">' +
         escapeHtml(error.message || 'Unable to load contacts.') +
         '</td></tr>';
     }
@@ -123,6 +155,8 @@
   function openAddContact() {
     const module = getModule();
     if (!module) return;
+
+    editingContactCNo = null;
 
     const modal = module.querySelector('#contactModal');
     const fieldsContainer = module.querySelector('#contactFormFields');
@@ -138,7 +172,12 @@
     form.reset();
 
     fieldsContainer.innerHTML = CONTACT_FORMS[activeContactType].map(function(field) {
-      const fullWidth = field.type === 'email' ? ' full-width' : '';
+      const fullWidth = (
+        field.key === 'officeEmail' ||
+        field.key === 'personalEmail' ||
+        field.key === 'institutionIndividualName'
+      ) ? ' full-width' : '';
+
       return (
         '<div class="contact-form-field' + fullWidth + '">' +
           '<label for="contact-' + field.key + '">' + escapeHtml(field.label) + '</label>' +
@@ -151,6 +190,59 @@
     }).join('');
 
     modal.hidden = false;
+
+    const firstInput = fieldsContainer.querySelector('input');
+    if (firstInput) firstInput.focus();
+  }
+
+  function openEditContact(cNo) {
+    const module = getModule();
+    if (!module) return;
+
+    const record = contactRecords.find(function(item) {
+      return item.cNo === cNo;
+    });
+
+    if (!record) {
+      alert('Contact not found.');
+      return;
+    }
+
+    const modal = module.querySelector('#contactModal');
+    const fieldsContainer = module.querySelector('#contactFormFields');
+    const title = module.querySelector('#contactModalTitle');
+    const form = module.querySelector('#contactForm');
+    const error = module.querySelector('#contactFormError');
+
+    editingContactCNo = cNo;
+    error.textContent = '';
+    form.reset();
+
+    title.textContent = activeContactType === 'STAFF'
+      ? 'Edit Staff Contact'
+      : 'Edit Third Party Contact';
+
+    fieldsContainer.innerHTML = CONTACT_FORMS[activeContactType].map(function(field) {
+      const fullWidth = (
+        field.key === 'officeEmail' ||
+        field.key === 'personalEmail' ||
+        field.key === 'institutionIndividualName'
+      ) ? ' full-width' : '';
+
+      return (
+        '<div class="contact-form-field' + fullWidth + '">' +
+          '<label for="contact-' + field.key + '">' + escapeHtml(field.label) + '</label>' +
+          '<input id="contact-' + field.key + '"' +
+            ' name="' + field.key + '"' +
+            ' type="' + field.type + '"' +
+            ' autocomplete="off"' +
+            ' value="' + escapeHtml(record[field.key]) + '" required>' +
+        '</div>'
+      );
+    }).join('');
+
+    modal.hidden = false;
+
     const firstInput = fieldsContainer.querySelector('input');
     if (firstInput) firstInput.focus();
   }
@@ -178,6 +270,11 @@
     if (!form.reportValidity()) return;
 
     const payload = { type: activeContactType };
+
+    if (editingContactCNo) {
+      payload.cNo = editingContactCNo;
+    }
+
     CONTACT_FORMS[activeContactType].forEach(function(field) {
       const input = form.elements[field.key];
       payload[field.key] = input ? input.value.trim() : '';
@@ -187,8 +284,12 @@
     saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving…';
 
     try {
+      const action = editingContactCNo
+        ? 'updateContactRecord'
+        : 'addContactRecord';
+
       const response = await API.request(
-        'addContactRecord',
+        action,
         payload,
         { useCache: false }
       );
@@ -198,6 +299,7 @@
       }
 
       closeAddContact();
+      editingContactCNo = null;
       await loadContactRecords(activeContactType);
     } catch (error) {
       console.error('Error saving contact:', error);
@@ -208,9 +310,37 @@
     }
   }
 
+  async function deleteContact(cNo) {
+    if (!window.API) return;
+
+    if (!confirm('Remove contact ' + cNo + '?')) return;
+
+    try {
+      const response = await API.request(
+        'deleteContactRecord',
+        {
+          type: activeContactType,
+          cNo: cNo
+        },
+        { useCache: false }
+      );
+
+      if (!response || response.success === false) {
+        throw new Error((response && response.error) || 'Unable to remove contact.');
+      }
+
+      await loadContactRecords(activeContactType);
+    } catch (error) {
+      console.error('Error deleting contact:', error);
+      alert(error.message || 'Unable to remove contact.');
+    }
+  }
+
   window.initContactModule = initContactModule;
   window.switchContactTab = switchContactTab;
   window.openAddContact = openAddContact;
+  window.openEditContact = openEditContact;
   window.closeAddContact = closeAddContact;
   window.submitContactForm = submitContactForm;
+  window.deleteContact = deleteContact;
 })();
