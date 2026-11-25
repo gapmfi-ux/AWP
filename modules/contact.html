@@ -1,7 +1,12 @@
 <div class="contact-module" id="contactModule">
   <header class="contact-header">
-    <h1><i class="fas fa-address-book"></i> Contact</h1>
-    <p>Staff and third-party contact directory</p>
+    <div>
+      <h1><i class="fas fa-address-book"></i> Contact</h1>
+      <p>Staff and third-party contact directory</p>
+    </div>
+    <button type="button" class="contact-add-btn" onclick="openAddContact()">
+      <i class="fas fa-plus"></i> Add New
+    </button>
   </header>
 
   <nav class="contact-tabs" aria-label="Contact categories">
@@ -10,7 +15,7 @@
       class="contact-tab-btn active"
       id="staffTabButton"
       aria-selected="true"
-      onclick="switchContactTab('staff')"
+      onclick="switchContactTab('STAFF')"
     >
       <i class="fas fa-users"></i> Staff
     </button>
@@ -19,7 +24,7 @@
       class="contact-tab-btn"
       id="thirdPartyTabButton"
       aria-selected="false"
-      onclick="switchContactTab('thirdParty')"
+      onclick="switchContactTab('THIRD-PARTY')"
     >
       <i class="fas fa-building"></i> Third Party
     </button>
@@ -30,6 +35,7 @@
       <table class="contact-table">
         <thead>
           <tr>
+            <th>CNo.</th>
             <th>Name</th>
             <th>Designation</th>
             <th>Office Mobile Number</th>
@@ -38,10 +44,8 @@
             <th>Personal Email</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td colspan="6" class="contact-empty">No staff contacts have been added yet.</td>
-          </tr>
+        <tbody id="staffContactsBody">
+          <tr><td colspan="7" class="contact-empty">Loading staff contacts…</td></tr>
         </tbody>
       </table>
     </div>
@@ -52,6 +56,7 @@
       <table class="contact-table">
         <thead>
           <tr>
+            <th>CNo.</th>
             <th>Institution/Individual Name</th>
             <th>Nature of business</th>
             <th>Contact person name</th>
@@ -59,36 +64,66 @@
             <th>Email</th>
           </tr>
         </thead>
-        <tbody>
-          <tr>
-            <td colspan="5" class="contact-empty">No third-party contacts have been added yet.</td>
-          </tr>
+        <tbody id="thirdPartyContactsBody">
+          <tr><td colspan="6" class="contact-empty">Loading third-party contacts…</td></tr>
         </tbody>
       </table>
     </div>
   </section>
+
+  <div class="contact-modal" id="contactModal" hidden>
+    <div class="contact-modal-backdrop" onclick="closeAddContact()"></div>
+    <section
+      class="contact-modal-card"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="contactModalTitle"
+    >
+      <header class="contact-modal-header">
+        <h2 id="contactModalTitle">Add Contact</h2>
+        <button type="button" class="contact-modal-close" aria-label="Close" onclick="closeAddContact()">
+          <i class="fas fa-times"></i>
+        </button>
+      </header>
+
+      <form id="contactForm" onsubmit="submitContactForm(event)">
+        <div id="contactFormFields" class="contact-form-grid"></div>
+        <p id="contactFormError" class="contact-form-error" role="alert"></p>
+        <div class="contact-modal-actions">
+          <button type="button" class="contact-cancel-btn" onclick="closeAddContact()">Cancel</button>
+          <button type="submit" class="contact-save-btn" id="contactSaveButton">
+            <i class="fas fa-save"></i> Save Contact
+          </button>
+        </div>
+      </form>
+    </section>
+  </div>
 </div>
 
 <style>
   .contact-module {
-    background: #fff;
-    border-radius: 10px;
     padding: 20px;
     color: #1e293b;
+    background: #fff;
+    border-radius: 10px;
   }
 
   .contact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
     margin-bottom: 20px;
-    border-bottom: 2px solid #e2e8f0;
     padding-bottom: 14px;
+    border-bottom: 2px solid #e2e8f0;
   }
 
   .contact-header h1 {
-    margin: 0 0 6px;
-    font-size: 1.4rem;
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0 0 6px;
+    font-size: 1.4rem;
   }
 
   .contact-header h1 i {
@@ -101,11 +136,33 @@
     font-size: 0.85rem;
   }
 
+  .contact-add-btn,
+  .contact-save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 15px;
+    color: #fff;
+    background: #4361ee;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .contact-add-btn:hover,
+  .contact-save-btn:hover {
+    background: #3451d1;
+  }
+
   .contact-tabs {
     display: flex;
     gap: 6px;
-    border-bottom: 2px solid #e2e8f0;
     margin-bottom: 18px;
+    border-bottom: 2px solid #e2e8f0;
   }
 
   .contact-tab-btn {
@@ -113,10 +170,10 @@
     align-items: center;
     gap: 8px;
     padding: 10px 18px;
+    color: #64748b;
     background: transparent;
     border: 0;
     border-bottom: 3px solid transparent;
-    color: #64748b;
     font: inherit;
     font-size: 0.85rem;
     font-weight: 600;
@@ -150,7 +207,7 @@
 
   .contact-table {
     width: 100%;
-    min-width: 760px;
+    min-width: 800px;
     border-collapse: collapse;
     font-size: 0.8rem;
   }
@@ -163,8 +220,8 @@
   }
 
   .contact-table th {
-    background: #f8fafc;
     color: #334155;
+    background: #f8fafc;
     font-weight: 700;
     white-space: nowrap;
   }
@@ -179,14 +236,151 @@
     text-align: center;
   }
 
+  .contact-modal[hidden] {
+    display: none;
+  }
+
+  .contact-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+  }
+
+  .contact-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+  }
+
+  .contact-modal-card {
+    position: relative;
+    z-index: 1;
+    width: min(620px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 22px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 16px 50px rgba(15, 23, 42, 0.25);
+  }
+
+  .contact-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+
+  .contact-modal-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+  }
+
+  .contact-modal-close {
+    width: 34px;
+    height: 34px;
+    color: #64748b;
+    background: #f1f5f9;
+    border: 0;
+    border-radius: 7px;
+    cursor: pointer;
+  }
+
+  .contact-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .contact-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .contact-form-field.full-width {
+    grid-column: 1 / -1;
+  }
+
+  .contact-form-field label {
+    color: #475569;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  .contact-form-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    color: #1e293b;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.85rem;
+  }
+
+  .contact-form-field input:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.12);
+  }
+
+  .contact-form-error {
+    min-height: 1.1em;
+    margin: 10px 0 0;
+    color: #b91c1c;
+    font-size: 0.82rem;
+  }
+
+  .contact-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .contact-cancel-btn {
+    padding: 9px 15px;
+    color: #334155;
+    background: #f1f5f9;
+    border: 0;
+    border-radius: 7px;
+    font: inherit;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .contact-save-btn:disabled {
+    opacity: 0.65;
+    cursor: wait;
+  }
+
   @media (max-width: 600px) {
     .contact-module {
       padding: 14px;
     }
 
-    .contact-tab-btn {
-      padding: 10px 12px;
+    .contact-header {
+      align-items: flex-start;
+    }
+
+    .contact-add-btn {
+      flex-shrink: 0;
+      padding: 8px 10px;
+    }
+
+    .contact-form-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .contact-form-field.full-width {
+      grid-column: auto;
     }
   }
 </style>
-
