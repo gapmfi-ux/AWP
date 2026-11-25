@@ -316,7 +316,8 @@ async function loadModuleFile(moduleName) {
     'investmentReport': 'modules/investment-report.html',
     'employeeList': 'modules/employee-list.html',
     'payroll': 'modules/payroll.html',
-    'payslip': 'modules/payslip.html'
+    'payslip': 'modules/payslip.html',
+     'contact': { file: 'modules/contact.html', init: 'initContactModule' }
   };
   
   try {
@@ -669,6 +670,10 @@ function initPayrollModule() {
 function initPayslipModule() {
   console.log('Payslip module loaded');
   if (typeof window.initPayslipModule === 'function') window.initPayslipModule();
+}
+
+function initContactModule() {
+  console.log('Contact module loaded');
 }
 
 // ============================================
