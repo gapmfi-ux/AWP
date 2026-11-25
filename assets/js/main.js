@@ -515,6 +515,7 @@ function loadModuleDirect(moduleName) {
       'employeeList': { file: 'modules/employee-list.html', init: 'initEmployeeListModule' },
       'payroll': { file: 'modules/payroll.html', init: 'initPayrollModule' },
       'payslip': { file: 'modules/payslip.html', init: 'initPayslipModule' },
+      'contact': { file: 'modules/contact.html', init: 'initContactModule' },
       'dashboard': null
     };
     
