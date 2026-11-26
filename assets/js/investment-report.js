@@ -594,39 +594,51 @@ function displayInterestReport(investments, fromDate, toDate, groupBy) {
   };
 
   function displayPurchaseReport(investments) {
-    const tbody = document.getElementById('purchaseReportBody');
-    if (!tbody) return;
-
-    if (!investments || investments.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No investments found</td></tr>';
-      return;
-    }
-
-    let html = '';
-    let totalAmount = 0;
-
-    investments.forEach(function(item) {
-      html += '<tr>';
-      html += '<td>' + (item.investmentCode || '') + '</td>';
-      html += '<td>' + (item.bankName || '') + '</td>';
-      html += '<td>' + (item.investmentType || '') + '</td>';
-      html += '<td class="text-right">' + formatCurrency(item.amount) + '</td>';
-      html += '<td class="text-center">' + (item.interestRate || 0).toFixed(2) + '</td>';
-      html += '<td class="text-center">' + (item.duration || 0) + '</td>';
-      html += '<td class="text-center">' + (item.investmentDate || '') + '</td>';
-      html += '</tr>';
-      totalAmount += item.amount;
-    });
-
-    html += '<tr class="subtotal-row">';
-    html += '<td colspan="3">TOTAL</td>';
-    html += '<td class="text-right">' + formatCurrency(totalAmount) + '</td>';
-    html += '<td>-</td><td>-</td><td>-</td>';
-    html += '</tr>';
-
-    tbody.innerHTML = html;
+  const tbody = document.getElementById('purchaseReportBody');
+  if (!tbody) {
+    console.error('Purchase report table body #purchaseReportBody was not found');
+    return;
   }
 
+  if (!Array.isArray(investments) || investments.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-cell">No investments found</td></tr>';
+    return;
+  }
+
+  let totalAmount = 0;
+
+  try {
+    const rows = investments.map(function(item) {
+      const amount = Number(item.amount) || 0;
+      const rate = Number(item.interestRate) || 0;
+      const duration = Number(item.duration) || 0;
+      totalAmount += amount;
+
+      return '<tr>' +
+        '<td>' + (item.investmentCode || '') + '</td>' +
+        '<td>' + (item.bankName || '') + '</td>' +
+        '<td>' + (item.investmentType || '') + '</td>' +
+        '<td class="text-right">' + formatCurrency(amount) + '</td>' +
+        '<td class="text-center">' + rate.toFixed(2) + '</td>' +
+        '<td class="text-center">' + duration + '</td>' +
+        '<td class="text-center">' + (item.investmentDate || '') + '</td>' +
+        '</tr>';
+    }).join('');
+
+    const totalRow =
+      '<tr class="subtotal-row">' +
+      '<td colspan="3">TOTAL</td>' +
+      '<td class="text-right">' + formatCurrency(totalAmount) + '</td>' +
+      '<td>-</td><td>-</td><td>-</td>' +
+      '</tr>';
+
+    tbody.innerHTML = rows + totalRow;
+  } catch (error) {
+    console.error('Error rendering purchase report:', error, investments[0]);
+    tbody.innerHTML =
+      '<tr><td colspan="7" class="loading-cell">Could not render purchase report. See console for details.</td></tr>';
+  }
+}
   // ============================================
   // LOAD MATURED INVESTMENTS
   // ============================================
